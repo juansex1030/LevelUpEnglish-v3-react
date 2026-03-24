@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
@@ -12,8 +14,28 @@ const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.SECRET_KEY || 'levelup-secret-key';
 
 // Middleware
-app.use(cors());
+app.use(helmet());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || '*',
+    credentials: true
+}));
 app.use(express.json());
+
+// Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: { msg: 'Too many requests from this IP, please try again after 15 minutes' }
+});
+app.use('/api/', limiter);
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10, // strict limit for auth
+    message: { msg: 'Too many authentication attempts, please try again later' }
+});
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/auth/register', authLimiter);
 
 // Database Setup
 const dbPath = path.join(__dirname, 'data', 'database.db');
@@ -140,7 +162,7 @@ app.post('/api/v1/auth/register', async (req, res) => {
         const insert = db.prepare('INSERT INTO users (username, email, password, avatar) VALUES (?, ?, ?, ?)');
         const result = insert.run(username, email, hashedPassword, 'default');
         
-        const token = jwt.sign({ id: result.lastInsertRowid, username, email, avatar: 'default' }, SECRET_KEY);
+        const token = jwt.sign({ id: result.lastInsertRowid, username, email, avatar: 'default' }, SECRET_KEY, { expiresIn: '24h' });
         res.status(201).json({ token, user: { id: result.lastInsertRowid, username, email, avatar: 'default' } });
     } catch (error) {
         res.status(400).json({ msg: 'User already exists or database error' });
@@ -155,7 +177,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
         return res.status(401).json({ msg: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user.id, username: user.username, email: user.email, is_admin: user.is_admin, avatar: user.avatar }, SECRET_KEY);
+    const token = jwt.sign({ id: user.id, username: user.username, email: user.email, is_admin: user.is_admin, avatar: user.avatar }, SECRET_KEY, { expiresIn: '24h' });
     res.json({ token, user: { id: user.id, username: user.username, email: user.email, is_admin: user.is_admin, avatar: user.avatar } });
 });
 
@@ -192,7 +214,7 @@ app.put('/api/v1/auth/profile', authenticateToken, async (req, res) => {
             updatedAvatar = avatar;
         }
         
-        const token = jwt.sign({ id: user.id, username: updatedUsername, email: user.email, is_admin: user.is_admin, avatar: updatedAvatar }, SECRET_KEY);
+        const token = jwt.sign({ id: user.id, username: updatedUsername, email: user.email, is_admin: user.is_admin, avatar: updatedAvatar }, SECRET_KEY, { expiresIn: '24h' });
         res.json({ 
             msg: 'Perfil actualizado exitosamente', 
             token, 
