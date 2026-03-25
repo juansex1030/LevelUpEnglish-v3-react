@@ -397,6 +397,65 @@
     justify-content: flex-end;
 }
 
+/* ===================================
+   SEGMENTED CONTROL (Theory / Practice)
+   =================================== */
+
+.custom-tabs {
+    display: inline-flex;
+    background: var(--color-fondo);
+    border: 1px solid var(--color-borde);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.custom-tabs .nav-item {
+    flex: none;
+    margin: 0 !important;
+    display: flex;
+}
+
+.custom-tabs .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.5rem;
+    border-radius: 7px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--color-texto-secundario) !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    outline: none;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease;
+    white-space: nowrap;
+    text-decoration: none !important;
+    line-height: 1;
+}
+
+.custom-tabs .nav-link:hover:not(.active) {
+    color: var(--color-texto-principal) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.custom-tabs .nav-link.active {
+    background: var(--acento-primario) !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.custom-tabs .nav-link::after,
+.custom-tabs .nav-link::before {
+    display: none !important;
+    content: none !important;
+}
+
 /* Responsive for Sidebar */
 @media (max-width: 1024px) {
     .topics-sidebar {

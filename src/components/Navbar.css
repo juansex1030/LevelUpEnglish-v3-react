@@ -58,7 +58,7 @@ body.light-mode .modern-navbar.scrolled {
     background: linear-gradient(135deg, var(--acento-primario), var(--acento-secundario));
     color: white;
     font-size: 1.2rem;
-    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 173, 181, 0.3);
 }
 
 .brand-text {
@@ -119,12 +119,12 @@ body.light-mode .modern-navbar.scrolled {
 
 .nav-link:hover {
     color: var(--color-texto-principal);
-    background: rgba(129, 140, 248, 0.1);
+    background: rgba(0, 173, 181, 0.1);
 }
 
 .nav-link.active {
     color: var(--color-texto-principal);
-    background: rgba(129, 140, 248, 0.15);
+    background: rgba(0, 173, 181, 0.15);
 }
 
 .nav-link.active::after {
@@ -146,8 +146,8 @@ body.light-mode .modern-navbar.scrolled {
 }
 
 .theme-toggle-btn {
-    background: rgba(129, 140, 248, 0.1);
-    border: 1px solid rgba(129, 140, 248, 0.2);
+    background: rgba(0, 173, 181, 0.1);
+    border: 1px solid rgba(0, 173, 181, 0.2);
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -161,7 +161,7 @@ body.light-mode .modern-navbar.scrolled {
 
 .theme-toggle-btn:hover {
     transform: rotate(15deg) scale(1.1);
-    background: rgba(129, 140, 248, 0.2);
+    background: rgba(0, 173, 181, 0.2);
 }
 
 /* Auth Buttons */
@@ -182,7 +182,7 @@ body.light-mode .modern-navbar.scrolled {
 }
 
 .btn-login:hover {
-    background: rgba(129, 140, 248, 0.1);
+    background: rgba(0, 173, 181, 0.1);
 }
 
 .btn-register {
@@ -193,13 +193,13 @@ body.light-mode .modern-navbar.scrolled {
     font-size: 0.95rem;
     padding: 0.6rem 1.5rem;
     border-radius: 50px;
-    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 173, 181, 0.3);
     transition: all 0.3s ease;
 }
 
 .btn-register:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+    box-shadow: 0 8px 25px rgba(0, 173, 181, 0.4);
 }
 
 /* User Dropdown */
@@ -222,7 +222,7 @@ body.light-mode .modern-navbar.scrolled {
 
 .user-profile-btn:hover {
     border-color: var(--acento-primario);
-    background: rgba(129, 140, 248, 0.05);
+    background: rgba(0, 173, 181, 0.05);
 }
 
 .avatar {
@@ -308,7 +308,7 @@ body.light-mode .modern-navbar.scrolled {
 }
 
 .dropdown-item:hover {
-    background: rgba(129, 140, 248, 0.1);
+    background: rgba(0, 173, 181, 0.1);
     color: var(--acento-primario);
 }
 

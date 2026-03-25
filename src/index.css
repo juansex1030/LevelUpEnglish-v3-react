@@ -1,103 +1,66 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
-@import "tailwindcss";
 
 /* --- VARIABLES DE COLOR PRINCIPALES --- */
 /* Por defecto, cargamos el TEMA OSCURO */
 :root {
-    /* --- PALETA CLEAN & FRIENDLY (Modo Claro por Defecto) --- */
-    --color-fondo: #F3F4F6;
-    /* Gris muy suave (Gray 100) - Menos cansado que blanco puro */
+    /* --- PALETA MIDNIGHT TEAL (Modo Claro/Por defecto adaptado) --- */
+    --color-fondo: #EEEEEE;
     --color-fondo-secundario: #FFFFFF;
-    /* Blanco puro para tarjetas/sidebar */
+    --color-borde: rgba(57, 62, 70, 0.2);
+    --color-texto-principal: #222831;
+    --color-texto-secundario: #393E46;
 
-    --color-borde: #E5E7EB;
-    /* Gris claro (Gray 200) */
-
-    --color-texto-principal: #1F2937;
-    /* Gris muy oscuro (Gray 800) - Alto contraste */
-    --color-texto-secundario: #6B7280;
-    /* Gris medio (Gray 500) */
-
-    /* Acentos más amigables y sólidos (No Neón) */
-    --acento-primario: #4F46E5;
-    /* Indigo 600 - Profesional y moderno */
-    --acento-secundario: #10B981;
-    /* Emerald 500 - Verde éxito natural */
+    --acento-primario: #00ADB5;
+    --acento-secundario: #00ADB5;
 
     /* Feedback Colors */
-    --feedback-correcto: #059669;
-    /* Emerald 600 */
+    --feedback-correcto: #00ADB5;
     --feedback-incorrecto: #DC2626;
-    /* Red 600 */
     --feedback-pista: #F59E0B;
-    /* Amber 500 - Cálido para pistas */
 
-    /* Sombras suaves en lugar de resplandores neón */
     --sombra-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --sombra-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-
     --sombra-titulo: none;
-    /* Eliminamos sombras de texto neón */
 }
 
 /* --- MODO OSCURO (Restaurado & Refinado) --- */
 [data-bs-theme="dark"] {
-    --color-fondo: #0F172A;
-    /* Slate 900 - Deep clean dark */
-    --color-fondo-secundario: #1E293B;
-    /* Slate 800 */
+    --color-fondo: #222831;
+    --color-fondo-secundario: #393E46;
+    --color-borde: rgba(238, 238, 238, 0.15);
 
-    --color-borde: #334155;
-    /* Slate 700 */
+    --color-texto-principal: #EEEEEE;
+    --color-texto-secundario: #b4bac2;
 
-    --color-texto-principal: #F8FAFC;
-    /* Slate 50 */
-    --color-texto-secundario: #94A3B8;
-    /* Slate 400 */
+    --acento-primario: #00ADB5;
+    --acento-secundario: #00ADB5;
 
-    --acento-primario: #818CF8;
-    /* Indigo 400 - Lighter for dark mode */
-    --acento-secundario: #34D399;
-    /* Emerald 400 */
-
-    --feedback-correcto: #34D399;
+    --feedback-correcto: #00ADB5;
     --feedback-incorrecto: #F87171;
     --feedback-pista: #FBBF24;
 
     --sombra-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
     --sombra-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
 
-    --sombra-titulo: 0 0 20px rgba(129, 140, 248, 0.15);
-    /* Subtle glow */
+    --sombra-titulo: 0 0 20px rgba(0, 173, 181, 0.15);
 }
 
 /* Definimos el TEMA CLARO cuando el body tenga la clase "light-mode" */
 body.light-mode {
-    --color-fondo: #F9FAFB;
-    /* Gris muy claro */
+    --color-fondo: #EEEEEE;
     --color-fondo-secundario: #FFFFFF;
-    /* Blanco */
-    --color-borde: #E5E7EB;
-    /* Gris claro */
-    --color-texto-principal: #111827;
-    /* Gris muy oscuro */
-    --color-texto-secundario: #6B7280;
-    /* Gris medio */
+    --color-borde: rgba(57, 62, 70, 0.2);
+    --color-texto-principal: #222831;
+    --color-texto-secundario: #393E46;
 
-    --acento-primario: #6366F1;
-    /* Púrpura más vibrante para modo claro */
-    --acento-secundario: #059669;
-    /* Verde oscuro para modo claro */
+    --acento-primario: #00ADB5;
+    --acento-secundario: #00ADB5;
 
-    --feedback-correcto: #059669;
-    /* Verde oscuro */
+    --feedback-correcto: #00ADB5;
     --feedback-incorrecto: #DC2626;
-    /* Rojo oscuro */
-    --feedback-pista: #818CF8;
-    /* Púrpura medio para pistas en modo claro */
+    --feedback-pista: #F59E0B;
 
     --sombra-titulo: none;
-    /* Sin sombra en modo claro */
 }
 
 

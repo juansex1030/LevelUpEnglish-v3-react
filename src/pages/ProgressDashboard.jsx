@@ -69,8 +69,8 @@ const ProgressDashboard = () => {
                     
                     const levelColors = {
                         A1: '#F59E0B',
-                        A2: '#4F46E5',
-                        B1: '#6366F1',
+                        A2: '#00ADB5',
+                        B1: '#00ADB5',
                         B2: '#3B82F6',
                         C1: '#10B981',
                     };

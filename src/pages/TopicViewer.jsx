@@ -58,7 +58,9 @@ const TopicViewer = () => {
         try {
             JSON.parse(topic.practice);
             return; 
-        } catch { }
+        } catch {
+            // Not JSON, fall back to executing it as a script loop
+        }
 
         if (containerRef.current) {
             Array.from(containerRef.current.getElementsByTagName('script')).forEach(oldScript => {
@@ -202,7 +204,7 @@ const TopicViewer = () => {
 
                 <section className="topic-main-content mt-4">
                     <ul className="nav nav-pills custom-tabs mb-4">
-                        <li className="nav-item m-1">
+                        <li className="nav-item">
                             <button 
                                 className={`nav-link ${activeTab === 'theory' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('theory')}
@@ -210,7 +212,7 @@ const TopicViewer = () => {
                                 <i className="bi bi-book me-2"></i> Theory
                             </button>
                         </li>
-                        <li className="nav-item m-1">
+                        <li className="nav-item">
                             <button 
                                 className={`nav-link ${activeTab === 'practice' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('practice')}
