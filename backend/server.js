@@ -57,7 +57,7 @@ db.exec(`
 // Migration for existing tables
 try {
     db.exec(`ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT 'default';`);
-} catch (e) {
+} catch {
     // Column likely already exists
 }
 
@@ -133,7 +133,9 @@ const isAdmin = (req, res, next) => {
 
 app.post('/api/v1/auth/register', async (req, res) => {
     const { username, email, password } = req.body;
-    if (!username || !email || !password) return res.status(400).json({ msg: 'Missing fields' });
+    if (!username || !email || !password) return res.status(400).json({ msg: 'Todos los campos son obligatorios' });
+    if (password.length < 6) return res.status(400).json({ msg: 'La contraseña debe tener al menos 6 caracteres' });
+    if (!email.includes('@')) return res.status(400).json({ msg: 'Formato de correo inválido' });
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -143,7 +145,11 @@ app.post('/api/v1/auth/register', async (req, res) => {
         const token = jwt.sign({ id: result.lastInsertRowid, username, email, avatar: 'default' }, SECRET_KEY);
         res.status(201).json({ token, user: { id: result.lastInsertRowid, username, email, avatar: 'default' } });
     } catch (error) {
-        res.status(400).json({ msg: 'User already exists or database error' });
+        console.error("Register error:", error.message);
+        if (error.message.includes('UNIQUE constraint failed')) {
+            return res.status(400).json({ msg: 'El nombre de usuario o correo ya está en uso' });
+        }
+        res.status(500).json({ msg: 'Error interno del servidor' });
     }
 });
 
@@ -200,6 +206,7 @@ app.put('/api/v1/auth/profile', authenticateToken, async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Profile update error:", error.message);
         if (error.message.includes('UNIQUE constraint failed')) {
             return res.status(400).json({ msg: 'El nombre de usuario ya está en uso' });
         }
@@ -284,7 +291,8 @@ app.post('/api/v1/progress/mark-complete', authenticateToken, (req, res) => {
         db.prepare('INSERT OR IGNORE INTO progress (user_id, topic_id) VALUES (?, ?)').run(req.user.id, topic.id);
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ msg: 'Database error' });
+        console.error("Error marking progress:", error.message);
+        res.status(500).json({ msg: 'Database error while saving progress' });
     }
 });
 
@@ -358,11 +366,18 @@ app.post('/api/v1/admin/topics', authenticateToken, isAdmin, (req, res) => {
 
 app.put('/api/v1/admin/topics/:id', authenticateToken, isAdmin, (req, res) => {
     const { title, description, icon, theory, practice } = req.body;
-    db.prepare(`
-        UPDATE topics SET title = ?, description = ?, icon = ?, theory = ?, practice = ?
-        WHERE id = ?
-    `).run(title, description, icon, theory, practice, req.params.id);
-    res.json({ success: true });
+    if (!title) return res.status(400).json({ msg: 'Title is required' });
+    
+    try {
+        db.prepare(`
+            UPDATE topics SET title = ?, description = ?, icon = ?, theory = ?, practice = ?
+            WHERE id = ?
+        `).run(title, description, icon, theory, practice, req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error updating topic:", error.message);
+        res.status(500).json({ msg: 'Error updating topic in database' });
+    }
 });
 
 app.delete('/api/v1/admin/topics/:id', authenticateToken, isAdmin, (req, res) => {

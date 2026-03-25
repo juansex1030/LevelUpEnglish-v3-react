@@ -478,7 +478,7 @@ const AdminPanel = () => {
                                          <div className="row g-3">
                                              {Object.entries(studentProgress.stats).map(([lvl, data]) => {
                                                  const pct = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-                                                 const colors = { A1: '#F59E0B', A2: '#4F46E5', B1: '#6366F1', B2: '#3B82F6', C1: '#10B981' };
+                                                 const colors = { A1: '#F59E0B', A2: '#00ADB5', B1: '#00ADB5', B2: '#3B82F6', C1: '#10B981' };
                                                  return (
                                                      <div key={lvl} className="col-12">
                                                          <div className="d-flex justify-content-between mb-1">
