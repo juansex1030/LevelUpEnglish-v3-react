@@ -127,16 +127,6 @@ body.light-mode .modern-navbar.scrolled {
     background: rgba(0, 173, 181, 0.15);
 }
 
-.nav-link.active::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 10%;
-    width: 80%;
-    height: 3px;
-    border-radius: 3px;
-    background: var(--acento-primario);
-}
 
 /* Actions */
 .nav-actions {

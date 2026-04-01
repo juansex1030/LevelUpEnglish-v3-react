@@ -13,7 +13,7 @@ const Landing = () => {
                 <div className="container">
                     <div className="hero-content">
                         <div className="hero-badge">
-                            <i className="bi bi-stars me-2"></i>100% Free · 141 Topics · A1 to C1
+                            100% Free · 141 Topics · A1 to C1
                         </div>
                         <h1 className="hero-title">Master English from Beginner to Advanced</h1>
                         <p className="hero-subtitle">

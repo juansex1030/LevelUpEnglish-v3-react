@@ -3,110 +3,77 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Database = require('better-sqlite3');
 const path = require('path');
-const fs = require('fs');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const hpp = require('hpp');
+
+// Database Import
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.SECRET_KEY || 'levelup-secret-key';
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// ======================
+// SECURITY MIDDLEWARE
+// ======================
 
-// Database Setup
-const dbPath = path.join(__dirname, 'data', 'database.db');
-const db = new Database(dbPath);
+// Set secure HTTP headers
+app.use(helmet());
 
-// Initialize Tables
-db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        is_admin BOOLEAN DEFAULT 0,
-        avatar TEXT DEFAULT 'default',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+// Prevent HTTP Parameter Pollution
+app.use(hpp());
 
-    CREATE TABLE IF NOT EXISTS topics (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        number INTEGER NOT NULL,
-        level TEXT NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        icon TEXT,
-        theory TEXT,
-        practice TEXT,
-        UNIQUE(level, number)
-    );
+// Rate Limiting for Auth routes
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // block after 100 requests
+    message: { msg: 'Too many requests from this IP, please try again after 15 minutes' }
+});
 
-    CREATE TABLE IF NOT EXISTS progress (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        topic_id INTEGER NOT NULL,
-        completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (topic_id) REFERENCES topics(id),
-        UNIQUE(user_id, topic_id)
-    );
-`);
+// General Middleware
+app.use(cors({
+    origin: process.env.FRONTEND_URL || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-// Migration for existing tables
-try {
-    db.exec(`ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT 'default';`);
-} catch {
-    // Column likely already exists
-}
+// Body parser with size limit to prevent DoS
+app.use(express.json({ limit: '10kb' }));
 
-// Load Topics from JSON if table is empty
-const loadTopics = () => {
-    const count = db.prepare('SELECT COUNT(*) as count FROM topics').get().count;
-    if (count === 0) {
-        const jsonPath = path.join(__dirname, 'data', 'topics.json');
-        if (fs.existsSync(jsonPath)) {
-            const topicsData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-            const insert = db.prepare(`
-                INSERT INTO topics (number, level, title, description, icon, theory, practice)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `);
-            
-            const transaction = db.transaction((topics) => {
-                for (const t of topics) {
-                    insert.run(t.number, t.level, t.title, t.description, t.icon, t.theory, t.practice);
-                }
-            });
-            
-            transaction(topicsData);
-            console.log(`Successfully loaded ${topicsData.length} topics into the database.`);
-        }
-    }
-};
+// Apply rate limiting to Auth routes
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/auth/register', authLimiter);
 
-loadTopics();
+// ======================
+// HELPERS & MIDDLEWARE
+// ======================
 
 // Initialize Default Admin if table is empty
 const initializeAdmin = async () => {
-    const adminEmail = 'juanse1030@gmail.com';
-    const adminUser = db.prepare('SELECT * FROM users WHERE email = ?').get(adminEmail);
-    
-    if (!adminUser) {
-        const hashedPassword = await bcrypt.hash('admin1234', 10);
-        db.prepare('INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)').run(
-            'juanse1030', 
-            adminEmail, 
-            hashedPassword, 
-            1
-        );
-        console.log('Default admin user created.');
+    try {
+        const adminEmail = 'juanse1030@gmail.com';
+        const adminUser = db.prepare('SELECT * FROM users WHERE email = ?').get(adminEmail);
+        
+        if (!adminUser) {
+            const hashedPassword = await bcrypt.hash('admin1234', 10);
+            db.prepare('INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)').run(
+                'juanse1030', 
+                adminEmail, 
+                hashedPassword, 
+                1
+            );
+            console.log('[Auth] Default admin user created.');
+        }
+    } catch (error) {
+        console.error("[Auth] Admin initialization error:", error.message);
     }
 };
 
 initializeAdmin();
 
-// Helper: Auth Middleware
+// Auth Middleware
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -114,7 +81,7 @@ const authenticateToken = (req, res, next) => {
     if (!token) return res.status(401).json({ msg: 'No token provided' });
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
-        if (err) return res.status(403).json({ msg: 'Invalid token' });
+        if (err) return res.status(403).json({ msg: 'Invalid or expired token' });
         req.user = user;
         next();
     });
@@ -301,31 +268,37 @@ app.post('/api/v1/progress/mark-complete', authenticateToken, (req, res) => {
 // ======================
 
 app.get('/api/v1/admin/stats', authenticateToken, isAdmin, (req, res) => {
-    const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-    const totalProgress = db.prepare('SELECT COUNT(*) as count FROM progress').get().count;
-    const completedTopics = db.prepare('SELECT COUNT(DISTINCT topic_id) as count FROM progress').get().count;
-    
-    // Chart data (mocked/calculated)
-    const levels = ['A1', 'A2', 'B1', 'B2', 'C1'];
-    const chart_data = levels.map(level => {
-        const count = db.prepare(`
-            SELECT COUNT(*) as count FROM progress p 
-            JOIN topics t ON p.topic_id = t.id 
-            WHERE t.level = ?
-        `).get(level).count;
-        return { name: level, completados: count };
-    });
+    console.log('--- ADMIN STATS CALLED ---');
+    try {
+        const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+        const totalProgress = db.prepare('SELECT COUNT(*) as count FROM progress').get().count;
+        const completedTopics = db.prepare('SELECT COUNT(DISTINCT topic_id) as count FROM progress').get().count;
+        
+        // Chart data (mocked/calculated)
+        const levels = ['A1', 'A2', 'B1', 'B2', 'C1'];
+        const chart_data = levels.map(level => {
+            const count = db.prepare(`
+                SELECT COUNT(*) as count FROM progress p 
+                JOIN topics t ON p.topic_id = t.id 
+                WHERE t.level = ?
+            `).get(level).count;
+            return { name: level, completados: count };
+        });
 
-    res.json({
-        total_users: totalUsers,
-        total_progress_entries: totalProgress,
-        completed_topics: completedTopics,
-        chart_data
-    });
+        res.json({
+            total_users: totalUsers,
+            total_progress_entries: totalProgress,
+            completed_topics: completedTopics,
+            chart_data
+        });
+    } catch (err) {
+        console.error('Error in /admin/stats:', err.message);
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
 app.get('/api/v1/admin/users', authenticateToken, isAdmin, (req, res) => {
-    const users = db.prepare('SELECT id, username, email, is_admin FROM users').all();
+    const users = db.prepare('SELECT id, username, email, is_admin, avatar, created_at FROM users').all();
     res.json({ users });
 });
 
@@ -342,6 +315,58 @@ app.delete('/api/v1/admin/users/:id', authenticateToken, isAdmin, (req, res) => 
     db.prepare('DELETE FROM progress WHERE user_id = ?').run(req.params.id);
     db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
     res.json({ success: true });
+});
+
+app.delete('/api/v1/admin/users/:id/progress', authenticateToken, isAdmin, (req, res) => {
+    try {
+        db.prepare('DELETE FROM progress WHERE user_id = ?').run(req.params.id);
+        res.json({ success: true, msg: 'Progress reset successfully' });
+    } catch (error) {
+        console.error("Error resetting progress:", error.message);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+app.get('/api/v1/admin/users/:id/progress', authenticateToken, isAdmin, (req, res) => {
+    const targetUserId = req.params.id;
+    
+    // Check if user exists
+    const userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(targetUserId);
+    if (!userExists) return res.status(404).json({ error: 'User not found' });
+
+    const progress = db.prepare(`
+        SELECT t.level, t.number FROM progress p
+        JOIN topics t ON p.topic_id = t.id
+        WHERE p.user_id = ?
+    `).all(targetUserId);
+    
+    const totalTopics = db.prepare('SELECT level, COUNT(*) as count FROM topics GROUP BY level').all();
+    const stats = {};
+    const completed_topics_by_level = {};
+    
+    totalTopics.forEach(t => {
+        stats[t.level] = { total: t.count, completed: 0 };
+        completed_topics_by_level[t.level] = [];
+    });
+    
+    progress.forEach(p => {
+        if (stats[p.level]) {
+            stats[p.level].completed++;
+            completed_topics_by_level[p.level].push(p.number);
+        }
+    });
+    
+    const completed_topics_count = progress.length;
+    const total_all = totalTopics.reduce((acc, curr) => acc + curr.count, 0);
+    const overall_percentage = total_all > 0 ? Math.round((completed_topics_count / total_all) * 100) : 0;
+    
+    res.json({
+        overall_percentage,
+        completed_topics: completed_topics_count,
+        total_topics: total_all,
+        stats,
+        completed_topics_by_level
+    });
 });
 
 app.get('/api/v1/admin/topics', authenticateToken, isAdmin, (req, res) => {
@@ -386,7 +411,43 @@ app.delete('/api/v1/admin/topics/:id', authenticateToken, isAdmin, (req, res) =>
     res.json({ success: true });
 });
 
+// Health Check
+app.get('/', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        message: 'LevelUpEnglish API is running',
+        version: '1.1.0',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// ======================
+// ERROR HANDLING
+// ======================
+
+// 404 Handler
+app.use((req, res) => {
+    res.status(404).json({ msg: 'Route not found' });
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error(`[Error] ${err.stack}`);
+    
+    // Don't leak stack traces in production
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    res.status(err.status || 500).json({
+        msg: err.message || 'Internal Server Error',
+        error: isProduction ? {} : err
+    });
+});
+
 // Start Server
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log('------------------------------------------------');
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🛡️  Security: Helmet, HPP, and Rate Limiting enabled`);
+    console.log(`📂 Database: SQLite (${db.name})`);
+    console.log('------------------------------------------------');
 });
