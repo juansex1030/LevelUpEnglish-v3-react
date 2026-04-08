@@ -3,17 +3,17 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 
 // Database Import
-const db = require('./db');
+const { query, initDatabase } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.SECRET_KEY || 'levelup-secret-key';
+let bootstrapPromise;
 
 // ======================
 // SECURITY MIDDLEWARE
@@ -50,19 +50,65 @@ app.use('/api/v1/auth/register', authLimiter);
 // HELPERS & MIDDLEWARE
 // ======================
 
+const isUniqueViolation = (error) => error && error.code === '23505';
+
+const buildProgressSummary = async (userId) => {
+    const progressResult = await query(
+        `
+        SELECT t.level, t.number
+        FROM progress p
+        JOIN topics t ON p.topic_id = t.id
+        WHERE p.user_id = $1
+        `,
+        [userId]
+    );
+
+    const totalTopicsResult = await query(
+        'SELECT level, COUNT(*)::int AS count FROM topics GROUP BY level'
+    );
+
+    const stats = {};
+    const completed_topics_by_level = {};
+
+    totalTopicsResult.rows.forEach((topic) => {
+        stats[topic.level] = { total: topic.count, completed: 0 };
+        completed_topics_by_level[topic.level] = [];
+    });
+
+    progressResult.rows.forEach((item) => {
+        if (stats[item.level]) {
+            stats[item.level].completed += 1;
+            completed_topics_by_level[item.level].push(item.number);
+        }
+    });
+
+    const completed_topics_count = progressResult.rows.length;
+    const total_all = totalTopicsResult.rows.reduce((acc, curr) => acc + curr.count, 0);
+    const overall_percentage = total_all > 0 ? Math.round((completed_topics_count / total_all) * 100) : 0;
+
+    return {
+        overall_percentage,
+        completed_topics: completed_topics_count,
+        total_topics: total_all,
+        stats,
+        completed_topics_by_level,
+    };
+};
+
 // Initialize Default Admin if table is empty
 const initializeAdmin = async () => {
     try {
         const adminEmail = 'juanse1030@gmail.com';
-        const adminUser = db.prepare('SELECT * FROM users WHERE email = ?').get(adminEmail);
-        
-        if (!adminUser) {
+        const adminUser = await query('SELECT id FROM users WHERE email = $1', [adminEmail]);
+
+        if (adminUser.rows.length === 0) {
             const hashedPassword = await bcrypt.hash('admin1234', 10);
-            db.prepare('INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)').run(
-                'juanse1030', 
-                adminEmail, 
-                hashedPassword, 
-                1
+            await query(
+                `
+                INSERT INTO users (username, email, password, is_admin)
+                VALUES ($1, $2, $3, $4)
+                `,
+                ['juanse1030', adminEmail, hashedPassword, true]
             );
             console.log('[Auth] Default admin user created.');
         }
@@ -71,7 +117,26 @@ const initializeAdmin = async () => {
     }
 };
 
-initializeAdmin();
+const ensureInitialized = async () => {
+    if (!bootstrapPromise) {
+        bootstrapPromise = (async () => {
+            await initDatabase();
+            await initializeAdmin();
+        })();
+    }
+
+    return bootstrapPromise;
+};
+
+// Ensure DB/init is completed both for local server and serverless runtimes.
+app.use(async (req, res, next) => {
+    try {
+        await ensureInitialized();
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
 
 // Auth Middleware
 const authenticateToken = (req, res, next) => {
@@ -106,14 +171,21 @@ app.post('/api/v1/auth/register', async (req, res) => {
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        const insert = db.prepare('INSERT INTO users (username, email, password, avatar) VALUES (?, ?, ?, ?)');
-        const result = insert.run(username, email, hashedPassword, 'default');
-        
-        const token = jwt.sign({ id: result.lastInsertRowid, username, email, avatar: 'default' }, SECRET_KEY);
-        res.status(201).json({ token, user: { id: result.lastInsertRowid, username, email, avatar: 'default' } });
+        const result = await query(
+            `
+            INSERT INTO users (username, email, password, avatar)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, username, email, avatar
+            `,
+            [username, email, hashedPassword, 'default']
+        );
+
+        const user = result.rows[0];
+        const token = jwt.sign({ id: user.id, username: user.username, email: user.email, avatar: user.avatar }, SECRET_KEY);
+        res.status(201).json({ token, user });
     } catch (error) {
         console.error("Register error:", error.message);
-        if (error.message.includes('UNIQUE constraint failed')) {
+        if (isUniqueViolation(error)) {
             return res.status(400).json({ msg: 'El nombre de usuario o correo ya está en uso' });
         }
         res.status(500).json({ msg: 'Error interno del servidor' });
@@ -122,7 +194,8 @@ app.post('/api/v1/auth/register', async (req, res) => {
 
 app.post('/api/v1/auth/login', async (req, res) => {
     const { email, password } = req.body;
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const result = await query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(401).json({ msg: 'Invalid credentials' });
@@ -132,14 +205,16 @@ app.post('/api/v1/auth/login', async (req, res) => {
     res.json({ token, user: { id: user.id, username: user.username, email: user.email, is_admin: user.is_admin, avatar: user.avatar } });
 });
 
-app.get('/api/v1/auth/me', authenticateToken, (req, res) => {
-    const user = db.prepare('SELECT id, username, email, is_admin, avatar FROM users WHERE id = ?').get(req.user.id);
+app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
+    const result = await query('SELECT id, username, email, is_admin, avatar FROM users WHERE id = $1', [req.user.id]);
+    const user = result.rows[0] || null;
     res.json({ user });
 });
 
 app.put('/api/v1/auth/profile', authenticateToken, async (req, res) => {
     const { newUsername, currentPassword, newPassword, avatar } = req.body;
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+    const result = await query('SELECT * FROM users WHERE id = $1', [req.user.id]);
+    const user = result.rows[0];
     
     if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
     if (!currentPassword || !(await bcrypt.compare(currentPassword, user.password))) {
@@ -148,23 +223,23 @@ app.put('/api/v1/auth/profile', authenticateToken, async (req, res) => {
 
     let updatedUsername = user.username;
     let updatedAvatar = user.avatar;
-    
+
     try {
         if (newUsername && newUsername.trim() !== '' && newUsername !== user.username) {
-            db.prepare('UPDATE users SET username = ? WHERE id = ?').run(newUsername, req.user.id);
+            await query('UPDATE users SET username = $1 WHERE id = $2', [newUsername, req.user.id]);
             updatedUsername = newUsername;
         }
-        
+
         if (newPassword && newPassword.trim() !== '') {
             const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-            db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedNewPassword, req.user.id);
+            await query('UPDATE users SET password = $1 WHERE id = $2', [hashedNewPassword, req.user.id]);
         }
 
         if (avatar) {
-            db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatar, req.user.id);
+            await query('UPDATE users SET avatar = $1 WHERE id = $2', [avatar, req.user.id]);
             updatedAvatar = avatar;
         }
-        
+
         const token = jwt.sign({ id: user.id, username: updatedUsername, email: user.email, is_admin: user.is_admin, avatar: updatedAvatar }, SECRET_KEY);
         res.json({ 
             msg: 'Perfil actualizado exitosamente', 
@@ -174,7 +249,7 @@ app.put('/api/v1/auth/profile', authenticateToken, async (req, res) => {
 
     } catch (error) {
         console.error("Profile update error:", error.message);
-        if (error.message.includes('UNIQUE constraint failed')) {
+        if (isUniqueViolation(error)) {
             return res.status(400).json({ msg: 'El nombre de usuario ya está en uso' });
         }
         res.status(500).json({ msg: 'Error interno del servidor' });
@@ -185,18 +260,23 @@ app.put('/api/v1/auth/profile', authenticateToken, async (req, res) => {
 // TOPICS API
 // ======================
 
-app.get('/api/v1/topics/:level', (req, res) => {
+app.get('/api/v1/topics/:level', async (req, res) => {
     const level = req.params.level.toUpperCase();
-    const topics = db.prepare('SELECT number, title, description, icon FROM topics WHERE level = ? ORDER BY number').all(level);
+    const result = await query(
+        'SELECT number, title, description, icon FROM topics WHERE level = $1 ORDER BY number',
+        [level]
+    );
+    const topics = result.rows;
     
     if (topics.length === 0) return res.status(404).json({ error: 'Level not found or empty' });
-    res.json({ topics });
+    return res.json({ topics });
 });
 
-app.get('/api/v1/topics/:level/:number', (req, res) => {
+app.get('/api/v1/topics/:level/:number', async (req, res) => {
     const level = req.params.level.toUpperCase();
     const number = parseInt(req.params.number);
-    const topic = db.prepare('SELECT * FROM topics WHERE level = ? AND number = ?').get(level, number);
+    const result = await query('SELECT * FROM topics WHERE level = $1 AND number = $2', [level, number]);
+    const topic = result.rows[0];
     
     if (!topic) return res.status(404).json({ error: 'Topic not found' });
     res.json({ topic });
@@ -211,51 +291,30 @@ app.get('/api/v1/topics/:level/script', (req, res) => {
 // PROGRESS API
 // ======================
 
-app.get('/api/v1/progress', authenticateToken, (req, res) => {
-    const progress = db.prepare(`
-        SELECT t.level, t.number FROM progress p
-        JOIN topics t ON p.topic_id = t.id
-        WHERE p.user_id = ?
-    `).all(req.user.id);
-    
-    // Calculate stats and groupings
-    const totalTopics = db.prepare('SELECT level, COUNT(*) as count FROM topics GROUP BY level').all();
-    const stats = {};
-    const completed_topics_by_level = {};
-    
-    totalTopics.forEach(t => {
-        stats[t.level] = { total: t.count, completed: 0 };
-        completed_topics_by_level[t.level] = [];
-    });
-    
-    progress.forEach(p => {
-        if (stats[p.level]) {
-            stats[p.level].completed++;
-            completed_topics_by_level[p.level].push(p.number);
-        }
-    });
-    
-    const completed_topics_count = progress.length;
-    const total_all = totalTopics.reduce((acc, curr) => acc + curr.count, 0);
-    const overall_percentage = total_all > 0 ? Math.round((completed_topics_count / total_all) * 100) : 0;
-    
-    res.json({
-        overall_percentage,
-        completed_topics: completed_topics_count,
-        total_topics: total_all,
-        stats,
-        completed_topics_by_level
-    });
+app.get('/api/v1/progress', authenticateToken, async (req, res) => {
+    const summary = await buildProgressSummary(req.user.id);
+    res.json(summary);
 });
 
-app.post('/api/v1/progress/mark-complete', authenticateToken, (req, res) => {
+app.post('/api/v1/progress/mark-complete', authenticateToken, async (req, res) => {
     const { level, topic_number } = req.body;
-    const topic = db.prepare('SELECT id FROM topics WHERE level = ? AND number = ?').get(level.toUpperCase(), topic_number);
+    const topicResult = await query(
+        'SELECT id FROM topics WHERE level = $1 AND number = $2',
+        [level.toUpperCase(), topic_number]
+    );
+    const topic = topicResult.rows[0];
     
     if (!topic) return res.status(404).json({ msg: 'Topic not found' });
     
     try {
-        db.prepare('INSERT OR IGNORE INTO progress (user_id, topic_id) VALUES (?, ?)').run(req.user.id, topic.id);
+        await query(
+            `
+            INSERT INTO progress (user_id, topic_id)
+            VALUES ($1, $2)
+            ON CONFLICT (user_id, topic_id) DO NOTHING
+            `,
+            [req.user.id, topic.id]
+        );
         res.json({ success: true });
     } catch (error) {
         console.error("Error marking progress:", error.message);
@@ -267,23 +326,31 @@ app.post('/api/v1/progress/mark-complete', authenticateToken, (req, res) => {
 // ADMIN API
 // ======================
 
-app.get('/api/v1/admin/stats', authenticateToken, isAdmin, (req, res) => {
+app.get('/api/v1/admin/stats', authenticateToken, isAdmin, async (req, res) => {
     console.log('--- ADMIN STATS CALLED ---');
     try {
-        const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-        const totalProgress = db.prepare('SELECT COUNT(*) as count FROM progress').get().count;
-        const completedTopics = db.prepare('SELECT COUNT(DISTINCT topic_id) as count FROM progress').get().count;
-        
-        // Chart data (mocked/calculated)
+        const totalUsers = (await query('SELECT COUNT(*)::int AS count FROM users')).rows[0].count;
+        const totalProgress = (await query('SELECT COUNT(*)::int AS count FROM progress')).rows[0].count;
+        const completedTopics = (await query('SELECT COUNT(DISTINCT topic_id)::int AS count FROM progress')).rows[0].count;
+
         const levels = ['A1', 'A2', 'B1', 'B2', 'C1'];
-        const chart_data = levels.map(level => {
-            const count = db.prepare(`
-                SELECT COUNT(*) as count FROM progress p 
-                JOIN topics t ON p.topic_id = t.id 
-                WHERE t.level = ?
-            `).get(level).count;
-            return { name: level, completados: count };
-        });
+        const chart_data = await Promise.all(
+            levels.map(async (level) => {
+                const count = (
+                    await query(
+                        `
+                        SELECT COUNT(*)::int AS count
+                        FROM progress p
+                        JOIN topics t ON p.topic_id = t.id
+                        WHERE t.level = $1
+                        `,
+                        [level]
+                    )
+                ).rows[0].count;
+
+                return { name: level, completados: count };
+            })
+        );
 
         res.json({
             total_users: totalUsers,
@@ -297,29 +364,29 @@ app.get('/api/v1/admin/stats', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-app.get('/api/v1/admin/users', authenticateToken, isAdmin, (req, res) => {
-    const users = db.prepare('SELECT id, username, email, is_admin, avatar, created_at FROM users').all();
+app.get('/api/v1/admin/users', authenticateToken, isAdmin, async (req, res) => {
+    const users = (await query('SELECT id, username, email, is_admin, avatar, created_at FROM users ORDER BY id')).rows;
     res.json({ users });
 });
 
-app.put('/api/v1/admin/users/:id/role', authenticateToken, isAdmin, (req, res) => {
-    const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.params.id);
+app.put('/api/v1/admin/users/:id/role', authenticateToken, isAdmin, async (req, res) => {
+    const userResult = await query('SELECT is_admin FROM users WHERE id = $1', [req.params.id]);
+    const user = userResult.rows[0];
     if (!user) return res.status(404).json({ error: 'User not found' });
-    
-    const newRole = user.is_admin ? 0 : 1;
-    db.prepare('UPDATE users SET is_admin = ? WHERE id = ?').run(newRole, req.params.id);
+
+    const newRole = !user.is_admin;
+    await query('UPDATE users SET is_admin = $1 WHERE id = $2', [newRole, req.params.id]);
     res.json({ is_admin: newRole });
 });
 
-app.delete('/api/v1/admin/users/:id', authenticateToken, isAdmin, (req, res) => {
-    db.prepare('DELETE FROM progress WHERE user_id = ?').run(req.params.id);
-    db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
+app.delete('/api/v1/admin/users/:id', authenticateToken, isAdmin, async (req, res) => {
+    await query('DELETE FROM users WHERE id = $1', [req.params.id]);
     res.json({ success: true });
 });
 
-app.delete('/api/v1/admin/users/:id/progress', authenticateToken, isAdmin, (req, res) => {
+app.delete('/api/v1/admin/users/:id/progress', authenticateToken, isAdmin, async (req, res) => {
     try {
-        db.prepare('DELETE FROM progress WHERE user_id = ?').run(req.params.id);
+        await query('DELETE FROM progress WHERE user_id = $1', [req.params.id]);
         res.json({ success: true, msg: 'Progress reset successfully' });
     } catch (error) {
         console.error("Error resetting progress:", error.message);
@@ -327,77 +394,59 @@ app.delete('/api/v1/admin/users/:id/progress', authenticateToken, isAdmin, (req,
     }
 });
 
-app.get('/api/v1/admin/users/:id/progress', authenticateToken, isAdmin, (req, res) => {
+app.get('/api/v1/admin/users/:id/progress', authenticateToken, isAdmin, async (req, res) => {
     const targetUserId = req.params.id;
-    
-    // Check if user exists
-    const userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(targetUserId);
+
+    const userExistsResult = await query('SELECT id FROM users WHERE id = $1', [targetUserId]);
+    const userExists = userExistsResult.rows[0];
     if (!userExists) return res.status(404).json({ error: 'User not found' });
 
-    const progress = db.prepare(`
-        SELECT t.level, t.number FROM progress p
-        JOIN topics t ON p.topic_id = t.id
-        WHERE p.user_id = ?
-    `).all(targetUserId);
-    
-    const totalTopics = db.prepare('SELECT level, COUNT(*) as count FROM topics GROUP BY level').all();
-    const stats = {};
-    const completed_topics_by_level = {};
-    
-    totalTopics.forEach(t => {
-        stats[t.level] = { total: t.count, completed: 0 };
-        completed_topics_by_level[t.level] = [];
-    });
-    
-    progress.forEach(p => {
-        if (stats[p.level]) {
-            stats[p.level].completed++;
-            completed_topics_by_level[p.level].push(p.number);
-        }
-    });
-    
-    const completed_topics_count = progress.length;
-    const total_all = totalTopics.reduce((acc, curr) => acc + curr.count, 0);
-    const overall_percentage = total_all > 0 ? Math.round((completed_topics_count / total_all) * 100) : 0;
-    
-    res.json({
-        overall_percentage,
-        completed_topics: completed_topics_count,
-        total_topics: total_all,
-        stats,
-        completed_topics_by_level
-    });
+    const summary = await buildProgressSummary(targetUserId);
+    res.json(summary);
 });
 
-app.get('/api/v1/admin/topics', authenticateToken, isAdmin, (req, res) => {
+app.get('/api/v1/admin/topics', authenticateToken, isAdmin, async (req, res) => {
     const level = req.query.level;
-    const topics = db.prepare('SELECT id, number, title, description, level, icon FROM topics WHERE level = ? ORDER BY number').all(level);
+    const topics = (
+        await query(
+            'SELECT id, number, title, description, level, icon FROM topics WHERE level = $1 ORDER BY number',
+            [level]
+        )
+    ).rows;
     res.json({ topics });
 });
 
-app.get('/api/v1/admin/topics/:id', authenticateToken, isAdmin, (req, res) => {
-    const topic = db.prepare('SELECT * FROM topics WHERE id = ?').get(req.params.id);
+app.get('/api/v1/admin/topics/:id', authenticateToken, isAdmin, async (req, res) => {
+    const topic = (await query('SELECT * FROM topics WHERE id = $1', [req.params.id])).rows[0] || null;
     res.json(topic);
 });
 
-app.post('/api/v1/admin/topics', authenticateToken, isAdmin, (req, res) => {
+app.post('/api/v1/admin/topics', authenticateToken, isAdmin, async (req, res) => {
     const { number, level, title, description, icon, theory, practice } = req.body;
-    const result = db.prepare(`
+    const result = await query(
+        `
         INSERT INTO topics (number, level, title, description, icon, theory, practice)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(number, level.toUpperCase(), title, description, icon, theory, practice);
-    res.status(201).json({ id: result.lastInsertRowid });
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id
+        `,
+        [number, level.toUpperCase(), title, description, icon, theory, practice]
+    );
+    res.status(201).json({ id: result.rows[0].id });
 });
 
-app.put('/api/v1/admin/topics/:id', authenticateToken, isAdmin, (req, res) => {
+app.put('/api/v1/admin/topics/:id', authenticateToken, isAdmin, async (req, res) => {
     const { title, description, icon, theory, practice } = req.body;
     if (!title) return res.status(400).json({ msg: 'Title is required' });
-    
+
     try {
-        db.prepare(`
-            UPDATE topics SET title = ?, description = ?, icon = ?, theory = ?, practice = ?
-            WHERE id = ?
-        `).run(title, description, icon, theory, practice, req.params.id);
+        await query(
+            `
+            UPDATE topics
+            SET title = $1, description = $2, icon = $3, theory = $4, practice = $5
+            WHERE id = $6
+            `,
+            [title, description, icon, theory, practice, req.params.id]
+        );
         res.json({ success: true });
     } catch (error) {
         console.error("Error updating topic:", error.message);
@@ -405,9 +454,8 @@ app.put('/api/v1/admin/topics/:id', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-app.delete('/api/v1/admin/topics/:id', authenticateToken, isAdmin, (req, res) => {
-    db.prepare('DELETE FROM progress WHERE topic_id = ?').run(req.params.id);
-    db.prepare('DELETE FROM topics WHERE id = ?').run(req.params.id);
+app.delete('/api/v1/admin/topics/:id', authenticateToken, isAdmin, async (req, res) => {
+    await query('DELETE FROM topics WHERE id = $1', [req.params.id]);
     res.json({ success: true });
 });
 
@@ -444,10 +492,23 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
-app.listen(PORT, '0.0.0.0', () => {
-    console.log('------------------------------------------------');
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`🛡️  Security: Helmet, HPP, and Rate Limiting enabled`);
-    console.log(`📂 Database: SQLite (${db.name})`);
-    console.log('------------------------------------------------');
-});
+const startServer = async () => {
+    await ensureInitialized();
+
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log('------------------------------------------------');
+        console.log(`Server running on http://localhost:${PORT}`);
+        console.log('Security: Helmet, HPP, and Rate Limiting enabled');
+        console.log('Database: PostgreSQL');
+        console.log('------------------------------------------------');
+    });
+};
+
+if (require.main === module) {
+    startServer().catch((error) => {
+        console.error('[Startup] Fatal error:', error.message);
+        process.exit(1);
+    });
+}
+
+module.exports = app;

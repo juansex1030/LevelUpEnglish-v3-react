@@ -11,6 +11,18 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+backend/.env
+
+# Local database and runtime instance
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated reports and temporary outputs
+eslint-report.txt
+lint_output*.txt
 
 # Editor directories and files
 .vscode/*

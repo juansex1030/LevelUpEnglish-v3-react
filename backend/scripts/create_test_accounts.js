@@ -1,11 +1,9 @@
-const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
-const path = require('path');
-
-const dbPath = path.join(__dirname, 'data', 'database.db');
-const db = new Database(dbPath);
+const { query, initDatabase, pool } = require('../db');
 
 async function createTestAccounts() {
+    await initDatabase();
+
     const accounts = [
         { username: 'test_student1', email: 'test1@example.com', password: 'password123' },
         { username: 'test_student2', email: 'test2@example.com', password: 'password123' }
@@ -14,15 +12,13 @@ async function createTestAccounts() {
     for (const acc of accounts) {
         try {
             const hashedPassword = await bcrypt.hash(acc.password, 10);
-            db.prepare('INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)').run(
-                acc.username,
-                acc.email,
-                hashedPassword,
-                0
+            await query(
+                'INSERT INTO users (username, email, password, is_admin) VALUES ($1, $2, $3, $4)',
+                [acc.username, acc.email, hashedPassword, false]
             );
             console.log(`Created account: ${acc.username} (${acc.email})`);
         } catch (error) {
-            if (error.message.includes('UNIQUE constraint failed')) {
+            if (error.code === '23505') {
                 console.log(`Account ${acc.username} already exists.`);
             } else {
                 console.error(`Error creating ${acc.username}:`, error.message);
@@ -31,4 +27,11 @@ async function createTestAccounts() {
     }
 }
 
-createTestAccounts();
+createTestAccounts()
+    .catch((error) => {
+        console.error('Error:', error.message);
+        process.exitCode = 1;
+    })
+    .finally(async () => {
+        await pool.end();
+    });
