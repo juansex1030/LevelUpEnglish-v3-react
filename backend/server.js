@@ -38,11 +38,16 @@ const configuredOrigins = (process.env.FRONTEND_URL || '')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+const normalizeOrigin = (value) => value.replace(/\/+$/, '');
+
+const normalizedConfiguredOrigins = configuredOrigins.map(normalizeOrigin);
+
 const isAllowedOrigin = (origin) => {
     if (!origin) return true; // non-browser / server-to-server
-    if (configuredOrigins.includes(origin)) return true;
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (normalizedConfiguredOrigins.includes(normalizedOrigin)) return true;
     if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
-    if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
+    if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(normalizedOrigin)) return true;
     return false;
 };
 
@@ -51,10 +56,11 @@ app.use(cors({
         if (isAllowedOrigin(origin)) {
             return callback(null, true);
         }
-        return callback(new Error('Not allowed by CORS'));
+        return callback(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 204,
 }));
 
 // Body parser with size limit to prevent DoS
