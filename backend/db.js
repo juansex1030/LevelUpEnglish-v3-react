@@ -6,10 +6,19 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
 const useSsl = process.env.PGSSL === 'true' || (process.env.NODE_ENV === 'production' && process.env.PGSSL !== 'false');
 
+const commonPoolOptions = {
+    ssl: useSsl ? { rejectUnauthorized: false } : false,
+    // Serverless-safe defaults (Vercel): keep pool small and fail fast.
+    max: Number(process.env.PGPOOL_MAX || 1),
+    idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
+    connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || 15000),
+    allowExitOnIdle: true,
+};
+
 const pool = hasDatabaseUrl
     ? new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: useSsl ? { rejectUnauthorized: false } : false,
+        ...commonPoolOptions,
     })
     : new Pool({
         host: process.env.PGHOST || 'localhost',
@@ -17,7 +26,7 @@ const pool = hasDatabaseUrl
         user: process.env.PGUSER || 'postgres',
         password: process.env.PGPASSWORD || 'postgres',
         database: process.env.PGDATABASE || 'levelupenglish',
-        ssl: useSsl ? { rejectUnauthorized: false } : false,
+        ...commonPoolOptions,
     });
 
 const query = (text, params = []) => pool.query(text, params);
