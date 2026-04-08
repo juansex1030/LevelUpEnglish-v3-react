@@ -1,89 +1,101 @@
-const Database = require('better-sqlite3');
+const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const dbPath = path.join(__dirname, 'data', 'database.db');
+const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
+const useSsl = process.env.PGSSL === 'true' || (process.env.NODE_ENV === 'production' && process.env.PGSSL !== 'false');
 
-// Ensure data directory exists
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-}
+const pool = hasDatabaseUrl
+    ? new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: useSsl ? { rejectUnauthorized: false } : false,
+    })
+    : new Pool({
+        host: process.env.PGHOST || 'localhost',
+        port: Number(process.env.PGPORT || 5432),
+        user: process.env.PGUSER || 'postgres',
+        password: process.env.PGPASSWORD || 'postgres',
+        database: process.env.PGDATABASE || 'levelupenglish',
+        ssl: useSsl ? { rejectUnauthorized: false } : false,
+    });
 
-const db = new Database(dbPath);
+const query = (text, params = []) => pool.query(text, params);
 
-// Initialize Tables
-db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        is_admin BOOLEAN DEFAULT 0,
-        avatar TEXT DEFAULT 'default',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+const initDatabase = async () => {
+    await query(`
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            is_admin BOOLEAN DEFAULT FALSE,
+            avatar TEXT DEFAULT 'default',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
 
-    CREATE TABLE IF NOT EXISTS topics (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        number INTEGER NOT NULL,
-        level TEXT NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        icon TEXT,
-        theory TEXT,
-        practice TEXT,
-        UNIQUE(level, number)
-    );
+    await query(`
+        CREATE TABLE IF NOT EXISTS topics (
+            id SERIAL PRIMARY KEY,
+            number INTEGER NOT NULL,
+            level TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            icon TEXT,
+            theory TEXT,
+            practice TEXT,
+            UNIQUE(level, number)
+        );
+    `);
 
-    CREATE TABLE IF NOT EXISTS progress (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        topic_id INTEGER NOT NULL,
-        completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (topic_id) REFERENCES topics(id),
-        UNIQUE(user_id, topic_id)
-    );
-`);
+    await query(`
+        CREATE TABLE IF NOT EXISTS progress (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+            completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, topic_id)
+        );
+    `);
 
-// Migration for existing tables
-try {
-    db.exec(`ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT 'default';`);
-} catch (e) {
-    // Column likely already exists
-}
+    const topicsCount = await query('SELECT COUNT(*)::int AS count FROM topics');
+    if (topicsCount.rows[0].count > 0) {
+        return;
+    }
 
-/**
- * Load initial topics from JSON if the table is empty
- */
-const loadTopics = () => {
+    const jsonPath = path.join(__dirname, 'data', 'topics.json');
+    if (!fs.existsSync(jsonPath)) {
+        console.warn('[Database] topics.json not found; skipping initial seed.');
+        return;
+    }
+
+    const topicsData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    const client = await pool.connect();
     try {
-        const count = db.prepare('SELECT COUNT(*) as count FROM topics').get().count;
-        if (count === 0) {
-            const jsonPath = path.join(__dirname, 'data', 'topics.json');
-            if (fs.existsSync(jsonPath)) {
-                const topicsData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-                const insert = db.prepare(`
-                    INSERT INTO topics (number, level, title, description, icon, theory, practice)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                `);
-                
-                const transaction = db.transaction((topics) => {
-                    for (const t of topics) {
-                        insert.run(t.number, t.level, t.title, t.description, t.icon, t.theory, t.practice);
-                    }
-                });
-                
-                transaction(topicsData);
-                console.log(`[Database] Successfully loaded ${topicsData.length} topics.`);
-            }
+        await client.query('BEGIN');
+        for (const topic of topicsData) {
+            await client.query(
+                `
+                INSERT INTO topics (number, level, title, description, icon, theory, practice)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (level, number) DO NOTHING
+                `,
+                [topic.number, topic.level, topic.title, topic.description, topic.icon, topic.theory, topic.practice]
+            );
         }
+        await client.query('COMMIT');
+        console.log(`[Database] Seeded ${topicsData.length} topics.`);
     } catch (error) {
-        console.error("[Database] Error loading topics:", error.message);
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
     }
 };
 
-loadTopics();
-
-module.exports = db;
+module.exports = {
+    pool,
+    query,
+    initDatabase,
+};

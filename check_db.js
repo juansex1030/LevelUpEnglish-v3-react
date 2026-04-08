@@ -1,8 +1,0 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const dbPath = path.join(__dirname, 'backend', 'data', 'database.db');
-const db = new Database(dbPath);
-const users = db.prepare('SELECT id, username, email FROM users').all();
-console.log(JSON.stringify(users, null, 2));
-const topics = db.prepare('SELECT id, level, number FROM topics LIMIT 5').all();
-console.log(JSON.stringify(topics, null, 2));

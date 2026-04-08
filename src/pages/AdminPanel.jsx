@@ -145,7 +145,7 @@ const AdminPanel = () => {
             });
             alert('Progreso reiniciado correctamente');
             if (selectedStudent && selectedStudent.id === studentId) handleViewProgress(selectedStudent);
-        } catch (err) {
+        } catch {
             alert('Error al reiniciar progreso');
         }
     };
