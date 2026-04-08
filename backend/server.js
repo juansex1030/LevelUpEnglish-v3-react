@@ -15,6 +15,11 @@ const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.SECRET_KEY || 'levelup-secret-key';
 let bootstrapPromise;
 
+// Vercel/Cloud environments run behind a proxy. This is required so req.ip is correct.
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
+
 // ======================
 // SECURITY MIDDLEWARE
 // ======================
@@ -26,9 +31,31 @@ app.use(helmet());
 app.use(hpp());
 
 // Rate Limiting for Auth routes
+const getRateLimitKey = (req) => {
+    if (req.ip) {
+        return req.ip;
+    }
+
+    const xForwardedFor = req.headers['x-forwarded-for'];
+    if (typeof xForwardedFor === 'string' && xForwardedFor.trim() !== '') {
+        return xForwardedFor.split(',')[0].trim();
+    }
+
+    const forwarded = req.headers.forwarded;
+    if (typeof forwarded === 'string') {
+        const match = forwarded.match(/for=([^;,"]+)/i);
+        if (match && match[1]) {
+            return match[1].replace(/\[|\]/g, '');
+        }
+    }
+
+    return req.socket?.remoteAddress || 'unknown';
+};
+
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // block after 100 requests
+    keyGenerator: (req) => getRateLimitKey(req),
     message: { msg: 'Too many requests from this IP, please try again after 15 minutes' }
 });
 
