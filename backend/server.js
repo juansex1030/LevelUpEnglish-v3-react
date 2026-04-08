@@ -63,7 +63,14 @@ const authLimiter = rateLimit({
 const configuredOrigins = (process.env.FRONTEND_URL || '')
     .split(',')
     .map((origin) => origin.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((origin) => {
+        try {
+            return new URL(origin).origin;
+        } catch {
+            return origin;
+        }
+    });
 
 const normalizeOrigin = (value) => value.replace(/\/+$/, '');
 
@@ -71,6 +78,12 @@ const normalizedConfiguredOrigins = configuredOrigins.map(normalizeOrigin);
 
 const isAllowedOrigin = (origin) => {
     if (!origin) return true; // non-browser / server-to-server
+
+    // If FRONTEND_URL is not configured, avoid blocking production preflight.
+    if (normalizedConfiguredOrigins.length === 0) {
+        return true;
+    }
+
     const normalizedOrigin = normalizeOrigin(origin);
     if (normalizedConfiguredOrigins.includes(normalizedOrigin)) return true;
     if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
@@ -78,7 +91,7 @@ const isAllowedOrigin = (origin) => {
     return false;
 };
 
-app.use(cors({
+const corsMiddleware = cors({
     origin: (origin, callback) => {
         if (isAllowedOrigin(origin)) {
             return callback(null, true);
@@ -88,7 +101,10 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     optionsSuccessStatus: 204,
-}));
+});
+
+app.use(corsMiddleware);
+app.options(/.*/, corsMiddleware);
 
 // Body parser with size limit to prevent DoS
 app.use(express.json({ limit: '10kb' }));
