@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import PracticeEngine from '../components/PracticeEngine';
+import AdBanner from '../components/AdBanner';
 import API_URL from '../api/config';
 import './LevelGrid.css'; // Let's reuse LevelGrid CSS for sidebar and colors for now
 
@@ -235,7 +236,10 @@ const TopicViewer = () => {
                     </div>
                 </section>
 
-                <div className="topic-navigation d-flex justify-content-between mt-5 pt-4" style={{ borderTop: '1px solid var(--color-borde)' }}>
+                {/* Ad: Horizontal banner above navigation — alta visibilidad, no interrumpe */}
+                <AdBanner type="horizontal" className="mt-4" />
+
+                <div className="topic-navigation d-flex justify-content-between mt-4 pt-4" style={{ borderTop: '1px solid var(--color-borde)' }}>
                     {parseInt(topicId) > 1 ? (
                         <Link to={`/niveles/${nivel}/topic/${parseInt(topicId) - 1}`} className="btn btn-outline-secondary">
                             <i className="bi bi-arrow-left me-2"></i> Previous

@@ -39,6 +39,7 @@ const initDatabase = async () => {
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             is_admin BOOLEAN DEFAULT FALSE,
+            is_premium BOOLEAN DEFAULT FALSE,
             avatar TEXT DEFAULT 'default',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -54,9 +55,28 @@ const initDatabase = async () => {
             icon TEXT,
             theory TEXT,
             practice TEXT,
+            premium_practice TEXT,
             UNIQUE(level, number)
         );
     `);
+
+    // --- Automigrate: Ensure columns exist ---
+    const columnsToEnsure = [
+        { table: 'users', column: 'is_premium', type: 'BOOLEAN DEFAULT FALSE' },
+        { table: 'topics', column: 'premium_practice', type: 'TEXT' }
+    ];
+
+    for (const { table, column, type } of columnsToEnsure) {
+        await query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='${table}' AND column_name='${column}') THEN
+                    ALTER TABLE ${table} ADD COLUMN ${column} ${type};
+                END IF;
+            END
+            $$;
+        `);
+    }
 
     await query(`
         CREATE TABLE IF NOT EXISTS progress (

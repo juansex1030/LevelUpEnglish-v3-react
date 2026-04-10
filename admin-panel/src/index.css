@@ -1,0 +1,752 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+/* --- VARIABLES DE COLOR PRINCIPALES --- */
+/* Por defecto, cargamos el TEMA OSCURO */
+:root {
+    /* --- PALETA MIDNIGHT TEAL (Modo Claro/Por defecto adaptado) --- */
+    --color-fondo: #EEEEEE;
+    --color-fondo-secundario: #FFFFFF;
+    --color-borde: rgba(57, 62, 70, 0.2);
+    --color-texto-principal: #222831;
+    --color-texto-secundario: #393E46;
+
+    --acento-primario: #00ADB5;
+    --acento-secundario: #00ADB5;
+
+    /* Feedback Colors */
+    --feedback-correcto: #00ADB5;
+    --feedback-incorrecto: #DC2626;
+    --feedback-pista: #F59E0B;
+
+    --sombra-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --sombra-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --sombra-titulo: none;
+}
+
+/* --- MODO OSCURO (Restaurado & Refinado) --- */
+[data-bs-theme="dark"] {
+    --color-fondo: #222831;
+    --color-fondo-secundario: #393E46;
+    --color-borde: rgba(238, 238, 238, 0.15);
+
+    --color-texto-principal: #EEEEEE;
+    --color-texto-secundario: #b4bac2;
+
+    --acento-primario: #00ADB5;
+    --acento-secundario: #00ADB5;
+
+    --feedback-correcto: #00ADB5;
+    --feedback-incorrecto: #F87171;
+    --feedback-pista: #FBBF24;
+
+    --sombra-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --sombra-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+
+    --sombra-titulo: 0 0 20px rgba(0, 173, 181, 0.15);
+}
+
+/* Definimos el TEMA CLARO cuando el body tenga la clase "light-mode" */
+body.light-mode {
+    --color-fondo: #EEEEEE;
+    --color-fondo-secundario: #FFFFFF;
+    --color-borde: rgba(57, 62, 70, 0.2);
+    --color-texto-principal: #222831;
+    --color-texto-secundario: #393E46;
+
+    --acento-primario: #00ADB5;
+    --acento-secundario: #00ADB5;
+
+    --feedback-correcto: #00ADB5;
+    --feedback-incorrecto: #DC2626;
+    --feedback-pista: #F59E0B;
+
+    --sombra-titulo: none;
+}
+
+
+/* --- Estilos Generales --- */
+
+body {
+    background-color: var(--color-fondo);
+    color: var(--color-texto-principal);
+    font-family: 'Poppins', sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+    overflow-x: hidden;
+}
+
+.no-transition * {
+    transition: none !important;
+}
+
+/* --- Barra de Navegación --- */
+.navbar {
+    background-color: var(--color-fondo-secundario);
+    border-bottom: 1px solid var(--color-borde);
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.navbar-brand,
+.nav-link {
+    color: var(--color-texto-principal) !important;
+}
+
+.nav-link:hover {
+    color: var(--acento-primario) !important;
+}
+
+.nav-link.active {
+    color: var(--acento-secundario) !important;
+    font-weight: bold;
+}
+
+.brand-logo-box {
+    background-color: var(--color-fondo-secundario);
+    /* Default for compatibility */
+    border: 1px solid var(--color-borde);
+    border-radius: 8px;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s, background-color 0.3s;
+}
+
+/* Light Mode Specific: Make logo box dark so white logo pops */
+body:not([data-bs-theme="dark"]) .brand-logo-box {
+    background-color: var(--color-texto-principal);
+    /* Dark background in light mode */
+    border-color: transparent;
+}
+
+/* Dark Mode Specific: Keep it subtle */
+[data-bs-theme="dark"] .brand-logo-box {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--color-borde);
+}
+
+.navbar-brand:hover .brand-logo-box {
+    transform: scale(1.1) rotate(-5deg);
+    border-color: var(--acento-primario);
+}
+
+body:not([data-bs-theme="dark"]) .navbar-brand:hover .brand-logo-box {
+    background-color: var(--acento-primario);
+    /* Indigo on hover */
+}
+
+/* --- LOGIN / REGISTER CARDS --- */
+.card.shadow-lg {
+    border: 1px solid var(--color-borde) !important;
+    background-color: var(--color-fondo-secundario);
+    box-shadow: var(--sombra-card) !important;
+}
+
+/* Ensure inputs are visible and friendly */
+.form-control {
+    background-color: var(--color-fondo);
+    border: 1px solid var(--color-borde);
+    color: var(--color-texto-principal);
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+}
+
+.form-control:focus {
+    background-color: var(--color-fondo-secundario);
+    border-color: var(--acento-primario);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    /* Soft indigo ring */
+}
+
+/* --- PÁGINA DE INICIO (INDEX) --- */
+.main-title {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: var(--color-texto-principal);
+}
+
+.text-muted {
+    color: var(--color-texto-secundario) !important;
+}
+
+.word-of-the-day-card {
+    background-size: cover;
+    background-position: center;
+    border-radius: 1rem;
+    padding: 2rem;
+    position: relative;
+    color: white;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    border: 1px solid var(--color-borde);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.word-of-the-day-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(17, 24, 39, 0.9) 20%, rgba(17, 24, 39, 0.2) 100%);
+    z-index: 1;
+}
+
+.word-of-the-day-card .content {
+    position: relative;
+    z-index: 2;
+}
+
+.word-of-the-day-card .tag {
+    display: inline-block;
+    background-color: var(--acento-primario);
+    color: var(--color-fondo);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.word-of-the-day-card h3 {
+    font-size: 2.5rem;
+    margin: 0;
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.word-of-the-day-card p {
+    font-size: 1.2rem;
+    margin: 0;
+    color: #cbd5e1;
+}
+
+.level-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    padding-top: 2rem;
+}
+
+.level-card-link {
+    text-decoration: none;
+}
+
+.level-card {
+    background: var(--color-fondo-secundario);
+    border: 1px solid var(--color-borde);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    border-radius: 1rem;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        box-shadow 0.4s ease,
+        background-color 0.3s,
+        border-color 0.3s;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+}
+
+.level-card-link:hover .level-card {
+    transform: translateY(-10px) scale(1.02);
+    border-color: var(--glow-color, var(--acento-primario));
+    box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.3),
+        0 0 20px -5px var(--glow-color, var(--acento-primario));
+}
+
+.card-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    display: block;
+    color: var(--glow-color);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.4s ease;
+}
+
+.level-card-link:hover .card-icon {
+    transform: scale(1.2) rotate(10deg);
+    text-shadow: 0 0 15px var(--glow-color);
+}
+
+.card-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--color-texto-principal);
+    margin-bottom: 0.5rem;
+}
+
+.card-description {
+    color: var(--color-texto-secundario);
+    font-size: 1rem;
+    line-height: 1.5;
+    flex-grow: 1;
+}
+
+/* Asignación de colores de acento a cada tarjeta */
+.card-a1 {
+    --glow-color: #F59E0B;
+}
+
+/* Naranja educativo (cálido, principiante) */
+.card-a2 {
+    --glow-color: var(--acento-primario);
+}
+
+/* Púrpura académico (principal) */
+.card-b1 {
+    --glow-color: #6366F1;
+}
+
+/* Índigo profesional */
+.card-b2 {
+    --glow-color: #3B82F6;
+}
+
+/* Azul intermedio */
+.card-c1 {
+    --glow-color: var(--acento-secundario);
+}
+
+/* Verde menta (éxito, avanzado) */
+
+
+/* --- PÁGINAS DE NIVELES (A1, A2...) --- */
+.level-header {
+    text-align: center;
+    margin-bottom: 4rem;
+    position: relative;
+    padding: 2rem 0;
+}
+
+.level-header .level-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 2rem;
+    border-radius: 12px;
+    background: var(--glow-color, var(--acento-primario));
+    /* Fallback */
+    background: linear-gradient(135deg, var(--glow-color, var(--acento-primario)), #111827);
+    /* Gradient fade to dark */
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    /* Soft shadow */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.level-header .level-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.level-header h1 {
+    font-size: 4.5rem;
+    font-weight: 800;
+    margin: 0;
+    /* Gradient for dark mode: white to light gray */
+    background: linear-gradient(to bottom, #ffffff 0%, #a1a1aa 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+    letter-spacing: -2px;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
+
+/* Override gradient for light mode: dark gray to gray */
+body.light-mode .level-header h1 {
+    background: linear-gradient(to bottom, #1F2937 0%, #4B5563 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.accordion-item {
+    background-color: var(--color-fondo-secundario);
+    border: 1px solid var(--color-borde);
+    margin-bottom: 1rem;
+    border-radius: 0.75rem !important;
+}
+
+.accordion-header .accordion-button {
+    background-color: var(--color-fondo-secundario);
+    color: var(--color-texto-principal);
+    font-weight: 600;
+    font-size: 1.2rem;
+    border-radius: 0.75rem;
+}
+
+.accordion-button:not(.collapsed) {
+    color: var(--acento-primario);
+    box-shadow: none;
+    background-color: var(--color-fondo-secundario);
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+}
+
+.accordion-body {
+    color: var(--color-texto-principal);
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+
+.accordion-body h3,
+.accordion-body h5 {
+    color: var(--color-texto-principal);
+    border-left: 4px solid var(--glow-color, var(--acento-primario));
+    padding-left: 12px;
+    margin-top: 1.8rem;
+    margin-bottom: 1.2rem;
+}
+
+.practice-game {
+    background-color: var(--color-fondo);
+    border: 1px solid var(--color-borde);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+}
+
+.practice-game p,
+.practice-game h4,
+.practice-game h5 {
+    color: var(--color-texto-principal);
+}
+
+.practice-game .form-control {
+    background-color: var(--color-borde);
+    color: var(--color-texto-principal);
+    border: 1px solid var(--color-borde);
+    font-size: 1.1rem;
+}
+
+.practice-game .btn {
+    background-color: var(--glow-color, var(--acento-primario));
+    color: var(--color-fondo);
+    border: none;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+body.light-mode .practice-game .btn {
+    color: #FFFFFF;
+}
+
+/* --- FEEDBACK, ANIMACIÓN Y FOOTER --- */
+.feedback {
+    margin-top: 1rem;
+    font-weight: bold;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.feedback-correct,
+.practice-game .feedback-correct {
+    color: var(--feedback-correcto) !important;
+}
+
+.feedback-incorrect,
+.practice-game .feedback-incorrect {
+    color: var(--feedback-incorrecto) !important;
+}
+
+.feedback-hint {
+    color: var(--feedback-pista);
+    font-style: italic;
+    font-size: 1rem;
+}
+
+.demonstrative-lab,
+.animation-container {
+    background-color: var(--color-fondo);
+}
+
+.animation-zone {
+    border: 2px dashed var(--color-borde);
+}
+
+.animation-zone::before {
+    color: var(--color-texto-secundario);
+}
+
+.animated-object {
+    background-color: var(--glow-color, var(--acento-secundario));
+}
+
+footer {
+    background-color: var(--color-fondo-secundario);
+    color: var(--color-texto-secundario);
+    border-top: 1px solid var(--color-borde);
+}
+
+/* --- RESPONSIVE DESIGN (Dispositivos Móviles y Tablets) --- */
+
+@media (max-width: 991px) {
+
+    /* Ajustes para Tablets y Pantallas Medianas */
+    .main-title {
+        font-size: 2.2rem;
+    }
+
+    .level-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .word-of-the-day-card {
+        min-height: 250px;
+    }
+
+    /* --- MOBILE SIDEBAR MENU --- */
+    .navbar-collapse {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        height: 100vh !important;
+        width: 280px;
+        background-color: var(--color-fondo-secundario);
+        padding: 1.5rem;
+        transition: left 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        z-index: 1050;
+        overflow-y: auto;
+        box-shadow: 2px 0 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .navbar-collapse.show {
+        left: 0;
+    }
+
+    /* Overlay cuando el menú está abierto */
+    .navbar-collapse::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 280px;
+        width: calc(100vw - 280px);
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    .navbar-collapse.show::before {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .navbar-nav {
+        flex-direction: column;
+        align-items: flex-start !important;
+        width: 100%;
+        margin: 0 !important;
+    }
+
+    .nav-item {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .nav-link {
+        padding: 0.8rem 1rem !important;
+        border-radius: 8px;
+        width: 100%;
+        display: block;
+        transition: background-color 0.2s, transform 0.2s;
+    }
+
+    .nav-link:hover {
+        background-color: rgba(45, 212, 191, 0.1);
+        transform: translateX(5px);
+    }
+
+    /* Separador visual entre niveles y botones de acción */
+    .nav-item:nth-child(7) {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--color-borde);
+    }
+
+    /* Botones de Login/Register en el menú móvil */
+    .nav-item .btn {
+        width: 100%;
+        padding: 0.8rem;
+        margin-bottom: 0.8rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 8px;
+    }
+
+    .nav-item .btn-outline-primary {
+        margin-right: 0 !important;
+    }
+
+    /* Dropdown del usuario en móvil */
+    .nav-item.dropdown .dropdown-menu {
+        position: static !important;
+        transform: none !important;
+        width: 100%;
+        border: none;
+        background-color: transparent;
+        box-shadow: none;
+        padding-left: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .dropdown-item {
+        border-radius: 6px;
+        padding: 0.7rem 1rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .dropdown-item:hover {
+        background-color: rgba(45, 212, 191, 0.1);
+    }
+
+    /* Botón de toggle del tema */
+    .nav-item:last-child {
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid var(--color-borde);
+    }
+
+    #theme-toggle {
+        width: 100%;
+        padding: 0.8rem;
+        border-radius: 8px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Ajustes generales para Móviles grandes y Tablets pequeñas */
+
+    .level-header h1 {
+        font-size: 2rem;
+    }
+
+    .level-header {
+        margin-bottom: 2rem;
+    }
+
+    .word-of-the-day-card h3 {
+        font-size: 1.8rem;
+    }
+
+    .word-of-the-day-card p {
+        font-size: 1rem;
+    }
+
+    .level-card {
+        padding: 2rem 1.5rem;
+    }
+
+    .card-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .card-title {
+        font-size: 1.5rem;
+    }
+
+    /* Navegación */
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 576px) {
+    /* Ajustes para Móviles (Teléfonos) */
+
+    main.container {
+        margin-top: 2rem !important;
+        /* Reducir margen superior */
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .main-title {
+        font-size: 1.8rem;
+    }
+
+    .level-header h1 {
+        font-size: 1.8rem;
+    }
+
+    .accordion-button {
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .accordion-body {
+        font-size: 1rem;
+        padding: 1rem;
+    }
+
+    .practice-game {
+        padding: 1rem;
+    }
+
+    .practice-game .btn {
+        width: 100%;
+        /* Botones de ancho completo en móvil para mejor tactilidad */
+        margin-top: 0.5rem;
+    }
+
+    .word-of-the-day-card {
+        padding: 1.5rem;
+        min-height: 220px;
+    }
+
+    .word-of-the-day-card h3 {
+        font-size: 1.5rem;
+    }
+
+    /* Ajustes de tablas si no son responsive */
+    .table thead {
+        font-size: 0.9rem;
+    }
+
+    .table td {
+        padding: 0.5rem;
+    }
+}
+
+/* ===== Game Button Visibility Fix =====
+   btn-outline-light is invisible in light mode (white-on-white).
+   This overrides it to be theme-aware using a secondary outline style. */
+body:not([data-bs-theme="dark"]) .btn-outline-light {
+    color: #495057 !important;
+    border-color: #ced4da !important;
+    background-color: transparent;
+}
+body:not([data-bs-theme="dark"]) .btn-outline-light:hover {
+    color: #fff !important;
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+body:not([data-bs-theme="dark"]) .btn-outline-light.active,
+body:not([data-bs-theme="dark"]) .btn-outline-light:active,
+body:not([data-bs-theme="dark"]) .btn-outline-light.btn-success {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: #fff !important;
+}
+body:not([data-bs-theme="dark"]) .btn-outline-light.btn-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #fff !important;
+}

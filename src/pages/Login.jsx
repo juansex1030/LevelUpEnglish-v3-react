@@ -15,6 +15,7 @@ const Login = () => {
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleChange = (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -29,10 +30,11 @@ const Login = () => {
         try {
             const response = await axios.post(`${API_URL}/auth/login`, formData);
             login(response.data.token, response.data.user);
+            sessionStorage.setItem('show_welcome', 'true');
             navigate('/learn');
             setLoading(false);
         } catch (err) {
-            setError(err.response?.data?.error || 'Inicio de sesión fallido. Verifica tu correo y contraseña.');
+            setError(err.response?.data?.msg || err.response?.data?.error || 'Inicio de sesión fallido. Verifica tu correo y contraseña.');
             setLoading(false);
         }
     };
@@ -65,15 +67,26 @@ const Login = () => {
 
                                 <div className="mb-3">
                                     <label htmlFor="password" className="form-label">Contraseña</label>
-                                    <input 
-                                        type="password" 
-                                        className="form-control" 
-                                        id="password" 
-                                        name="password"
-                                        value={formData.password}
-                                        onChange={handleChange}
-                                        required 
-                                    />
+                                    <div className="input-group">
+                                        <input 
+                                            type={showPassword ? 'text' : 'password'}
+                                            className="form-control" 
+                                            id="password" 
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleChange}
+                                            required 
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-secondary"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            tabIndex={-1}
+                                            title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                        >
+                                            <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="mb-3 form-check">

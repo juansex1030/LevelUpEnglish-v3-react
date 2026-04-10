@@ -1,0 +1,103 @@
+/* ===========================
+   AdBanner — Estilos base
+   =========================== */
+
+.ad-banner-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 1.5rem auto;
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+/* Etiqueta "Publicidad" discreta */
+.ad-label {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-texto-secundario, #9ca3af);
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* ---- Placeholder (desarrollo) ---- */
+.ad-placeholder {
+    background: repeating-linear-gradient(
+        -45deg,
+        rgba(128, 128, 128, 0.04),
+        rgba(128, 128, 128, 0.04) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+    border: 1.5px dashed var(--color-borde, rgba(255,255,255,0.12));
+    min-height: 60px;
+}
+
+.ad-placeholder-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    color: var(--color-texto-secundario, #9ca3af);
+    font-size: 0.8rem;
+    opacity: 0.5;
+    padding: 1rem;
+    text-align: center;
+}
+
+.ad-placeholder-inner i {
+    font-size: 1.4rem;
+    opacity: 0.6;
+}
+
+.ad-placeholder-inner small {
+    font-size: 0.65rem;
+    opacity: 0.7;
+}
+
+/* ---- Tipos de banner ---- */
+
+/* Leaderboard horizontal — ancho completo, altura fija */
+.ad-horizontal {
+    width: 100%;
+    max-width: 100%;
+    min-height: 90px;
+}
+
+/* Cuadrado — centrado */
+.ad-square {
+    width: 300px;
+    max-width: 100%;
+    min-height: 250px;
+}
+
+/* Sidebar / skyscraper */
+.ad-sidebar {
+    width: 160px;
+    min-height: 600px;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .ad-horizontal {
+        min-height: 60px;
+    }
+
+    .ad-square {
+        width: 100%;
+        min-height: 200px;
+    }
+
+    .ad-sidebar {
+        display: none; /* Ocultar sidebar en móvil */
+    }
+}

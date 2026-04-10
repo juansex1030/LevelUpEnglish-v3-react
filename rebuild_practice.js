@@ -1,321 +1,24 @@
-import React, { useState, useEffect } from 'react';
+const fs = require('fs');
 
-/* =====================================================================
-   PracticeEngine.jsx
-   Renders game data stored as JSON in the database.
-   Supported game types:
-     - multiple_choice
-     - fill_in
-     - unscramble
-     - matching
-     - spell_tool
-     - number_words
-     - memory_game
-     - hangman_game
-     - crossword_game
-     - sentence_builder
-     - trivia_game
-     - fill_blanks_game
-===================================================================== */
+const originalCode = fs.readFileSync('src/components/PracticeEngine.jsx', 'utf8');
 
-const PracticeEngine = ({ data, onScoreUpdate }) => {
-    const [completedQuestions, setCompletedQuestions] = React.useState(new Set());
-    const [shuffledGames, setShuffledGames] = useState([]);
+const additionalGames = `
 
-    useEffect(() => {
-        if (data && data.games) {
-            setShuffledGames([...data.games].sort(() => Math.random() - 0.5));
-        }
-    }, [data]);
-
-    if (!data || !data.games) return null;
-
-    const totalQuestions = data.games.length;
-
-    const handleCorrect = (gameIdx) => {
-        const key = `${gameIdx}`;
-        if (completedQuestions.has(key)) return;
-
-        const newSet = new Set(completedQuestions).add(key);
-        setCompletedQuestions(newSet);
-        
-        if (onScoreUpdate) {
-            const scorePercent = Math.round((newSet.size / totalQuestions) * 100);
-            onScoreUpdate(scorePercent);
-        }
-    };
-
-    return (
-        <div className="practice-engine">
-            {shuffledGames.map((game, i) => (
-                <div key={i} className="mb-5 p-4 bg-dark rounded shadow-sm border border-secondary" style={{ position: 'relative' }}>
-                    <div className="d-flex align-items-center mb-3 border-bottom border-secondary pb-3">
-                        <div className="game-icon bg-gradient me-3 p-3 rounded-circle shadow-sm" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
-                            <span className="fs-3">🎮</span>
-                        </div>
-                        <div>
-                            <h4 className="fw-bold mb-1 text-white">{game.title}</h4>
-                            <p className="text-secondary mb-0">{game.instruction}</p>
-                        </div>
-                        
-                        {completedQuestions.has(`${i}`) && (
-                            <div className="ms-auto animate__animated animate__zoomIn">
-                                <span className="badge bg-success rounded-pill p-2 px-3 shadow-sm">
-                                    <i className="bi bi-check-circle-fill me-2"></i>Completado
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                    
-                    <div className="game-board position-relative" style={{ minHeight: '300px', filter: completedQuestions.has(`${i}`) ? 'brightness(0.7) grayscale(0.5)' : 'none', transition: 'all 0.5s', pointerEvents: completedQuestions.has(`${i}`) ? 'none' : 'auto' }}>
-                        {game.type === 'multiple_choice' && <MultipleChoice game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'fill_in'         && <FillIn game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'unscramble'      && <Unscramble game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'matching'        && <Matching game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'spell_tool'      && <SpellTool game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'number_words'    && <NumberWords game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'memory_game'     && <MemoryGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'hangman_game'    && <HangmanGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'crossword_game'  && <CrosswordGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'sentence_builder'&& <SentenceBuilderGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'trivia_game'     && <TriviaGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'fill_blanks_game'&& <FillBlanksGame game={game} onCorrect={() => handleCorrect(i)} />}
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-};
-
-/* ── shared feedback banner ─────────────────────────────────────────── */
-const Feedback = ({ fb }) => {
-    if (!fb) return null;
-    const ok = fb.type === 'success';
-    return (
-        <div className={`mt-3 p-2 rounded text-center fw-bold ${ok ? 'text-success' : 'text-danger'}`}
-             style={{ background: ok ? 'rgba(40,167,69,.12)' : 'rgba(220,53,69,.12)', fontSize: '0.95rem' }}>
-            {fb.text}
-        </div>
-    );
-};
-
-/* ── 1. Multiple Choice ─────────────────────────────────────────────── */
-const MultipleChoice = ({ game, onCorrect }) => {
-    const [idx, setIdx] = useState(0);
-    const [fb, setFb] = useState(null);
-    const q = game.questions[idx];
-
-    const shuffledOptions = React.useMemo(() => {
-        if (!q || !q.options) return [];
-        return [...q.options].sort(() => Math.random() - 0.5);
-    }, [q]);
-
-    const choose = (opt) => {
-        if (opt === q.a) {
-            setFb({ type: 'success', text: '✅ Correct!' });
-            if (idx === game.questions.length - 1) {
-                setTimeout(() => onCorrect(), 1400);
-            } else {
-                setTimeout(() => { setFb(null); setIdx(i => i + 1); }, 1400);
-            }
-        } else {
-            setFb({ type: 'error', text: `❌ Try again!` });
-        }
-    };
-
-    return (
-        <>
-            <div className="text-center fs-5 fw-semibold mb-4 py-2 px-3 rounded" style={{ background: 'rgba(255,255,255,.05)' }}>{q.q}</div>
-            <div className="d-flex flex-wrap justify-content-center gap-2">
-                {shuffledOptions.map((opt, i) => (
-                    <button key={i} className="btn btn-outline-primary px-4 py-2" onClick={() => choose(opt)}>{opt}</button>
-                ))}
-            </div>
-            <Feedback fb={fb} />
-        </>
-    );
-};
-
-/* ── 2. Fill In ─────────────────────────────────────────────────────── */
-const FillIn = ({ game, onCorrect }) => {
-    const [idx, setIdx] = useState(0);
-    const [val, setVal] = useState('');
-    const [fb, setFb] = useState(null);
-    const q = game.questions[idx];
-
-    const check = () => {
-        if (val.trim().toLowerCase() === q.a.toLowerCase()) {
-            setFb({ type: 'success', text: '✅ Excellent!' });
-            if (idx === game.questions.length - 1) {
-                setTimeout(() => onCorrect(), 1400);
-            } else {
-                setTimeout(() => { setFb(null); setVal(''); setIdx(i => i + 1); }, 1400);
-            }
-        } else {
-            setFb({ type: 'error', text: `❌ Almost! The answer is: "${q.a}"` });
-        }
-    };
-
-    return (
-        <>
-            <div className="fs-5 fw-semibold mb-4 p-3 rounded text-center" style={{ background: 'rgba(255,255,255,.05)' }}>{q.q}</div>
-            <div className="d-flex gap-2 mb-2">
-                <input className="form-control" value={val} onChange={e => setVal(e.target.value)} />
-                <button className="btn btn-primary" onClick={check}>Check</button>
-            </div>
-            <Feedback fb={fb} />
-        </>
-    );
-};
-
-/* ── 3. Unscramble ──────────────────────────────────────────────────── */
-const Unscramble = ({ game, onCorrect }) => {
-    const [idx, setIdx] = useState(0);
-    const [val, setVal] = useState('');
-    const [fb, setFb] = useState(null);
-    const q = game.questions[idx];
-
-    const check = () => {
-        if (val.trim().toLowerCase() === q.a.toLowerCase()) {
-            setFb({ type: 'success', text: '✅ Perfect!' });
-            if (idx === game.questions.length - 1) {
-                setTimeout(() => onCorrect(), 1400);
-            } else {
-                setTimeout(() => { setFb(null); setVal(''); setIdx(i => i + 1); }, 1400);
-            }
-        } else {
-            setFb({ type: 'error', text: '❌ Not quite. Remember the correct word order.' });
-        }
-    };
-
-    return (
-        <>
-            <div className="p-3 rounded mb-4 text-center" style={{ background: 'rgba(255,255,255,.05)' }}><span className="text-muted d-block small">Scrambled:</span><span className="fw-bold fs-5">{q.q}</span></div>
-            <div className="d-flex gap-2 mb-2">
-                <input className="form-control" value={val} onChange={e => setVal(e.target.value)} />
-                <button className="btn btn-primary" onClick={check}>Check</button>
-            </div>
-            <Feedback fb={fb} />
-        </>
-    );
-};
-
-/* ── 4. Matching ─────────────────────────────────────────────────────── */
-const Matching = ({ game, onCorrect }) => {
-    const [selections, setSelections] = useState({});
-    const [fb, setFb] = useState(null);
-    const shuffled = React.useMemo(() => [...game.questions.map(q => q.a)].sort(() => Math.random() - 0.5), [game]);
-
-    const check = () => {
-        const allRight = game.questions.every((q, i) => selections[i] === q.a);
-        if (allRight) {
-            setFb({ type: 'success', text: '✅ All matches are correct! Great job!' });
-            setTimeout(() => { if (onCorrect) onCorrect(); }, 1400);
-        } else {
-            setFb({ type: 'error', text: '❌ Some matches are incorrect. Try again!' });
-        }
-    };
-
-    return (
-        <>
-            {game.questions.map((q, i) => (
-                <div key={i} className="d-flex align-items-center gap-3 mb-3">
-                    <span className="fw-semibold" style={{ minWidth: '120px' }}>{q.q}</span>
-                    <select className="form-select w-auto" onChange={e => setSelections(s => ({ ...s, [i]: e.target.value }))}>
-                        <option value="">Choose...</option>
-                        {shuffled.map((a, j) => <option key={j} value={a}>{a}</option>)}
-                    </select>
-                </div>
-            ))}
-            <button className="btn btn-primary" onClick={check}>Check</button>
-            <Feedback fb={fb} />
-        </>
-    );
-};
-
-/* ── 5. Spell Tool ──────────────────────────────────────────────────── */
-const SpellTool = ({ game, onCorrect }) => {
-    const [name, setName] = useState('');
-    const [result, setResult] = useState('');
-
-    const spell = () => {
-        if (!name.trim()) return;
-        const spelled = Array.from(name.toUpperCase()).map(c => game.alphabet[c] || c).join(' - ');
-        setResult(spelled);
-        setTimeout(() => { if (onCorrect) onCorrect(); }, 1000);
-    };
-
-    return (
-        <>
-            <div className="d-flex gap-2 mb-3">
-                <input className="form-control" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && spell()} />
-                <button className="btn btn-primary" onClick={spell}>Spell it!</button>
-            </div>
-            {result && <div className="p-3 rounded text-center fw-bold fs-5 text-info">{result}</div>}
-        </>
-    );
-};
-
-/* ── 6. Number Words ─────────────────────────────────────────────────── */
-const numberToWords = (num) => {
-    const units = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
-    const tens  = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
-    if (num === 0) return 'zero';
-    function c(n) {
-        if (n < 20) return units[n];
-        if (n < 100) return tens[Math.floor(n/10)] + (n%10 > 0 ? '-' + units[n%10] : '');
-        if (n < 1000) return units[Math.floor(n/100)] + ' hundred' + (n%100 > 0 ? ' and ' + c(n%100) : '');
-        return c(Math.floor(n/1000)) + ' thousand' + (n%1000 > 0 ? ', ' + c(n%1000) : '');
-    }
-    return c(num);
-};
-
-const NumberWords = ({ game, onCorrect }) => {
-    const min = 1, max = 10000, choices = 3;
-    const [num, setNum] = useState(() => Math.floor(Math.random() * (max - min + 1)) + min);
-    const correct = numberToWords(num);
-    const [opts, setOpts] = useState(() => {
-        const s = new Set([correct]);
-        while (s.size < choices) s.add(numberToWords(Math.floor(Math.random() * (max - min + 1)) + min));
-        return [...s].sort(() => Math.random() - 0.5);
-    });
-    const [fb, setFb] = useState(null);
-
-    const choose = (opt) => {
-        if (opt === correct) {
-            setFb({ type: 'success', text: '✅ Correct!' });
-            setTimeout(() => { if (onCorrect) onCorrect(); }, 1400);
-        } else {
-            setFb({ type: 'error', text: `❌ Incorrect. It was: "${correct}"` });
-        }
-    };
-
-    return (
-        <div className="text-center">
-            <h1 className="display-4 fw-bold text-info mb-4">{num.toLocaleString('en-US')}</h1>
-            <div className="d-flex flex-wrap justify-content-center gap-2">
-                {opts.map((o, i) => <button key={i} className="btn btn-outline-primary" onClick={() => choose(o)}>{o}</button>)}
-            </div>
-            <Feedback fb={fb} />
-        </div>
-    );
-};
-
-/* ── 7. Memory Game (Premium Arcade) ─────────────────────────────────── */
+/* ── 7. Memory Game (Premium Arcade) ────────────────────────────────── */
 const MemoryGame = ({ game, onCorrect }) => {
-    const [cards, setCards] = useState(() => {
+    const [cards, setCards] = React.useState(() => {
         if (!game.pairs) return [];
         const deck = [];
         game.pairs.forEach((pair, i) => {
-            deck.push({ id: `emoji-${i}`, matchId: i, type: 'emoji', content: pair.emoji });
-            deck.push({ id: `word-${i}`, matchId: i, type: 'word', content: pair.word });
+            deck.push({ id: \`emoji-\${i}\`, matchId: i, type: 'emoji', content: pair.emoji });
+            deck.push({ id: \`word-\${i}\`, matchId: i, type: 'word', content: pair.word });
         });
         return deck.sort(() => Math.random() - 0.5);
     });
 
-    const [flippedIdxs, setFlippedIdxs] = useState([]);
-    const [matchedIds, setMatchedIds] = useState([]);
-    const [moves, setMoves] = useState(0);
+    const [flippedIdxs, setFlippedIdxs] = React.useState([]);
+    const [matchedIds, setMatchedIds] = React.useState([]);
+    const [moves, setMoves] = React.useState(0);
 
     const handleFlip = (index) => {
         if (flippedIdxs.length === 2) return;
@@ -366,7 +69,6 @@ const MemoryGame = ({ game, onCorrect }) => {
                                 transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
                                 position: 'relative'
                             }}>
-                                {/* Front (Hidden) */}
                                 <div style={{
                                     position: 'absolute', width: '100%', height: '100%',
                                     backfaceVisibility: 'hidden',
@@ -377,7 +79,6 @@ const MemoryGame = ({ game, onCorrect }) => {
                                     display: 'flex', justifyContent: 'center', alignItems: 'center',
                                     fontSize: '2rem'
                                 }}>❓</div>
-                                {/* Back (Revealed) */}
                                 <div style={{
                                     position: 'absolute', width: '100%', height: '100%',
                                     backfaceVisibility: 'hidden',
@@ -407,10 +108,10 @@ const MemoryGame = ({ game, onCorrect }) => {
 
 /* ── 8. Hangman Game (Premium Arcade) ─────────────────────────────────── */
 const HangmanGame = ({ game, onCorrect }) => {
-    const [wordIdx, setWordIdx] = useState(0);
-    const [guessedLetters, setGuessedLetters] = useState(new Set());
-    const [lives, setLives] = useState(6);
-    const [gameStatus, setGameStatus] = useState('playing'); // playing, won_word, lost, won_all
+    const [wordIdx, setWordIdx] = React.useState(0);
+    const [guessedLetters, setGuessedLetters] = React.useState(new Set());
+    const [lives, setLives] = React.useState(6);
+    const [gameStatus, setGameStatus] = React.useState('playing');
 
     const currentWordData = game.words && game.words[wordIdx];
     const currentWord = currentWordData ? currentWordData.word.toUpperCase() : '';
@@ -486,7 +187,7 @@ const HangmanGame = ({ game, onCorrect }) => {
                             <button key={letter} 
                                 onClick={() => handleGuess(letter)}
                                 disabled={isGuessed}
-                                className={`btn fw-bold shadow-sm ${isCorrect ? 'btn-success' : (isWrong ? 'btn-danger opacity-50' : 'btn-light')}`}
+                                className={\`btn fw-bold shadow-sm \${isCorrect ? 'btn-success' : (isWrong ? 'btn-danger opacity-50' : 'btn-light')}\`}
                                 style={{ width: '45px', height: '45px' }}>
                                 {letter}
                             </button>
@@ -520,10 +221,10 @@ const HangmanGame = ({ game, onCorrect }) => {
 
 /* ── 9. Crossword Game (Premium Arcade) ────────────────────────────────── */
 const CrosswordGame = ({ game, onCorrect }) => {
-    const [userGrid, setUserGrid] = useState({});
-    const [selectedCell, setSelectedCell] = useState(null); 
-    const [selectedDir, setSelectedDir] = useState('across'); 
-    const [showErrors, setShowErrors] = useState(false);
+    const [userGrid, setUserGrid] = React.useState({});
+    const [selectedCell, setSelectedCell] = React.useState(null); 
+    const [selectedDir, setSelectedDir] = React.useState('across'); 
+    const [showErrors, setShowErrors] = React.useState(false);
 
     const answerGrid = React.useMemo(() => {
         const grid = {};
@@ -535,7 +236,7 @@ const CrosswordGame = ({ game, onCorrect }) => {
             chars.forEach((char, i) => {
                 const r = w.dir === 'down' ? w.row + i : w.row;
                 const c = w.dir === 'across' ? w.col + i : w.col;
-                const key = `${r}-${c}`;
+                const key = \`\${r}-\${c}\`;
                 grid[key] = char;
                 if (i === 0) cellNumbers[key] = w.num;
             });
@@ -549,14 +250,14 @@ const CrosswordGame = ({ game, onCorrect }) => {
         return keys.every(k => (userGrid[k] || '').toUpperCase() === answerGrid.grid[k]);
     }, [userGrid, answerGrid]);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (isWon && onCorrect) {
             onCorrect();
         }
     }, [isWon, onCorrect]);
 
     const handleCellClick = (r, c) => {
-        if (!answerGrid.grid[`${r}-${c}`]) return; 
+        if (!answerGrid.grid[\`\${r}-\${c}\`]) return; 
         if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
             setSelectedDir(prev => prev === 'across' ? 'down' : 'across');
         } else {
@@ -570,19 +271,19 @@ const CrosswordGame = ({ game, onCorrect }) => {
         const { r, c } = selectedCell;
 
         if (/^[a-zA-Z]$/.test(key)) {
-            setUserGrid(prev => ({ ...prev, [`${r}-${c}`]: key.toUpperCase() }));
+            setUserGrid(prev => ({ ...prev, [\`\${r}-\${c}\`]: key.toUpperCase() }));
             setShowErrors(false);
             const nextR = selectedDir === 'down' ? r + 1 : r;
             const nextC = selectedDir === 'across' ? c + 1 : c;
-            if (answerGrid.grid[`${nextR}-${nextC}`]) {
+            if (answerGrid.grid[\`\${nextR}-\${nextC}\`]) {
                 setSelectedCell({ r: nextR, c: nextC });
             }
         } else if (key === 'Backspace') {
-            setUserGrid(prev => ({ ...prev, [`${r}-${c}`]: '' }));
+            setUserGrid(prev => ({ ...prev, [\`\${r}-\${c}\`]: '' }));
             setShowErrors(false);
             const prevR = selectedDir === 'down' ? r - 1 : r;
             const prevC = selectedDir === 'across' ? c - 1 : c;
-            if (answerGrid.grid[`${prevR}-${prevC}`]) {
+            if (answerGrid.grid[\`\${prevR}-\${prevC}\`]) {
                 setSelectedCell({ r: prevR, c: prevC });
             }
         }
@@ -598,13 +299,13 @@ const CrosswordGame = ({ game, onCorrect }) => {
                 return w.col === selectedCell.c && selectedCell.r >= w.row && selectedCell.r < w.row + w.word.length;
             }
         });
-        return word ? `${word.num} ${word.dir === 'across' ? 'Horizontal' : 'Vertical'}: ${word.hint}` : "Selecciona una casilla para ver la pista";
+        return word ? \`\${word.num}. \${word.hint}\` : "Selecciona una casilla para ver la pista";
     };
 
     if (!game.gridSize) return null;
 
     return (
-        <div className="crossword-container" style={{ margin: '0 auto', maxWidth: '800px', outline: 'none' }} tabIndex="0" onKeyDown={handleKeyDown}>
+        <div className="crossword-container" style={{ outline: 'none' }} tabIndex="0" onKeyDown={handleKeyDown}>
             {isWon && (
                 <div className="alert alert-success text-center fw-bold animate__animated animate__tada my-3 shadow-sm border-0">
                     <i className="bi bi-star-fill text-warning me-2"></i> ¡Crucigrama perfecto! <i className="bi bi-star-fill text-warning ms-2"></i>
@@ -619,13 +320,13 @@ const CrosswordGame = ({ game, onCorrect }) => {
             <div className="d-flex justify-content-center">
                 <div className="crossword-grid" style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: `repeat(${game.gridSize.cols}, 40px)`,
-                    gridTemplateRows: `repeat(${game.gridSize.rows}, 40px)`,
+                    gridTemplateColumns: \`repeat(\${game.gridSize.cols}, 40px)\`,
+                    gridTemplateRows: \`repeat(\${game.gridSize.rows}, 40px)\`,
                     gap: '2px', background: '#222', padding: '4px', borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)'
                 }}>
                     {Array.from({ length: game.gridSize.rows }).map((_, r) => 
                         Array.from({ length: game.gridSize.cols }).map((_, c) => {
-                            const isCell = !!answerGrid.grid[`${r}-${c}`];
+                            const isCell = !!answerGrid.grid[\`\${r}-\${c}\`];
                             const isSelected = selectedCell && selectedCell.r === r && selectedCell.c === c;
                             
                             let isHighlightedPath = false;
@@ -644,14 +345,14 @@ const CrosswordGame = ({ game, onCorrect }) => {
                                 }
                             }
 
-                            if (!isCell) return <div key={`${r}-${c}`} style={{ background: 'transparent' }} />;
+                            if (!isCell) return <div key={\`\${r}-\${c}\`} style={{ background: 'transparent' }} />;
 
                             let bg = isWon ? '#28a745' : (isSelected ? '#ffca28' : (isHighlightedPath ? '#fffde7' : 'white'));
                             let color = isWon ? 'white' : 'black';
                             
-                            const currentVal = userGrid[`${r}-${c}`];
+                            const currentVal = userGrid[\`\${r}-\${c}\`];
                             if (showErrors && currentVal) {
-                                if (currentVal !== answerGrid.grid[`${r}-${c}`]) {
+                                if (currentVal !== answerGrid.grid[\`\${r}-\${c}\`]) {
                                     bg = '#f8d7da'; color = '#dc3545';
                                 } else {
                                     bg = '#d4edda'; color = '#28a745';
@@ -659,10 +360,10 @@ const CrosswordGame = ({ game, onCorrect }) => {
                             }
 
                             return (
-                                <div key={`${r}-${c}`} onClick={() => handleCellClick(r, c)}
+                                <div key={\`\${r}-\${c}\`} onClick={() => handleCellClick(r, c)}
                                     className="d-flex justify-content-center align-items-center position-relative fw-bold"
                                     style={{ background: bg, color: color, cursor: 'pointer', transition: 'all 0.2s' }}>
-                                    {answerGrid.cellNumbers[`${r}-${c}`] && (<span style={{ position: 'absolute', top: '1px', left: '3px', fontSize: '10px', color: '#555' }}>{answerGrid.cellNumbers[`${r}-${c}`]}</span>)}
+                                    {answerGrid.cellNumbers[\`\${r}-\${c}\`] && (<span style={{ position: 'absolute', top: '1px', left: '3px', fontSize: '10px', color: '#555' }}>{answerGrid.cellNumbers[\`\${r}-\${c}\`]}</span>)}
                                     {currentVal}
                                 </div>
                             );
@@ -710,18 +411,18 @@ const CrosswordGame = ({ game, onCorrect }) => {
 
 /* ── 10. Sentence Builder Game (Premium Arcade) ────────────────────────────────── */
 const SentenceBuilderGame = ({ game, onCorrect }) => {
-    const [sentenceIdx, setSentenceIdx] = useState(0);
-    const [availableWords, setAvailableWords] = useState([]);
-    const [selectedWords, setSelectedWords] = useState([]);
-    const [status, setStatus] = useState('playing'); 
+    const [sentenceIdx, setSentenceIdx] = React.useState(0);
+    const [availableWords, setAvailableWords] = React.useState([]);
+    const [selectedWords, setSelectedWords] = React.useState([]);
+    const [status, setStatus] = React.useState('playing'); 
 
     const currentSentence = game.sentences && game.sentences[sentenceIdx];
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (!currentSentence) return;
-        const words = currentSentence.text.split(' ').map((w, i) => ({ id: `w-\${i}`, text: w }));
+        const words = currentSentence.text.split(' ').map((w, i) => ({ id: \`w-\${i}\`, text: w }));
         if (currentSentence.distractors) {
-            currentSentence.distractors.forEach((d, i) => words.push({ id: `d-\${i}`, text: d }));
+            currentSentence.distractors.forEach((d, i) => words.push({ id: \`d-\${i}\`, text: d }));
         }
         setAvailableWords(words.sort(() => Math.random() - 0.5));
         setSelectedWords([]);
@@ -796,10 +497,10 @@ const SentenceBuilderGame = ({ game, onCorrect }) => {
 
 /* ── 11. Trivia Game (Premium Arcade) ────────────────────────────────── */
 const TriviaGame = ({ game, onCorrect }) => {
-    const [qIdx, setQIdx] = useState(0);
-    const [selectedOption, setSelectedOption] = useState(null);
-    const [status, setStatus] = useState('playing'); 
-    const [score, setScore] = useState(0);
+    const [qIdx, setQIdx] = React.useState(0);
+    const [selectedOption, setSelectedOption] = React.useState(null);
+    const [status, setStatus] = React.useState('playing'); 
+    const [score, setScore] = React.useState(0);
 
     const question = game.questions && game.questions[qIdx];
 
@@ -834,7 +535,7 @@ const TriviaGame = ({ game, onCorrect }) => {
                 <h2 className="text-warning mb-3"><i className="bi bi-trophy-fill me-2"></i>¡Trivia Completada!</h2>
                 <h4 className="text-white">Puntuación: {score} / {game.questions.length}</h4>
                 <div className="progress mt-4 bg-dark" style={{ height: '20px' }}>
-                    <div className="progress-bar bg-success progress-bar-striped progress-bar-animated" style={{ width: `${(score / game.questions.length) * 100}%` }}></div>
+                    <div className="progress-bar bg-success progress-bar-striped progress-bar-animated" style={{ width: \`\${(score / game.questions.length) * 100}%\` }}></div>
                 </div>
             </div>
         );
@@ -860,7 +561,7 @@ const TriviaGame = ({ game, onCorrect }) => {
                         else { bg = 'rgba(0,0,0,0.2)'; }
                     }
                     return (
-                        <button key={idx} className={`btn d-flex align-items-center text-start p-3 fw-bold fs-5 ${selectedOption === null ? 'trivia-btn-hover' : ''}`}
+                        <button key={idx} className={\`btn d-flex align-items-center text-start p-3 fw-bold fs-5 \${selectedOption === null ? 'trivia-btn-hover' : ''}\`}
                             style={{ background: bg, border: border, color: 'white', transition: 'all 0.2s rounded' }}
                             onClick={() => handleSelect(idx)} disabled={selectedOption !== null}>
                             <span className="me-3 opacity-50">{String.fromCharCode(65 + idx)}.</span>{opt}{icon}
@@ -874,9 +575,9 @@ const TriviaGame = ({ game, onCorrect }) => {
 
 /* ── 12. Fill in the Blanks Game (Premium Arcade) ────────────────────────────────── */
 const FillBlanksGame = ({ game, onCorrect }) => {
-    const [sentenceIdx, setSentenceIdx] = useState(0);
-    const [userInputs, setUserInputs] = useState('');
-    const [status, setStatus] = useState('playing');
+    const [sentenceIdx, setSentenceIdx] = React.useState(0);
+    const [userInputs, setUserInputs] = React.useState('');
+    const [status, setStatus] = React.useState('playing');
 
     const currentData = game.sentences && game.sentences[sentenceIdx];
 
@@ -941,7 +642,7 @@ const FillBlanksGame = ({ game, onCorrect }) => {
             <form onSubmit={handleSubmit} className="mb-4 mt-5">
                 {renderTextWithInput()}
                 <div className="mt-5">
-                    <button type="submit" className={`btn btn-lg rounded-pill px-5 fw-bold shadow-sm ${status === 'correct' ? 'btn-success' : 'btn-warning'}`} disabled={!userInputs.trim() || status === 'checking' || status === 'correct'}>
+                    <button type="submit" className={\`btn btn-lg rounded-pill px-5 fw-bold shadow-sm \${status === 'correct' ? 'btn-success' : 'btn-warning'}\`} disabled={!userInputs.trim() || status === 'checking' || status === 'correct'}>
                         {status === 'checking' ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-chevron-double-right me-2"></i>} Comprobar
                     </button>
                 </div>
@@ -951,4 +652,79 @@ const FillBlanksGame = ({ game, onCorrect }) => {
     );
 };
 
-export default PracticeEngine;
+`;
+
+const newEngine = originalCode.replace(
+    /const PracticeEngine =[^]*?return \([^]*?\}\);\s*\};/, 
+    \`const PracticeEngine = ({ data, onScoreUpdate }) => {
+    const [completedQuestions, setCompletedQuestions] = React.useState(new Set());
+    const [shuffledGames, setShuffledGames] = React.useState([]);
+
+    React.useEffect(() => {
+        if (data && data.games) {
+            setShuffledGames([...data.games].sort(() => Math.random() - 0.5));
+        }
+    }, [data]);
+
+    if (!data || !data.games) return null;
+
+    const totalQuestions = data.games.length;
+
+    const handleCorrect = (gameIdx) => {
+        const key = \\\`\${gameIdx}\\\`;
+        if (completedQuestions.has(key)) return;
+
+        const newSet = new Set(completedQuestions).add(key);
+        setCompletedQuestions(newSet);
+        
+        if (onScoreUpdate) {
+            const scorePercent = Math.round((newSet.size / totalQuestions) * 100);
+            onScoreUpdate(scorePercent);
+        }
+    };
+
+    return (
+        <div className="practice-engine">
+            {shuffledGames.map((game, i) => (
+                <div key={i} className="mb-5 p-4 bg-dark rounded shadow-sm border border-secondary" style={{ position: 'relative' }}>
+                    <div className="d-flex align-items-center mb-3 border-bottom border-secondary pb-3">
+                        <div className="game-icon bg-gradient me-3 p-3 rounded-circle shadow-sm" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
+                            <span className="fs-3">🎮</span>
+                        </div>
+                        <div>
+                            <h4 className="fw-bold mb-1 text-white">{game.title}</h4>
+                            <p className="text-secondary mb-0">{game.instruction}</p>
+                        </div>
+                        
+                        {completedQuestions.has(\\\`\${i}\\\`) && (
+                            <div className="ms-auto animate__animated animate__zoomIn">
+                                <span className="badge bg-success rounded-pill p-2 px-3 shadow-sm">
+                                    <i className="bi bi-check-circle-fill me-2"></i>Completado
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="game-board position-relative" style={{ minHeight: '300px', filter: completedQuestions.has(\\\`\${i}\\\`) ? 'brightness(0.7) grayscale(0.5)' : 'none', transition: 'all 0.5s', pointerEvents: completedQuestions.has(\\\`\${i}\\\`) ? 'none' : 'auto' }}>
+                        {game.type === 'multiple_choice' && <MultipleChoice game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'fill_in'         && <FillIn game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'unscramble'      && <Unscramble game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'matching'        && <Matching game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'spell_tool'      && <SpellTool game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'number_words'    && <NumberWords game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'memory_game'     && <MemoryGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'hangman_game'    && <HangmanGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'crossword_game'  && <CrosswordGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'sentence_builder'&& <SentenceBuilderGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'trivia_game'     && <TriviaGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'fill_blanks_game'&& <FillBlanksGame game={game} onCorrect={() => handleCorrect(i)} />}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};\`)
+.replace(/const GameCard = [^]*?\s*?/, '')
+.replace('export default PracticeEngine;', additionalGames + '\nexport default PracticeEngine;');
+
+fs.writeFileSync('src/components/PracticeEngine.jsx', newEngine);

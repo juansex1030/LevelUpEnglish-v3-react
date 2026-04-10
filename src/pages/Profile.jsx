@@ -4,7 +4,7 @@ import axios from 'axios';
 import API_URL from '../api/config';
 
 const Profile = () => {
-    const { user, login } = useAuth();
+    const { user, login, token } = useAuth();
     
     // Fallback if not loaded yet
     const initialUsername = user?.username || '';
@@ -46,7 +46,6 @@ const Profile = () => {
 
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
             const response = await axios.put(`${API_URL}/auth/profile`, {
                 newUsername: formData.newUsername,
                 currentPassword: formData.currentPassword,

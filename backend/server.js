@@ -6,13 +6,20 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 
 // Database Import
 const { query, initDatabase } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SECRET_KEY = process.env.SECRET_KEY || 'levelup-secret-key';
+const SECRET_KEY = process.env.SECRET_KEY;
+
+if (!SECRET_KEY && process.env.NODE_ENV === 'production') {
+    console.error('CRITICAL: SECRET_KEY not found in environment variables. Refusing to start in production.');
+    process.exit(1);
+}
+const ACTUAL_SECRET = SECRET_KEY || 'levelup-dev-secret-key';
 let bootstrapPromise;
 
 // Vercel/Cloud environments run behind a proxy. This is required so req.ip is correct.
@@ -106,6 +113,35 @@ const corsMiddleware = cors({
 app.use(corsMiddleware);
 app.options(/.*/, corsMiddleware);
 
+// Stripe Webhook MUST exist before express.json()
+app.post('/api/v1/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    const payload = req.body;
+    const sig = req.headers['stripe-signature'];
+    
+    let event;
+    try {
+        if (!process.env.STRIPE_WEBHOOK_SECRET) {
+            // Unsecured fallback for local testing without CLI if needed
+            event = JSON.parse(payload.toString());
+        } else {
+            event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET);
+        }
+    } catch (err) {
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const userId = session.client_reference_id;
+        if (userId) {
+            await query('UPDATE users SET is_premium = true WHERE id = $1', [userId]);
+            console.log(`[Stripe] User ${userId} is now Premium!`);
+        }
+    }
+
+    res.json({received: true});
+});
+
 // Body parser with size limit to prevent DoS
 app.use(express.json({ limit: '10kb' }));
 
@@ -153,12 +189,21 @@ const buildProgressSummary = async (userId) => {
     const total_all = totalTopicsResult.rows.reduce((acc, curr) => acc + curr.count, 0);
     const overall_percentage = total_all > 0 ? Math.round((completed_topics_count / total_all) * 100) : 0;
 
+    // ✨ ACHIEVEMENT CALCULATION
+    const achievements = [];
+    Object.keys(stats).forEach((level) => {
+        if (stats[level].total > 0 && stats[level].completed === stats[level].total) {
+            achievements.push(level);
+        }
+    });
+
     return {
         overall_percentage,
         completed_topics: completed_topics_count,
         total_topics: total_all,
         stats,
         completed_topics_by_level,
+        achievements
     };
 };
 
@@ -212,7 +257,7 @@ const authenticateToken = (req, res, next) => {
 
     if (!token) return res.status(401).json({ msg: 'No token provided' });
 
-    jwt.verify(token, SECRET_KEY, (err, user) => {
+    jwt.verify(token, ACTUAL_SECRET, (err, user) => {
         if (err) return res.status(403).json({ msg: 'Invalid or expired token' });
         req.user = user;
         next();
@@ -238,17 +283,16 @@ app.post('/api/v1/auth/register', async (req, res) => {
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        const result = await query(
-            `
-            INSERT INTO users (username, email, password, avatar)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, username, email, avatar
-            `,
-            [username, email, hashedPassword, 'default']
+        const newUser = await query(
+            'INSERT INTO users (username, email, password, is_admin, is_premium) VALUES ($1, $2, $3, false, false) RETURNING id, username, email, is_admin, is_premium, avatar, created_at',
+            [username, email, hashedPassword]
         );
 
-        const user = result.rows[0];
-        const token = jwt.sign({ id: user.id, username: user.username, email: user.email, avatar: user.avatar }, SECRET_KEY);
+        const user = newUser.rows[0];
+        const token = jwt.sign(
+            { id: user.id, username: user.username, email: user.email, is_admin: user.is_admin, is_premium: user.is_premium, avatar: user.avatar }, 
+            ACTUAL_SECRET
+        );
         res.status(201).json({ token, user });
     } catch (error) {
         console.error("Register error:", error.message);
@@ -268,13 +312,19 @@ app.post('/api/v1/auth/login', async (req, res) => {
         return res.status(401).json({ msg: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user.id, username: user.username, email: user.email, is_admin: user.is_admin, avatar: user.avatar }, SECRET_KEY);
-    res.json({ token, user: { id: user.id, username: user.username, email: user.email, is_admin: user.is_admin, avatar: user.avatar } });
+    const token = jwt.sign(
+        { id: user.id, username: user.username, email: user.email, is_admin: user.is_admin, is_premium: user.is_premium, avatar: user.avatar }, 
+        ACTUAL_SECRET
+    );
+    res.json({ token, user: { id: user.id, username: user.username, email: user.email, is_admin: user.is_admin, is_premium: user.is_premium, avatar: user.avatar } });
 });
 
 app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
-    const result = await query('SELECT id, username, email, is_admin, avatar FROM users WHERE id = $1', [req.user.id]);
-    const user = result.rows[0] || null;
+    const userResult = await query(
+        'SELECT id, username, email, is_admin, is_premium, avatar, created_at FROM users WHERE id = $1',
+        [req.user.id]
+    );
+    const user = userResult.rows[0] || null;
     res.json({ user });
 });
 
@@ -307,11 +357,14 @@ app.put('/api/v1/auth/profile', authenticateToken, async (req, res) => {
             updatedAvatar = avatar;
         }
 
-        const token = jwt.sign({ id: user.id, username: updatedUsername, email: user.email, is_admin: user.is_admin, avatar: updatedAvatar }, SECRET_KEY);
+        const token = jwt.sign(
+            { id: user.id, username: updatedUsername, email: user.email, is_admin: user.is_admin, is_premium: user.is_premium, avatar: updatedAvatar }, 
+            ACTUAL_SECRET
+        );
         res.json({ 
             msg: 'Perfil actualizado exitosamente', 
             token, 
-            user: { id: user.id, username: updatedUsername, email: user.email, is_admin: user.is_admin, avatar: updatedAvatar } 
+            user: { id: user.id, username: updatedUsername, email: user.email, is_admin: user.is_admin, is_premium: user.is_premium, avatar: updatedAvatar } 
         });
 
     } catch (error) {
@@ -324,8 +377,19 @@ app.put('/api/v1/auth/profile', authenticateToken, async (req, res) => {
 });
 
 // ======================
+// ======================
 // TOPICS API
 // ======================
+
+app.get('/api/v1/topics', async (req, res) => {
+    try {
+        const result = await query('SELECT id, number, level, title, description, icon, premium_practice FROM topics ORDER BY level, number');
+        res.json({ topics: result.rows });
+    } catch (err) {
+        console.error("Error fetching all topics:", err);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
 app.get('/api/v1/topics/:level', async (req, res) => {
     const level = req.params.level.toUpperCase();
@@ -355,6 +419,36 @@ app.get('/api/v1/topics/:level/script', (req, res) => {
 });
 
 // ======================
+// STRIPE CHECKOUT
+// ======================
+app.post('/api/v1/checkout', authenticateToken, async (req, res) => {
+    try {
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'usd',
+                    product_data: {
+                        name: 'LevelUp English Premium Arcade',
+                        description: 'Acceso de por vida a los juegos interactivos premium.',
+                    },
+                    unit_amount: 999, // $9.99
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            client_reference_id: String(req.user.id),
+            success_url: `${req.headers.origin || 'http://localhost:5174'}/arcade?success=true`,
+            cancel_url: `${req.headers.origin || 'http://localhost:5174'}/arcade?canceled=true`,
+        });
+
+        res.json({ id: session.id, url: session.url });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ======================
 // PROGRESS API
 // ======================
 
@@ -365,9 +459,14 @@ app.get('/api/v1/progress', authenticateToken, async (req, res) => {
 
 app.post('/api/v1/progress/mark-complete', authenticateToken, async (req, res) => {
     const { level, topic_number } = req.body;
+    
+    if (!level || !topic_number) {
+        return res.status(400).json({ msg: 'Nivel y número de tema son requeridos' });
+    }
+
     const topicResult = await query(
         'SELECT id FROM topics WHERE level = $1 AND number = $2',
-        [level.toUpperCase(), topic_number]
+        [level.toUpperCase(), parseInt(topic_number)]
     );
     const topic = topicResult.rows[0];
     
@@ -432,18 +531,27 @@ app.get('/api/v1/admin/stats', authenticateToken, isAdmin, async (req, res) => {
 });
 
 app.get('/api/v1/admin/users', authenticateToken, isAdmin, async (req, res) => {
-    const users = (await query('SELECT id, username, email, is_admin, avatar, created_at FROM users ORDER BY id')).rows;
+    const users = (await query('SELECT id, username, email, is_admin, is_premium, avatar, created_at FROM users ORDER BY id')).rows;
     res.json({ users });
 });
 
 app.put('/api/v1/admin/users/:id/role', authenticateToken, isAdmin, async (req, res) => {
-    const userResult = await query('SELECT is_admin FROM users WHERE id = $1', [req.params.id]);
-    const user = userResult.rows[0];
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
+    const { id } = req.params;
+    if (Number(id) === req.user.id) return res.status(400).json({ error: 'No puedes cambiar tu propio rol' });
+    const user = (await query('SELECT is_admin FROM users WHERE id = $1', [id])).rows[0];
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     const newRole = !user.is_admin;
-    await query('UPDATE users SET is_admin = $1 WHERE id = $2', [newRole, req.params.id]);
-    res.json({ is_admin: newRole });
+    await query('UPDATE users SET is_admin = $1 WHERE id = $2', [newRole, id]);
+    res.json({ success: true, is_admin: newRole });
+});
+
+app.put('/api/v1/admin/users/:id/premium', authenticateToken, isAdmin, async (req, res) => {
+    const { id } = req.params;
+    const user = (await query('SELECT is_premium FROM users WHERE id = $1', [id])).rows[0];
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    const newPremium = !user.is_premium;
+    await query('UPDATE users SET is_premium = $1 WHERE id = $2', [newPremium, id]);
+    res.json({ success: true, is_premium: newPremium });
 });
 
 app.delete('/api/v1/admin/users/:id', authenticateToken, isAdmin, async (req, res) => {

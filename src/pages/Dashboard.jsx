@@ -14,6 +14,7 @@ const LevelCard = ({ icon, cssClass, title, description, link }) => (
 const Dashboard = () => {
     return (
         <div className="container mt-5 mb-5">
+
             <div className="text-center mb-5">
                 <h1 className="main-title">Choose Your Path to Fluency</h1>
                 <p className="lead text-muted">Select your current level to begin your learning adventure.</p>

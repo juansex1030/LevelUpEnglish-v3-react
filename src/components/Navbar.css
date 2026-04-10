@@ -99,6 +99,7 @@ body.light-mode .modern-navbar.scrolled {
     border-radius: 8px;
     transition: all 0.3s ease;
     position: relative;
+    white-space: nowrap;
 }
 
 .nav-icon {

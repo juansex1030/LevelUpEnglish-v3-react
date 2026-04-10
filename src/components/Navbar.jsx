@@ -87,6 +87,11 @@ const Navbar = () => {
                             </Link>
                         </li>
                         <li>
+                            <Link className={`nav-link ${location.pathname === '/arcade' ? 'active' : ''} text-warning fw-bold`} to="/arcade" onClick={closeMenu} style={{ letterSpacing: '0.5px' }}>
+                                👾 Arcade
+                            </Link>
+                        </li>
+                        <li>
                             <Link className={`nav-link ${location.pathname.includes('/a1') ? 'active' : ''}`} to="/niveles/a1" onClick={closeMenu}>
                                 <span className="level-dot a1"></span> A1
                             </Link>
@@ -152,11 +157,6 @@ const Navbar = () => {
                                     <Link className="dropdown-item" to="/progress" onClick={closeMenu}>
                                         <i className="bi bi-graph-up text-success"></i> My Progress
                                     </Link>
-                                    {user.is_admin && (
-                                        <Link className="dropdown-item" to="/admin" onClick={closeMenu}>
-                                            <i className="bi bi-shield-lock text-warning"></i> Admin Panel
-                                        </Link>
-                                    )}
                                     <div className="dropdown-divider"></div>
                                     <button className="dropdown-item text-danger" onClick={handleLogout}>
                                         <i className="bi bi-box-arrow-right"></i> Logout

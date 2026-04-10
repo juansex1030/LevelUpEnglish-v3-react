@@ -4,6 +4,7 @@ import { ProgressProvider } from './context/ProgressContext'
 
 // Layouts & Global Components
 import Navbar from './components/Navbar'
+import WelcomeToast from './components/WelcomeToast'
 
 // Pages
 import Landing from './pages/Landing'
@@ -14,9 +15,9 @@ import LevelGrid from './pages/LevelGrid'
 import TopicViewer from './pages/TopicViewer'
 import Diccionario from './pages/Diccionario'
 import ProgressDashboard from './pages/ProgressDashboard'
-import AdminPanel from './pages/AdminPanel'
 import Vocabulary from './pages/Vocabulary'
 import Profile from './pages/Profile'
+import ArcadePremium from './pages/ArcadePremium'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
       <ProgressProvider>
         <div className="min-h-screen bg-transparent flex flex-col">
           <Navbar />
+          <WelcomeToast />
           <main className="flex-grow">
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -35,7 +37,7 @@ function App() {
               <Route path="/diccionario" element={<Diccionario />} />
               <Route path="/vocabulario" element={<Vocabulary />} />
               <Route path="/progress" element={<ProgressDashboard />} />
-              <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/arcade" element={<ArcadePremium />} />
               <Route path="/profile" element={<Profile />} />
             </Routes>
           </main>

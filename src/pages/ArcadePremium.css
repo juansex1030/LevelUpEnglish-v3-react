@@ -1,0 +1,117 @@
+.arcade-container {
+    min-height: calc(100vh - 80px);
+    background: radial-gradient(circle at 50% 0%, rgba(255, 193, 7, 0.1) 0%, transparent 50%), var(--color-fondo);
+}
+
+.arcade-title {
+    font-size: 3rem;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #FFC107 0%, #FF9800 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 4px 12px rgba(255, 193, 7, 0.3));
+}
+
+.upsell-banner {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    border: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.upsell-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #FFC107, #FF9800, #FFC107);
+}
+
+.shadow-icon {
+    filter: drop-shadow(0px 0px 20px rgba(255,255,255,0.2));
+}
+
+/* Nav Pills */
+.arcade-nav .nav-link {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+.arcade-nav .nav-link:not(.active):hover {
+    background: rgba(255, 193, 7, 0.1);
+    color: #FFC107 !important;
+}
+
+/* Cards */
+.arcade-card {
+    background: var(--color-fondo-secundario);
+    border: 1px solid var(--color-borde);
+    border-radius: 1.5rem;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.arcade-card.unlocked:hover {
+    transform: translateY(-8px) scale(1.02);
+    border-color: #FFC107;
+    box-shadow: 0 15px 30px rgba(255, 193, 7, 0.15);
+}
+
+.level-badge {
+    display: inline-block;
+    padding: 0.25rem 1rem;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.05);
+    font-size: 0.85rem;
+    color: var(--color-texto-secundario);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.floating-emoji {
+    font-size: 3.5rem;
+    display: inline-block;
+    animation: float 4s ease-in-out infinite;
+    filter: drop-shadow(0 10px 10px rgba(0,0,0,0.2));
+}
+
+@keyframes float {
+    0% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(5deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
+}
+
+/* Locked State */
+.arcade-card.locked {
+    position: relative;
+    opacity: 0.8;
+}
+
+.overlay-lock {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(2px);
+    z-index: 10;
+    border-radius: 1.5rem;
+    transition: backdrop-filter 0.3s;
+}
+
+.arcade-card.locked:hover .overlay-lock {
+    backdrop-filter: blur(4px);
+    background: rgba(0,0,0,0.5);
+}
+
+.arcade-card.locked:hover .lock-icon {
+    transform: scale(1.2);
+    color: #FFC107 !important;
+}
+
+.lock-icon {
+    font-size: 3.5rem;
+    position: relative;
+    z-index: 20;
+    transition: all 0.3s;
+}

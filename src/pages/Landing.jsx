@@ -52,7 +52,7 @@ const Landing = () => {
                     <p className="section-subtitle">
                         Learn English effectively with our platform designed for your success
                     </p>
-                    <div className="row g-4">
+                    <div className="row g-4 justify-content-center">
                         <div className="col-md-6 col-lg-3">
                             <div className="feature-card">
                                 <i className="bi bi-gift-fill feature-icon"></i>
@@ -86,6 +86,19 @@ const Landing = () => {
                                 <h3 className="feature-title">Complete Content</h3>
                                 <p className="feature-description">
                                     Structured curriculum covering A1 (Beginner) to C1 (Advanced).
+                                </p>
+                            </div>
+                        </div>
+                        
+                        {/* Premium Beta Announcement */}
+                        <div className="col-md-6 col-lg-3">
+                            <div className="feature-card">
+                                <i className="bi bi-joystick feature-icon"></i>
+                                <h3 className="feature-title">
+                                    Arcade Premium <span className="badge bg-warning text-dark ms-2" style={{fontSize: '0.5em', verticalAlign: 'middle', background: '#FFD700'}}>EN DESARROLLO</span>
+                                </h3>
+                                <p className="feature-description">
+                                    A massive collection of randomized games and special engines coming soon in Beta.
                                 </p>
                             </div>
                         </div>

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import API_URL from '../api/config';
+import AdBanner from '../components/AdBanner';
 import './LevelGrid.css';
 
 const LevelGrid = () => {
@@ -112,6 +113,9 @@ const LevelGrid = () => {
                 )}
             </div>
 
+            {/* Ad: Horizontal banner below level header */}
+            <AdBanner type="horizontal" />
+
             <div className="topics-grid">
                 {topicsWithStatus.map(topic => (
                     <Link 
@@ -134,6 +138,11 @@ const LevelGrid = () => {
                         )}
                     </Link>
                 ))}
+            </div>
+
+            {/* Ad: Square ad below the grid */}
+            <div className="d-flex justify-content-center mt-4">
+                <AdBanner type="square" />
             </div>
 
             <div className="text-center mt-5">
