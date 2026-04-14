@@ -18,14 +18,21 @@ import React, { useState, useEffect } from 'react';
      - fill_blanks_game
 ===================================================================== */
 
+/** Stable Fisher-Yates shuffle — avoids V8 sort instability with Math.random()-0.5 */
+const stableShuffle = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+};
+
 const PracticeEngine = ({ data, onScoreUpdate }) => {
     const [completedQuestions, setCompletedQuestions] = React.useState(new Set());
-    const [shuffledGames, setShuffledGames] = useState([]);
 
     useEffect(() => {
-        if (data && data.games) {
-            setShuffledGames([...data.games].sort(() => Math.random() - 0.5));
-        }
+        setCompletedQuestions(new Set());
     }, [data]);
 
     if (!data || !data.games) return null;
@@ -38,7 +45,7 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
 
         const newSet = new Set(completedQuestions).add(key);
         setCompletedQuestions(newSet);
-        
+
         if (onScoreUpdate) {
             const scorePercent = Math.round((newSet.size / totalQuestions) * 100);
             onScoreUpdate(scorePercent);
@@ -47,7 +54,7 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
 
     return (
         <div className="practice-engine">
-            {shuffledGames.map((game, i) => (
+            {data.games.map((game, i) => (
                 <div key={i} className="mb-5 p-4 bg-dark rounded shadow-sm border border-secondary" style={{ position: 'relative' }}>
                     <div className="d-flex align-items-center mb-3 border-bottom border-secondary pb-3">
                         <div className="game-icon bg-gradient me-3 p-3 rounded-circle shadow-sm" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
@@ -57,7 +64,7 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
                             <h4 className="fw-bold mb-1 text-white">{game.title}</h4>
                             <p className="text-secondary mb-0">{game.instruction}</p>
                         </div>
-                        
+
                         {completedQuestions.has(`${i}`) && (
                             <div className="ms-auto animate__animated animate__zoomIn">
                                 <span className="badge bg-success rounded-pill p-2 px-3 shadow-sm">
@@ -66,20 +73,20 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
                             </div>
                         )}
                     </div>
-                    
+
                     <div className="game-board position-relative" style={{ minHeight: '300px', filter: completedQuestions.has(`${i}`) ? 'brightness(0.7) grayscale(0.5)' : 'none', transition: 'all 0.5s', pointerEvents: completedQuestions.has(`${i}`) ? 'none' : 'auto' }}>
-                        {game.type === 'multiple_choice' && <MultipleChoice game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'fill_in'         && <FillIn game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'unscramble'      && <Unscramble game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'matching'        && <Matching game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'spell_tool'      && <SpellTool game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'number_words'    && <NumberWords game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'memory_game'     && <MemoryGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'hangman_game'    && <HangmanGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'crossword_game'  && <CrosswordGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'sentence_builder'&& <SentenceBuilderGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'trivia_game'     && <TriviaGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'fill_blanks_game'&& <FillBlanksGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'multiple_choice'  && <MultipleChoice game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'fill_in'          && <FillIn game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'unscramble'       && <Unscramble game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'matching'         && <Matching game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'spell_tool'       && <SpellTool game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'number_words'     && <NumberWords game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'memory_game'      && <MemoryGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'hangman_game'     && <HangmanGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'crossword_game'   && <CrosswordGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'sentence_builder' && <SentenceBuilderGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'trivia_game'      && <TriviaGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'fill_blanks_game' && <FillBlanksGame game={game} onCorrect={() => handleCorrect(i)} />}
                     </div>
                 </div>
             ))}
@@ -107,7 +114,7 @@ const MultipleChoice = ({ game, onCorrect }) => {
 
     const shuffledOptions = React.useMemo(() => {
         if (!q || !q.options) return [];
-        return [...q.options].sort(() => Math.random() - 0.5);
+        return stableShuffle(q.options);
     }, [q]);
 
     const choose = (opt) => {
@@ -119,7 +126,7 @@ const MultipleChoice = ({ game, onCorrect }) => {
                 setTimeout(() => { setFb(null); setIdx(i => i + 1); }, 1400);
             }
         } else {
-            setFb({ type: 'error', text: `❌ Try again!` });
+            setFb({ type: 'error', text: '❌ Try again!' });
         }
     };
 
@@ -160,7 +167,7 @@ const FillIn = ({ game, onCorrect }) => {
         <>
             <div className="fs-5 fw-semibold mb-4 p-3 rounded text-center" style={{ background: 'rgba(255,255,255,.05)' }}>{q.q}</div>
             <div className="d-flex gap-2 mb-2">
-                <input className="form-control" value={val} onChange={e => setVal(e.target.value)} />
+                <input className="form-control" value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} />
                 <button className="btn btn-primary" onClick={check}>Check</button>
             </div>
             <Feedback fb={fb} />
@@ -192,7 +199,7 @@ const Unscramble = ({ game, onCorrect }) => {
         <>
             <div className="p-3 rounded mb-4 text-center" style={{ background: 'rgba(255,255,255,.05)' }}><span className="text-muted d-block small">Scrambled:</span><span className="fw-bold fs-5">{q.q}</span></div>
             <div className="d-flex gap-2 mb-2">
-                <input className="form-control" value={val} onChange={e => setVal(e.target.value)} />
+                <input className="form-control" value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} />
                 <button className="btn btn-primary" onClick={check}>Check</button>
             </div>
             <Feedback fb={fb} />
@@ -204,7 +211,7 @@ const Unscramble = ({ game, onCorrect }) => {
 const Matching = ({ game, onCorrect }) => {
     const [selections, setSelections] = useState({});
     const [fb, setFb] = useState(null);
-    const shuffled = React.useMemo(() => [...game.questions.map(q => q.a)].sort(() => Math.random() - 0.5), [game]);
+    const shuffled = React.useMemo(() => stableShuffle(game.questions.map(q => q.a)), [game]);
 
     const check = () => {
         const allRight = game.questions.every((q, i) => selections[i] === q.a);
@@ -272,12 +279,12 @@ const numberToWords = (num) => {
 
 const NumberWords = ({ game, onCorrect }) => {
     const min = 1, max = 10000, choices = 3;
-    const [num, setNum] = useState(() => Math.floor(Math.random() * (max - min + 1)) + min);
+    const [num] = useState(() => Math.floor(Math.random() * (max - min + 1)) + min);
     const correct = numberToWords(num);
-    const [opts, setOpts] = useState(() => {
+    const [opts] = useState(() => {
         const s = new Set([correct]);
         while (s.size < choices) s.add(numberToWords(Math.floor(Math.random() * (max - min + 1)) + min));
-        return [...s].sort(() => Math.random() - 0.5);
+        return stableShuffle([...s]);
     });
     const [fb, setFb] = useState(null);
 
@@ -303,14 +310,14 @@ const NumberWords = ({ game, onCorrect }) => {
 
 /* ── 7. Memory Game (Premium Arcade) ─────────────────────────────────── */
 const MemoryGame = ({ game, onCorrect }) => {
-    const [cards, setCards] = useState(() => {
+    const [cards] = useState(() => {
         if (!game.pairs) return [];
         const deck = [];
         game.pairs.forEach((pair, i) => {
             deck.push({ id: `emoji-${i}`, matchId: i, type: 'emoji', content: pair.emoji });
             deck.push({ id: `word-${i}`, matchId: i, type: 'word', content: pair.word });
         });
-        return deck.sort(() => Math.random() - 0.5);
+        return stableShuffle(deck);
     });
 
     const [flippedIdxs, setFlippedIdxs] = useState([]);
@@ -354,41 +361,12 @@ const MemoryGame = ({ game, onCorrect }) => {
                     const isFlipped = flippedIdxs.includes(i) || matchedIds.includes(card.matchId);
                     return (
                         <div key={card.id} onClick={() => handleFlip(i)}
-                            style={{ 
-                                width: '100px', height: '140px', cursor: 'pointer',
-                                perspective: '1000px',
-                                display: 'flex', justifyContent: 'center', alignItems: 'center'
-                            }}>
-                            <div style={{
-                                width: '100%', height: '100%',
-                                transition: 'transform 0.6s',
-                                transformStyle: 'preserve-3d',
-                                transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                                position: 'relative'
-                            }}>
+                            style={{ width: '100px', height: '140px', cursor: 'pointer', perspective: '1000px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            <div style={{ width: '100%', height: '100%', transition: 'transform 0.6s', transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', position: 'relative' }}>
                                 {/* Front (Hidden) */}
-                                <div style={{
-                                    position: 'absolute', width: '100%', height: '100%',
-                                    backfaceVisibility: 'hidden',
-                                    background: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
-                                    borderRadius: '12px',
-                                    border: '2px solid white',
-                                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                                    display: 'flex', justifyContent: 'center', alignItems: 'center',
-                                    fontSize: '2rem'
-                                }}>❓</div>
+                                <div style={{ position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden', background: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', borderRadius: '12px', border: '2px solid white', boxShadow: '0 4px 8px rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '2rem' }}>❓</div>
                                 {/* Back (Revealed) */}
-                                <div style={{
-                                    position: 'absolute', width: '100%', height: '100%',
-                                    backfaceVisibility: 'hidden',
-                                    background: 'white',
-                                    borderRadius: '12px',
-                                    border: '2px solid #ff9a9e',
-                                    display: 'flex', justifyContent: 'center', alignItems: 'center',
-                                    transform: 'rotateY(180deg)',
-                                    fontSize: card.type === 'emoji' ? '3rem' : '1.2rem',
-                                    fontWeight: 'bold', color: '#333', textAlign: 'center', wordBreak: 'break-word', padding: '5px'
-                                }}>
+                                <div style={{ position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden', background: 'white', borderRadius: '12px', border: '2px solid #ff9a9e', display: 'flex', justifyContent: 'center', alignItems: 'center', transform: 'rotateY(180deg)', fontSize: card.type === 'emoji' ? '3rem' : '1.2rem', fontWeight: 'bold', color: '#333', textAlign: 'center', wordBreak: 'break-word', padding: '5px' }}>
                                     {card.content}
                                 </div>
                             </div>
@@ -410,7 +388,7 @@ const HangmanGame = ({ game, onCorrect }) => {
     const [wordIdx, setWordIdx] = useState(0);
     const [guessedLetters, setGuessedLetters] = useState(new Set());
     const [lives, setLives] = useState(6);
-    const [gameStatus, setGameStatus] = useState('playing'); // playing, won_word, lost, won_all
+    const [gameStatus, setGameStatus] = useState('playing');
 
     const currentWordData = game.words && game.words[wordIdx];
     const currentWord = currentWordData ? currentWordData.word.toUpperCase() : '';
@@ -456,20 +434,14 @@ const HangmanGame = ({ game, onCorrect }) => {
                 <span className="badge bg-secondary p-2">Palabra {wordIdx + 1} / {game.words.length}</span>
                 <span className="badge bg-danger p-2"><i className="bi bi-heart-fill me-1"></i>x {lives}</span>
             </div>
-            
+
             <div className="alert alert-info d-inline-block shadow-sm fw-bold mb-5">
                 <i className="bi bi-lightbulb-fill text-warning me-2"></i> Pista: {currentWordData.hint}
             </div>
 
             <div className="word-display d-flex justify-content-center flex-wrap gap-2 mb-5">
                 {currentWord.split('').map((letter, i) => (
-                    <div key={i} style={{
-                        width: '40px', height: '50px', 
-                        borderBottom: letter === ' ' ? 'none' : '3px solid white',
-                        display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
-                        fontSize: '2rem', fontWeight: 'bold', color: 'white',
-                        margin: '0 5px'
-                    }}>
+                    <div key={i} style={{ width: '40px', height: '50px', borderBottom: letter === ' ' ? 'none' : '3px solid white', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', fontSize: '2rem', fontWeight: 'bold', color: 'white', margin: '0 5px' }}>
                         {(isLetterGuessed(letter) || gameStatus === 'lost') ? letter : ''}
                     </div>
                 ))}
@@ -481,9 +453,8 @@ const HangmanGame = ({ game, onCorrect }) => {
                         const isGuessed = guessedLetters.has(letter);
                         const isCorrect = isGuessed && currentWord.includes(letter);
                         const isWrong = isGuessed && !currentWord.includes(letter);
-                        
                         return (
-                            <button key={letter} 
+                            <button key={letter}
                                 onClick={() => handleGuess(letter)}
                                 disabled={isGuessed}
                                 className={`btn fw-bold shadow-sm ${isCorrect ? 'btn-success' : (isWrong ? 'btn-danger opacity-50' : 'btn-light')}`}
@@ -498,22 +469,11 @@ const HangmanGame = ({ game, onCorrect }) => {
             {gameStatus === 'lost' && (
                 <div className="alert alert-danger mt-4 fw-bold animate__animated animate__shakeX">
                     ¡Perdiste! La palabra era: {currentWord}
-                    <button className="btn btn-sm btn-danger ms-3" onClick={() => {
-                        setLives(6); setGuessedLetters(new Set()); setGameStatus('playing');
-                    }}>Reintentar</button>
+                    <button className="btn btn-sm btn-danger ms-3" onClick={() => { setLives(6); setGuessedLetters(new Set()); setGameStatus('playing'); }}>Reintentar</button>
                 </div>
             )}
-            
-            {gameStatus === 'won_word' && (
-                <div className="text-success fs-3 fw-bold mt-4 animate__animated animate__bounceIn">
-                    ¡Correcto!
-                </div>
-            )}
-            {gameStatus === 'won_all' && (
-                <div className="text-success fs-2 fw-bold mt-4 animate__animated animate__tada">
-                    🏆 ¡Completaste todas las palabras!
-                </div>
-            )}
+            {gameStatus === 'won_word' && (<div className="text-success fs-3 fw-bold mt-4 animate__animated animate__bounceIn">¡Correcto!</div>)}
+            {gameStatus === 'won_all' && (<div className="text-success fs-2 fw-bold mt-4 animate__animated animate__tada">🏆 ¡Completaste todas las palabras!</div>)}
         </div>
     );
 };
@@ -521,8 +481,8 @@ const HangmanGame = ({ game, onCorrect }) => {
 /* ── 9. Crossword Game (Premium Arcade) ────────────────────────────────── */
 const CrosswordGame = ({ game, onCorrect }) => {
     const [userGrid, setUserGrid] = useState({});
-    const [selectedCell, setSelectedCell] = useState(null); 
-    const [selectedDir, setSelectedDir] = useState('across'); 
+    const [selectedCell, setSelectedCell] = useState(null);
+    const [selectedDir, setSelectedDir] = useState('across');
     const [showErrors, setShowErrors] = useState(false);
 
     const answerGrid = React.useMemo(() => {
@@ -556,7 +516,7 @@ const CrosswordGame = ({ game, onCorrect }) => {
     }, [isWon, onCorrect]);
 
     const handleCellClick = (r, c) => {
-        if (!answerGrid.grid[`${r}-${c}`]) return; 
+        if (!answerGrid.grid[`${r}-${c}`]) return;
         if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
             setSelectedDir(prev => prev === 'across' ? 'down' : 'across');
         } else {
@@ -610,24 +570,19 @@ const CrosswordGame = ({ game, onCorrect }) => {
                     <i className="bi bi-star-fill text-warning me-2"></i> ¡Crucigrama perfecto! <i className="bi bi-star-fill text-warning ms-2"></i>
                 </div>
             )}
-            
+
             <div className="text-center p-3 mb-4 rounded shadow-sm bg-dark border border-secondary" style={{ color: 'var(--color-texto-principal)' }}>
                 <i className="bi bi-info-circle text-info me-2"></i>
                 <span className="fw-bold">{getActiveWordLabel()}</span>
             </div>
 
             <div className="d-flex justify-content-center">
-                <div className="crossword-grid" style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: `repeat(${game.gridSize.cols}, 40px)`,
-                    gridTemplateRows: `repeat(${game.gridSize.rows}, 40px)`,
-                    gap: '2px', background: '#222', padding: '4px', borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)'
-                }}>
-                    {Array.from({ length: game.gridSize.rows }).map((_, r) => 
+                <div className="crossword-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${game.gridSize.cols}, 40px)`, gridTemplateRows: `repeat(${game.gridSize.rows}, 40px)`, gap: '2px', background: '#222', padding: '4px', borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+                    {Array.from({ length: game.gridSize.rows }).map((_, r) =>
                         Array.from({ length: game.gridSize.cols }).map((_, c) => {
                             const isCell = !!answerGrid.grid[`${r}-${c}`];
                             const isSelected = selectedCell && selectedCell.r === r && selectedCell.c === c;
-                            
+
                             let isHighlightedPath = false;
                             if (selectedCell) {
                                 const activeW = game.words?.find(w => {
@@ -648,14 +603,11 @@ const CrosswordGame = ({ game, onCorrect }) => {
 
                             let bg = isWon ? '#28a745' : (isSelected ? '#ffca28' : (isHighlightedPath ? '#fffde7' : 'white'));
                             let color = isWon ? 'white' : 'black';
-                            
+
                             const currentVal = userGrid[`${r}-${c}`];
                             if (showErrors && currentVal) {
-                                if (currentVal !== answerGrid.grid[`${r}-${c}`]) {
-                                    bg = '#f8d7da'; color = '#dc3545';
-                                } else {
-                                    bg = '#d4edda'; color = '#28a745';
-                                }
+                                if (currentVal !== answerGrid.grid[`${r}-${c}`]) { bg = '#f8d7da'; color = '#dc3545'; }
+                                else { bg = '#d4edda'; color = '#28a745'; }
                             }
 
                             return (
@@ -670,27 +622,27 @@ const CrosswordGame = ({ game, onCorrect }) => {
                     )}
                 </div>
             </div>
-            
+
             {!isWon && (
                 <div className="text-center mt-4 d-flex justify-content-center gap-3 flex-wrap">
                     <button className="btn btn-warning rounded-pill px-4 fw-bold shadow-sm mb-2" onClick={() => setShowErrors(true)}>
                         <i className="bi bi-check2-circle me-2"></i> Verificar Respuestas
                     </button>
                     <button className="btn btn-outline-danger rounded-pill px-4 fw-bold shadow-sm mb-2" onClick={() => {
-                            if(window.confirm('¿Estás seguro de que deseas reiniciar todo el crucigrama?')) {
-                                setUserGrid({}); setShowErrors(false); setSelectedCell(null);
-                            }
-                        }}>
+                        if (window.confirm('¿Estás seguro de que deseas reiniciar todo el crucigrama?')) {
+                            setUserGrid({}); setShowErrors(false); setSelectedCell(null);
+                        }
+                    }}>
                         <i className="bi bi-arrow-counterclockwise me-2"></i> Reiniciar
                     </button>
                 </div>
             )}
-            
+
             <div className="row mt-4 px-3">
                 <div className="col-md-6 text-start">
                     <h6 className="fw-bold" style={{ color: 'var(--color-texto-principal)' }}>➡️ Horizontales</h6>
                     <ul className="list-unstyled small text-muted">
-                        {game.words?.filter(w => w.dir === 'across').sort((a,b) => a.num - b.num).map(w => (
+                        {game.words?.filter(w => w.dir === 'across').sort((a, b) => a.num - b.num).map(w => (
                             <li key={w.num} className="mb-1"><strong>{w.num}.</strong> {w.hint}</li>
                         ))}
                     </ul>
@@ -698,7 +650,7 @@ const CrosswordGame = ({ game, onCorrect }) => {
                 <div className="col-md-6 text-start">
                     <h6 className="fw-bold" style={{ color: 'var(--color-texto-principal)' }}>⬇️ Verticales</h6>
                     <ul className="list-unstyled small text-muted">
-                        {game.words?.filter(w => w.dir === 'down').sort((a,b) => a.num - b.num).map(w => (
+                        {game.words?.filter(w => w.dir === 'down').sort((a, b) => a.num - b.num).map(w => (
                             <li key={w.num} className="mb-1"><strong>{w.num}.</strong> {w.hint}</li>
                         ))}
                     </ul>
@@ -708,37 +660,43 @@ const CrosswordGame = ({ game, onCorrect }) => {
     );
 };
 
-/* ── 10. Sentence Builder Game (Premium Arcade) ────────────────────────────────── */
+/* ── 10. Sentence Builder Game (Premium Arcade) ─────────────────────────── */
 const SentenceBuilderGame = ({ game, onCorrect }) => {
     const [sentenceIdx, setSentenceIdx] = useState(0);
     const [availableWords, setAvailableWords] = useState([]);
     const [selectedWords, setSelectedWords] = useState([]);
-    const [status, setStatus] = useState('playing'); 
+    const [status, setStatus] = useState('playing');
 
     const currentSentence = game.sentences && game.sentences[sentenceIdx];
 
     useEffect(() => {
         if (!currentSentence) return;
-        const words = currentSentence.text.split(' ').map((w, i) => ({ id: `w-\${i}`, text: w }));
+        const words = currentSentence.text.split(' ').map((w, i) => ({ id: `w-${i}`, text: w }));
         if (currentSentence.distractors) {
-            currentSentence.distractors.forEach((d, i) => words.push({ id: `d-\${i}`, text: d }));
+            currentSentence.distractors.forEach((d, i) => words.push({ id: `d-${i}`, text: d }));
         }
-        setAvailableWords(words.sort(() => Math.random() - 0.5));
+        setAvailableWords(stableShuffle(words));
         setSelectedWords([]);
         setStatus('playing');
-    }, [currentSentence]);
+    }, [sentenceIdx, game]);
 
     const selectWord = (word) => {
         if (status !== 'playing' && status !== 'incorrect') return;
         setAvailableWords(prev => prev.filter(w => w.id !== word.id));
-        setSelectedWords(prev => [...prev, word]);
+        setSelectedWords(prev => {
+            if (prev.some(w => w.id === word.id)) return prev;
+            return [...prev, word];
+        });
         setStatus('playing');
     };
 
     const deselectWord = (word) => {
         if (status !== 'playing' && status !== 'incorrect') return;
         setSelectedWords(prev => prev.filter(w => w.id !== word.id));
-        setAvailableWords(prev => [...prev, word]);
+        setAvailableWords(prev => {
+            if (prev.some(w => w.id === word.id)) return prev;
+            return [...prev, word];
+        });
         setStatus('playing');
     };
 
@@ -759,36 +717,42 @@ const SentenceBuilderGame = ({ game, onCorrect }) => {
         }
     };
 
+    const handleClear = () => {
+        setAvailableWords(prev => [...prev, ...selectedWords]);
+        setSelectedWords([]);
+        setStatus('playing');
+    };
+
     if (!currentSentence) return null;
 
     return (
         <div className="sentence-builder-container p-4 text-center">
             <h5 className="mb-4 text-info fw-bold">"{currentSentence.translation}"</h5>
-            
-            <div className="build-area mb-4 p-3 rounded d-flex flex-wrap gap-2 justify-content-center align-items-center min-vh-25" 
-                style={{ 
+
+            <div className="build-area mb-4 p-3 rounded d-flex flex-wrap gap-2 justify-content-center align-items-center"
+                style={{
                     border: status === 'correct' ? '2px dashed #28a745' : (status === 'incorrect' ? '2px dashed #dc3545' : '2px dashed var(--color-borde)'),
                     minHeight: '80px', transition: 'all 0.3s',
-                    background: status === 'correct' ? 'rgba(40, 167, 69, 0.1)' : (status === 'incorrect' ? 'rgba(220, 53, 69, 0.1)' : 'rgba(255, 255, 255, 0.05)')
+                    background: status === 'correct' ? 'rgba(40,167,69,0.1)' : (status === 'incorrect' ? 'rgba(220,53,69,0.1)' : 'rgba(255,255,255,0.05)')
                 }}>
                 {selectedWords.length === 0 && <span className="text-muted" style={{ opacity: 0.5 }}>Toca palabras para formar la oración</span>}
                 {selectedWords.map(w => (<button key={w.id} onClick={() => deselectWord(w)} className="btn btn-light fw-bold shadow-sm animate__animated animate__fadeIn">{w.text}</button>))}
             </div>
 
-            <div className="word-bank d-flex flex-wrap gap-2 justify-content-center mb-4 min-vh-25" style={{ minHeight: '80px' }}>
+            <div className="word-bank d-flex flex-wrap gap-2 justify-content-center mb-4" style={{ minHeight: '80px' }}>
                 {availableWords.map(w => (<button key={w.id} onClick={() => selectWord(w)} className="btn fw-bold shadow-sm" style={{ background: '#3e445b', color: 'white' }}>{w.text}</button>))}
             </div>
 
             {status !== 'correct' && status !== 'won_all' && (
                 <div className="d-flex justify-content-center gap-3">
-                    <button className="btn btn-secondary rounded-pill px-4" onClick={() => setSelectedWords([])} disabled={selectedWords.length === 0}>Limpiar</button>
+                    <button className="btn btn-secondary rounded-pill px-4" onClick={handleClear} disabled={selectedWords.length === 0}>Limpiar</button>
                     <button className="btn btn-warning rounded-pill px-4 fw-bold" onClick={handleCheck} disabled={selectedWords.length === 0}>Comprobar</button>
                 </div>
             )}
 
             {status === 'correct' && (<div className="text-success fw-bold animate__animated animate__bounceIn"><i className="bi bi-check-circle-fill me-2 fs-4"></i> ¡Excelente!</div>)}
             {status === 'won_all' && (<div className="alert alert-success fw-bold animate__animated animate__tada my-3 shadow-sm border-0">🎉 ¡Completaste todas las oraciones!</div>)}
-            
+
             <div className="mt-4 text-end"><span className="badge bg-dark text-white p-2">Oración {sentenceIdx + 1} de {game.sentences.length}</span></div>
         </div>
     );
@@ -798,7 +762,7 @@ const SentenceBuilderGame = ({ game, onCorrect }) => {
 const TriviaGame = ({ game, onCorrect }) => {
     const [qIdx, setQIdx] = useState(0);
     const [selectedOption, setSelectedOption] = useState(null);
-    const [status, setStatus] = useState('playing'); 
+    const [status, setStatus] = useState('playing');
     const [score, setScore] = useState(0);
 
     const question = game.questions && game.questions[qIdx];
@@ -806,7 +770,7 @@ const TriviaGame = ({ game, onCorrect }) => {
     const handleSelect = (idx) => {
         if (status !== 'playing') return;
         setSelectedOption(idx);
-        
+
         if (idx === question.correctIdx) {
             setStatus('correct');
             setScore(s => s + 1);
@@ -855,24 +819,24 @@ const TriviaGame = ({ game, onCorrect }) => {
                 {question.options.map((opt, idx) => {
                     let bg = '#3e445b'; let border = '2px solid transparent'; let icon = null;
                     if (selectedOption !== null) {
-                        if (idx === question.correctIdx) { bg = 'rgba(40, 167, 69, 0.2)'; border = '2px solid #28a745'; icon = <i className="bi bi-check-circle-fill text-success ms-auto"></i>; }
-                        else if (selectedOption === idx) { bg = 'rgba(220, 53, 69, 0.2)'; border = '2px solid #dc3545'; icon = <i className="bi bi-x-circle-fill text-danger ms-auto"></i>; }
+                        if (idx === question.correctIdx) { bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; icon = <i className="bi bi-check-circle-fill text-success ms-auto"></i>; }
+                        else if (selectedOption === idx) { bg = 'rgba(220,53,69,0.2)'; border = '2px solid #dc3545'; icon = <i className="bi bi-x-circle-fill text-danger ms-auto"></i>; }
                         else { bg = 'rgba(0,0,0,0.2)'; }
                     }
                     return (
                         <button key={idx} className={`btn d-flex align-items-center text-start p-3 fw-bold fs-5 ${selectedOption === null ? 'trivia-btn-hover' : ''}`}
-                            style={{ background: bg, border: border, color: 'white', transition: 'all 0.2s rounded' }}
+                            style={{ background: bg, border: border, color: 'white', transition: 'all 0.2s' }}
                             onClick={() => handleSelect(idx)} disabled={selectedOption !== null}>
                             <span className="me-3 opacity-50">{String.fromCharCode(65 + idx)}.</span>{opt}{icon}
                         </button>
-                    )
+                    );
                 })}
             </div>
         </div>
     );
 };
 
-/* ── 12. Fill in the Blanks Game (Premium Arcade) ────────────────────────────────── */
+/* ── 12. Fill in the Blanks Game (Premium Arcade) ────────────────────────── */
 const FillBlanksGame = ({ game, onCorrect }) => {
     const [sentenceIdx, setSentenceIdx] = useState(0);
     const [userInputs, setUserInputs] = useState('');
@@ -883,10 +847,10 @@ const FillBlanksGame = ({ game, onCorrect }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (status !== 'playing' && status !== 'incorrect') return;
-        
+
         setStatus('checking');
         const isMatch = userInputs.trim().toLowerCase() === currentData.answer.trim().toLowerCase();
-        
+
         setTimeout(() => {
             if (isMatch) {
                 setStatus('correct');
@@ -915,23 +879,30 @@ const FillBlanksGame = ({ game, onCorrect }) => {
     }
 
     const renderTextWithInput = () => {
-        const parts = currentData.text.split('____');
-        if (parts.length < 2) return currentData.text; 
-        
+        const parts = currentData.text.split(/_{2,}/);
+        if (parts.length < 2) return currentData.text;
+
         let inputClass = "form-control fw-bold mx-2 text-center d-inline-block";
         let inputStyles = { width: '150px', display: 'inline-block', backgroundColor: '#3e445b', color: 'white', border: '2px solid transparent' };
 
-        if (status === 'correct') { inputStyles.backgroundColor = 'rgba(40, 167, 69, 0.2)'; inputStyles.border = '2px solid #28a745'; inputStyles.color = '#28a745'; } 
-        else if (status === 'incorrect') { inputStyles.backgroundColor = 'rgba(220, 53, 69, 0.2)'; inputStyles.border = '2px solid #dc3545'; inputStyles.color = '#dc3545'; inputClass += " animate__animated animate__headShake"; }
+        if (status === 'correct') {
+            inputStyles.backgroundColor = 'rgba(40,167,69,0.2)'; inputStyles.border = '2px solid #28a745'; inputStyles.color = '#28a745';
+        } else if (status === 'incorrect') {
+            inputStyles.backgroundColor = 'rgba(220,53,69,0.2)'; inputStyles.border = '2px solid #dc3545'; inputStyles.color = '#dc3545';
+            inputClass += ' animate__animated animate__headShake';
+        }
 
         return (
             <div className="fs-3 fw-bold lh-lg">
                 <span>{parts[0]}</span>
-                <input type="text" className={inputClass} style={inputStyles} value={userInputs} onChange={(e) => { setUserInputs(e.target.value); setStatus('playing'); }} disabled={status === 'checking' || status === 'correct'} autoComplete="off" autoFocus />
+                <input type="text" className={inputClass} style={inputStyles} value={userInputs}
+                    onChange={(e) => { setUserInputs(e.target.value); setStatus('playing'); }}
+                    disabled={status === 'checking' || status === 'correct'}
+                    autoComplete="off" autoFocus />
                 <span>{parts[1]}</span>
             </div>
         );
-    }
+    };
 
     return (
         <div className="fill-blanks-container p-5 text-center">
@@ -941,7 +912,8 @@ const FillBlanksGame = ({ game, onCorrect }) => {
             <form onSubmit={handleSubmit} className="mb-4 mt-5">
                 {renderTextWithInput()}
                 <div className="mt-5">
-                    <button type="submit" className={`btn btn-lg rounded-pill px-5 fw-bold shadow-sm ${status === 'correct' ? 'btn-success' : 'btn-warning'}`} disabled={!userInputs.trim() || status === 'checking' || status === 'correct'}>
+                    <button type="submit" className={`btn btn-lg rounded-pill px-5 fw-bold shadow-sm ${status === 'correct' ? 'btn-success' : 'btn-warning'}`}
+                        disabled={!userInputs.trim() || status === 'checking' || status === 'correct'}>
                         {status === 'checking' ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-chevron-double-right me-2"></i>} Comprobar
                     </button>
                 </div>
