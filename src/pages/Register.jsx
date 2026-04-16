@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import API_URL from '../api/config';
+import apiClient from '../api/apiClient';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -31,11 +30,14 @@ const Register = () => {
         setLoading(true);
 
         try {
-            await axios.post(`${API_URL}/auth/register`, formData);
+            await apiClient.post('/auth/register', formData);
             setLoading(false);
+            // After register, the user is already logged in via cookie in the new backend logic.
+            // We can redirect to /learn or stay at /login. Let's redirect to /login for clarity
+            // or just trigger the auth context. Let's stay with /login for now as per current flow.
             navigate('/login');
         } catch (err) {
-            setError(err.response?.data?.error || 'Error al registrarse. Intenta nuevamente.');
+            setError(err.response?.data?.msg || err.response?.data?.error || 'Error al registrarse. Intenta nuevamente.');
             setLoading(false);
         }
     };
@@ -48,72 +50,32 @@ const Register = () => {
                         <div className="card-body p-5">
                             <h2 className="text-center mb-4">Crear Cuenta</h2>
                             <p className="text-center text-muted mb-4">Únete a LevelUpEnglish</p>
-
                             {error && <div className="alert alert-danger">{error}</div>}
-
                             <form onSubmit={handleSubmit}>
                                 <div className="mb-3">
                                     <label htmlFor="username" className="form-label">Usuario</label>
-                                    <input 
-                                        type="text" 
-                                        className="form-control" 
-                                        id="username" 
-                                        name="username"
-                                        value={formData.username}
-                                        onChange={handleChange}
-                                        required 
-                                    />
+                                    <input type="text" className="form-control" id="username" name="username" value={formData.username} onChange={handleChange} required />
                                 </div>
-
                                 <div className="mb-3">
                                     <label htmlFor="email" className="form-label">Correo Electrónico</label>
-                                    <input 
-                                        type="email" 
-                                        className="form-control" 
-                                        id="email" 
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        required 
-                                    />
+                                    <input type="email" className="form-control" id="email" name="email" value={formData.email} onChange={handleChange} required />
                                 </div>
-
                                 <div className="mb-3">
                                     <label htmlFor="password" className="form-label">Contraseña</label>
-                                    <input 
-                                        type="password" 
-                                        className="form-control" 
-                                        id="password" 
-                                        name="password"
-                                        value={formData.password}
-                                        onChange={handleChange}
-                                        required 
-                                    />
+                                    <input type="password" className="form-control" id="password" name="password" value={formData.password} onChange={handleChange} required />
                                     <small className="text-muted">Mínimo 6 caracteres</small>
                                 </div>
-
                                 <div className="mb-4">
                                     <label htmlFor="confirm_password" className="form-label">Confirmar Contraseña</label>
-                                    <input 
-                                        type="password" 
-                                        className="form-control" 
-                                        id="confirm_password" 
-                                        name="confirm_password"
-                                        value={formData.confirm_password}
-                                        onChange={handleChange}
-                                        required 
-                                    />
+                                    <input type="password" className="form-control" id="confirm_password" name="confirm_password" value={formData.confirm_password} onChange={handleChange} required />
                                 </div>
-
                                 <div className="d-grid">
                                     <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
                                         {loading ? 'Registrando...' : 'Registrarse'}
                                     </button>
                                 </div>
                             </form>
-
                             <hr className="my-4" />
-
                             <div className="text-center">
                                 <small className="text-muted">¿Ya tienes cuenta? <Link to="/login">Inicia sesión aquí</Link></small>
                             </div>

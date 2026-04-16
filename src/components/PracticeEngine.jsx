@@ -367,7 +367,11 @@ const MemoryGame = ({ game, onCorrect }) => {
                                 <div style={{ position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden', background: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', borderRadius: '12px', border: '2px solid white', boxShadow: '0 4px 8px rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '2rem' }}>❓</div>
                                 {/* Back (Revealed) */}
                                 <div style={{ position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden', background: 'white', borderRadius: '12px', border: '2px solid #ff9a9e', display: 'flex', justifyContent: 'center', alignItems: 'center', transform: 'rotateY(180deg)', fontSize: card.type === 'emoji' ? '3rem' : '1.2rem', fontWeight: 'bold', color: '#333', textAlign: 'center', wordBreak: 'break-word', padding: '5px' }}>
-                                    {card.content}
+                                    {card.type === 'emoji' && typeof card.content === 'string' && card.content.startsWith('/assets/') ? (
+                                        <img src={card.content} alt="icon" style={{ width: '85%', height: '85%', objectFit: 'contain' }} />
+                                    ) : (
+                                        card.content
+                                    )}
                                 </div>
                             </div>
                         </div>

@@ -13,6 +13,7 @@ dist-ssr
 *.local
 .env
 backend/.env
+admin-panel/.env
 
 # Local database and runtime instance
 instance/

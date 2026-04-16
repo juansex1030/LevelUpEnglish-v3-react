@@ -145,13 +145,18 @@ async function run() {
                 type: 'crossword_game',
                 title: '📝 Crossword: Verb To Be Vocabulary',
                 instruction: 'Click a cell, then type letters using your keyboard. Check clues below!',
-                gridSize: { rows: 6, cols: 6 },
+                gridSize: { rows: 10, cols: 10 },
                 words: [
                     { word: 'VERB', hint: 'A word that expresses action or state. "To Be" is a ___',  row: 0, col: 0, dir: 'across', num: 1 },
                     { word: 'BEEN', hint: 'Past participle of "To Be" (I have ___ here before)',       row: 0, col: 3, dir: 'down',   num: 2 },
                     { word: 'ARE',  hint: 'Form of "To Be" for You / We / They',                       row: 3, col: 0, dir: 'across', num: 3 },
                     { word: 'NOT',  hint: 'Used to make a negative: "She is ___ here"',                row: 3, col: 3, dir: 'across', num: 4 },
-                    { word: 'ONE',  hint: 'The number 1 in English words',                              row: 3, col: 4, dir: 'down',   num: 5 },
+                    { word: 'ONE',  hint: 'The number 1 in English words',                             row: 3, col: 4, dir: 'down',   num: 5 },
+                    { word: 'AM',   hint: 'Form of "To Be" for I (I ___ happy)',                        row: 5, col: 0, dir: 'across', num: 6 },
+                    { word: 'IS',   hint: 'Form of "To Be" for He / She / It',                         row: 5, col: 0, dir: 'down',   num: 7 },
+                    { word: 'WAS',  hint: 'Past tense of am/is',                                       row: 5, col: 2, dir: 'down',   num: 8 },
+                    { word: 'WERE', hint: 'Past tense of are',                                         row: 7, col: 1, dir: 'across', num: 9 },
+                    { word: 'HAPPY', hint: 'Opposite of sad (I am ___)',                               row: 1, col: 6, dir: 'down',   num: 10 }
                 ]
             },
         ]

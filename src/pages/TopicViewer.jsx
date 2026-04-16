@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import DOMPurify from 'dompurify';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import PracticeEngine from '../components/PracticeEngine';
@@ -138,7 +139,7 @@ const TopicViewer = () => {
             return (
                 <div 
                     className="practice-wrapper" 
-                    dangerouslySetInnerHTML={{ __html: topic.practice }} 
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(topic.practice) }} 
                 />
             );
         }
@@ -229,7 +230,7 @@ const TopicViewer = () => {
                                 className="theory-wrapper" 
                                 ref={theoryRef}
                                 style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '1rem' }}
-                                dangerouslySetInnerHTML={{ __html: topic.theory }} 
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(topic.theory) }} 
                             />
                         )}
                         {activeTab === 'practice' && renderPractice()}

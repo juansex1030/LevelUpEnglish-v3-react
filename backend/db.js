@@ -9,7 +9,7 @@ const useSsl = process.env.PGSSL === 'true' || (process.env.NODE_ENV === 'produc
 const commonPoolOptions = {
     ssl: useSsl ? { rejectUnauthorized: false } : false,
     // Serverless-safe defaults (Vercel): keep pool small and fail fast.
-    max: Number(process.env.PGPOOL_MAX || 1),
+    max: Number(process.env.PGPOOL_MAX || 20),
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
     connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || 15000),
     allowExitOnIdle: true,
@@ -37,7 +37,7 @@ const initDatabase = async () => {
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
+            password TEXT,
             is_admin BOOLEAN DEFAULT FALSE,
             is_premium BOOLEAN DEFAULT FALSE,
             avatar TEXT DEFAULT 'default',
@@ -63,7 +63,13 @@ const initDatabase = async () => {
     // --- Automigrate: Ensure columns exist ---
     const columnsToEnsure = [
         { table: 'users', column: 'is_premium', type: 'BOOLEAN DEFAULT FALSE' },
-        { table: 'topics', column: 'premium_practice', type: 'TEXT' }
+        { table: 'users', column: 'reset_otp', type: 'VARCHAR(10)' },
+        { table: 'users', column: 'reset_otp_expires_at', type: 'TIMESTAMP' },
+        { table: 'users', column: 'google_id', type: 'VARCHAR(255) UNIQUE' },
+        { table: 'users', column: 'otp_attempts', type: 'INTEGER DEFAULT 0' },
+        { table: 'users', column: 'last_login_at', type: 'TIMESTAMP' },
+        { table: 'topics', column: 'arcade_enabled', type: 'BOOLEAN DEFAULT TRUE' },
+        { table: 'topics', column: 'premium_practice', type: 'JSONB DEFAULT NULL' }
     ];
 
     for (const { table, column, type } of columnsToEnsure) {
@@ -71,7 +77,7 @@ const initDatabase = async () => {
             DO $$
             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='${table}' AND column_name='${column}') THEN
-                    ALTER TABLE ${table} ADD COLUMN ${column} ${type};
+                    EXECUTE 'ALTER TABLE ${table} ADD COLUMN ${column} ' || '${type}';
                 END IF;
             END
             $$;
@@ -88,10 +94,17 @@ const initDatabase = async () => {
         );
     `);
 
-    const topicsCount = await query('SELECT COUNT(*)::int AS count FROM topics');
-    if (topicsCount.rows[0].count > 0) {
-        return;
-    }
+    await query(`
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id SERIAL PRIMARY KEY,
+            admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            action TEXT NOT NULL,
+            target_type TEXT NOT NULL,
+            target_id TEXT,
+            details JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
 
     const jsonPath = path.join(__dirname, 'data', 'topics.json');
     if (!fs.existsSync(jsonPath)) {
@@ -108,15 +121,21 @@ const initDatabase = async () => {
                 `
                 INSERT INTO topics (number, level, title, description, icon, theory, practice)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
-                ON CONFLICT (level, number) DO NOTHING
+                ON CONFLICT (level, number) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    description = EXCLUDED.description,
+                    icon = EXCLUDED.icon,
+                    theory = EXCLUDED.theory,
+                    practice = EXCLUDED.practice
                 `,
                 [topic.number, topic.level, topic.title, topic.description, topic.icon, topic.theory, topic.practice]
             );
         }
         await client.query('COMMIT');
-        console.log(`[Database] Seeded ${topicsData.length} topics.`);
+        console.log(`[Database] Synced ${topicsData.length} topics from JSON.`);
     } catch (error) {
         await client.query('ROLLBACK');
+        console.error('[Database] Seeding error:', error);
         throw error;
     } finally {
         client.release();

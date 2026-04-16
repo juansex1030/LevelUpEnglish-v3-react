@@ -149,13 +149,18 @@ async function run() {
                 type: 'crossword_game',
                 title: '📝 Crossword: Number Words',
                 instruction: 'Click a cell and type to fill in the crossword. Use the clues below!',
-                gridSize: { rows: 10, cols: 7 },
+                gridSize: { rows: 12, cols: 12 },
                 words: [
                     { word: 'FIVE',   hint: 'The number 5',              row: 0, col: 0, dir: 'across', num: 1 },
                     { word: 'FOUR',   hint: 'The number 4 (2+2)',        row: 0, col: 0, dir: 'down',   num: 2 },
                     { word: 'EIGHT',  hint: 'The number 8 (4+4)',        row: 0, col: 3, dir: 'down',   num: 3 },
                     { word: 'TWO',    hint: 'The number 2 (1+1)',        row: 4, col: 1, dir: 'down',   num: 4 },
                     { word: 'ELEVEN', hint: 'The number 11',             row: 4, col: 2, dir: 'down',   num: 5 },
+                    { word: 'SEVEN',  hint: 'The number 7',              row: 6, col: 0, dir: 'across', num: 6 },
+                    { word: 'SIX',    hint: 'The number 6',              row: 6, col: 0, dir: 'down',   num: 7 },
+                    { word: 'NINE',   hint: 'The number 9',              row: 8, col: 4, dir: 'across', num: 8 },
+                    { word: 'THREE',  hint: 'The number 3',              row: 2, col: 6, dir: 'down',   num: 9 },
+                    { word: 'TWELVE', hint: 'The number 12 (a dozen)',   row: 10, col: 1, dir: 'across', num: 10 }
                 ]
             },
         ]

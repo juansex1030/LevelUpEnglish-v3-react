@@ -142,13 +142,18 @@ async function run() {
                 type: 'crossword_game',
                 title: '📝 Crossword: Demonstratives',
                 instruction: 'Click a cell, type letters with your keyboard. Check clues below!',
-                gridSize: { rows: 5, cols: 5 },
+                gridSize: { rows: 10, cols: 10 },
                 words: [
                     { word: 'THESE', hint: 'Plural demonstrative for NEAR things (opposite of THOSE)',   row: 0, col: 0, dir: 'across', num: 1 },
                     { word: 'HARSH', hint: 'Severe or difficult — the opposite of EASY',                  row: 0, col: 1, dir: 'down',   num: 2 },
                     { word: 'SENSE', hint: 'When something makes ___, it is clear and logical',           row: 0, col: 3, dir: 'down',   num: 3 },
                     { word: 'ERASE', hint: 'To remove or delete — like erasing a mistake with a rubber',  row: 0, col: 4, dir: 'down',   num: 4 },
                     { word: 'THOSE', hint: 'Plural demonstrative for FAR things (opposite of THESE)',     row: 4, col: 0, dir: 'across', num: 5 },
+                    { word: 'THIS',  hint: 'Singular demonstrative for NEAR things',                      row: 6, col: 0, dir: 'across', num: 6 },
+                    { word: 'THAT',  hint: 'Singular demonstrative for FAR things',                       row: 6, col: 0, dir: 'down',   num: 7 },
+                    { word: 'NEAR',  hint: 'Opposite of far',                                             row: 8, col: 2, dir: 'across', num: 8 },
+                    { word: 'FAR',   hint: 'Opposite of near',                                            row: 2, col: 6, dir: 'down',   num: 9 },
+                    { word: 'POINT', hint: 'Demonstratives are used to ___ to things',                    row: 9, col: 4, dir: 'across', num: 10 }
                 ]
             },
         ]

@@ -1,50 +1,47 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-import axios from 'axios';
-import API_URL from '../api/config';
+import apiClient from '../api/apiClient';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const verifyToken = async () => {
-      if (token) {
-        try {
-          const res = await axios.get(`${API_URL}/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setUser(res.data.user);
-        } catch (error) {
-          console.error("Token verification failed", error);
-          localStorage.removeItem('token');
-          setToken(null);
-          setUser(null);
-        }
-      }
+  const verifyUser = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get('/auth/me');
+      setUser(res.data.user);
+    } catch (error) {
+      setUser(null);
+    } finally {
       setLoading(false);
-    };
-    verifyToken();
-  }, [token]);
+    }
+  };
 
-  const login = (newToken, userData) => {
-    localStorage.setItem('token', newToken);
-    setToken(newToken);
+  useEffect(() => {
+    verifyUser();
+  }, []);
+
+  const login = (userData) => {
+    // With cookies, the token is already set in the browser. 
+    // We just update the user state.
     setUser(userData);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
+  const logout = async () => {
+    try {
+      await apiClient.post('/auth/logout');
+    } catch (error) {
+      console.error("Logout failed at server level", error);
+    } finally {
+      setUser(null);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, verifyUser }}>
       {children}
     </AuthContext.Provider>
   );

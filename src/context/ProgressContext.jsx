@@ -1,13 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import apiClient from '../api/apiClient';
 import { useAuth } from './AuthContext';
-import API_URL from '../api/config';
 
 const ProgressContext = createContext(null);
 
 export const ProgressProvider = ({ children }) => {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const [progressData, setProgressData] = useState({
     overall_percentage: 0,
     stats: {
@@ -23,20 +22,17 @@ export const ProgressProvider = ({ children }) => {
   const [loadingProgress, setLoadingProgress] = useState(false);
 
   const fetchProgress = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
     try {
       setLoadingProgress(true);
-      // Backend URL to be defined in vite.config.js or via env var
-      const response = await axios.get(`${API_URL}/progress`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await apiClient.get('/progress');
       setProgressData(response.data);
     } catch (error) {
       console.error("Error fetching progress:", error);
     } finally {
       setLoadingProgress(false);
     }
-  }, [token]);
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -59,15 +55,13 @@ export const ProgressProvider = ({ children }) => {
   }, [user, fetchProgress]);
 
   const markComplete = async (level, topicNumber, topicName, isCompleted = true) => {
-    if (!token) return false;
+    if (!user) return false;
     try {
-      await axios.post(`${API_URL}/progress/mark-complete`, {
+      await apiClient.post('/progress/mark-complete', {
         level,
         topic_number: topicNumber,
         topic_name: topicName,
         completed: isCompleted
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       // Refresh progress after marking complete
       await fetchProgress();

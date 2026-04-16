@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
-import API_URL from '../api/config';
+import apiClient from '../api/apiClient';
 
 const Profile = () => {
-    const { user, login, token } = useAuth();
+    const { user, login } = useAuth();
     
     // Fallback if not loaded yet
     const initialUsername = user?.username || '';
@@ -46,20 +45,18 @@ const Profile = () => {
 
         try {
             setLoading(true);
-            const response = await axios.put(`${API_URL}/auth/profile`, {
+            const response = await apiClient.put('/auth/profile', {
                 newUsername: formData.newUsername,
                 currentPassword: formData.currentPassword,
                 newPassword: formData.newPassword,
                 avatar: formData.avatar
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
 
             setStatus({ type: 'success', msg: response.data.msg });
             
-            // If token was updated (username changed), save it and update context
-            if (response.data.token) {
-                login(response.data.token, response.data.user);
+            // Update context with new user data
+            if (response.data.user) {
+                login(response.data.user);
             }
             
             // Clear passwords
@@ -111,7 +108,24 @@ const Profile = () => {
                                         border: '4px solid var(--color-fondo-primario)',
                                         lineHeight: 1
                                     }}>
-                                    {displayAvatar}
+                                    {formData.avatar === 'default' ? (
+                                        initials
+                                    ) : (
+                                        formData.avatar.startsWith('http') ? (
+                                            <img 
+                                                src={formData.avatar} 
+                                                alt={user.username} 
+                                                style={{ 
+                                                    width: '100%', 
+                                                    height: '100%', 
+                                                    borderRadius: '50%', 
+                                                    objectFit: 'cover' 
+                                                }} 
+                                            />
+                                        ) : (
+                                            formData.avatar
+                                        )
+                                    )}
                                 </div>
                                 
                                 <button 

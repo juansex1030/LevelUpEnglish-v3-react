@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import API_URL from '../api/config';
+import apiClient from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PracticeEngine from '../components/PracticeEngine';
@@ -9,7 +8,7 @@ import './ArcadePremium.css';
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1'];
 
 const ArcadePremium = () => {
-    const { user, token } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     
@@ -21,8 +20,6 @@ const ArcadePremium = () => {
 
     // =====================================================================
     // GUARDIA DE DESARROLLO (DEVELOPMENT GATE)
-    // Si la app está en producción, mostramos "Coming Soon" a los usuarios.
-    // Si estás corriendo "npm run dev", verás el Arcade normal para trabajar.
     // =====================================================================
     if (!import.meta.env.DEV) {
         return (
@@ -48,7 +45,7 @@ const ArcadePremium = () => {
     useEffect(() => {
         const fetchTopics = async () => {
             try {
-                const res = await axios.get(`${API_URL}/topics`);
+                const res = await apiClient.get('/topics');
                 setTopics(res.data.topics);
                 setLoading(false);
             } catch (err) {
@@ -67,9 +64,7 @@ const ArcadePremium = () => {
 
         setCheckoutLoading(true);
         try {
-            const res = await axios.post(`${API_URL}/checkout`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await apiClient.post('/checkout', {});
             window.location.href = res.data.url;
         } catch (err) {
             console.error("Stripe Checkout Error", err);
@@ -78,14 +73,24 @@ const ArcadePremium = () => {
         }
     };
 
-    const handlePlayArea = (topic) => {
-        if (!user || !user.is_premium) {
-            return; // Candado prevendrá el click visual, pero protegemos por código
+    const [gameLoading, setGameLoading] = useState(false);
+
+    const handlePlayArea = async (topic) => {
+        if (!user || !user.is_premium) return;
+        
+        setGameLoading(true);
+        try {
+            const res = await apiClient.get(`/topics/${topic.level}/${topic.number}/premium`);
+            const completeTopic = { ...topic, premium_practice: res.data.premium_practice };
+            setActiveGameTopic(completeTopic);
+        } catch (err) {
+            console.error("Error loading arcade game:", err);
+            alert("Hubo un error al cargar el juego. Intente de nuevo.");
+        } finally {
+            setGameLoading(false);
         }
-        setActiveGameTopic(topic);
     };
 
-    // UI Feedback for successful/canceled payments
     const searchParams = new URLSearchParams(location.search);
     const isSuccess = searchParams.get('success');
 
@@ -98,13 +103,13 @@ const ArcadePremium = () => {
     }
 
     if (activeGameTopic) {
-        // If a game is active, render only the game board
-        // Parse the premium data from the database
         let premiumData = null;
-        
         try {
             if (activeGameTopic.premium_practice) {
-                premiumData = JSON.parse(activeGameTopic.premium_practice);
+                // If it's a string, parse it. If it's already an object (from the new API), use it.
+                premiumData = typeof activeGameTopic.premium_practice === 'string' 
+                    ? JSON.parse(activeGameTopic.premium_practice) 
+                    : activeGameTopic.premium_practice;
             }
         } catch (e) {
             console.error("Error parsing premium practice JSON", e);
@@ -120,7 +125,7 @@ const ArcadePremium = () => {
                     <span className="badge bg-warning text-dark px-3 py-2">Premium Level {activeGameTopic.level}</span>
                 </div>
                 
-                {premiumData && premiumData.games && premiumData.games.length > 0 ? (
+                {premiumData && (premiumData.games || premiumData.pairs) ? (
                     <PracticeEngine data={premiumData} onScoreUpdate={() => console.log('Premium Game Finished!')} />
                 ) : (
                     <div className="alert alert-info text-center shadow-sm">
@@ -149,14 +154,12 @@ const ArcadePremium = () => {
                     )}
                 </div>
 
-                {/* Upsell Banner Si No Es Premium */}
                 {user && !user.is_premium && (
                     <div className="upsell-banner shadow-lg mb-5 text-center p-5 rounded-4">
                         <i className="bi bi-lock-fill display-3 text-white mb-3 shadow-icon"></i>
                         <h2 className="text-white fw-bold mb-3">Zona Bloqueada</h2>
                         <p className="text-white-50 fs-5 mb-4">
                             Obtén acceso de por vida a los 10 juegos interactivos organizados de A1 a C1.
-                            Memoria, Trabalenguas, Ahorcado y más.
                         </p>
                         <button className="btn btn-warning btn-lg fw-bold px-5 rounded-pill shadow" onClick={handleCheckout} disabled={checkoutLoading}>
                             {checkoutLoading ? 'Conectando seguro...' : 'Desbloquear Todo - $9.99'}
@@ -164,7 +167,6 @@ const ArcadePremium = () => {
                     </div>
                 )}
 
-                {/* Nav Niveles */}
                 <ul className="nav nav-pills justify-content-center mb-5 arcade-nav">
                     {LEVELS.map(lvl => (
                         <li className="nav-item mx-2" key={lvl}>
@@ -178,10 +180,9 @@ const ArcadePremium = () => {
                     ))}
                 </ul>
 
-                {/* Level Map Grid */}
                 <div className="level-map position-relative">
                     <div className="row g-4">
-                        {topics.filter(t => t.level === selectedLevel).map((topic, index) => {
+                        {topics.filter(t => t.level === selectedLevel).map((topic) => {
                             const isLocked = !user || !user.is_premium;
                             return (
                                 <div className="col-md-6 col-lg-4" key={topic.id}>
@@ -207,7 +208,6 @@ const ArcadePremium = () => {
                                                 )}
                                             </div>
                                             <h4 className="fw-bold">{topic.title}</h4>
-                                            
                                             {isLocked && <div className="overlay-lock"></div>}
                                         </div>
                                     </div>
@@ -216,7 +216,6 @@ const ArcadePremium = () => {
                         })}
                     </div>
                 </div>
-
             </div>
         </div>
     );

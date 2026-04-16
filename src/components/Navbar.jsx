@@ -129,7 +129,7 @@ const Navbar = () => {
                     </ul>
 
                     {/* Right Side Actions */}
-                    <div className="nav-actions">
+                    <div className="nav-actions" style={{ marginLeft: '1.5rem' }}>
                         <button className="theme-toggle-btn desktop-theme" onClick={toggleTheme} aria-label="Toggle theme" title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}>
                             {theme === 'dark' ? <i className="bi bi-sun-fill text-warning"></i> : <i className="bi bi-moon-stars-fill text-primary"></i>}
                         </button>
@@ -138,7 +138,18 @@ const Navbar = () => {
                             <div className="user-dropdown-container">
                                 <button className="user-profile-btn" style={{ fontSize: user?.avatar && user.avatar !== 'default' ? '1.5rem' : 'inherit' }}>
                                     {user.avatar && user.avatar !== 'default' ? (
-                                        <div style={{ marginRight: '8px', lineHeight: 1 }}>{user.avatar}</div>
+                                        user.avatar.startsWith('http') ? (
+                                            <div className="avatar-img-wrapper" style={{ marginRight: '8px' }}>
+                                                <img 
+                                                    src={user.avatar} 
+                                                    alt={user.username} 
+                                                    className="rounded-circle shadow-sm"
+                                                    style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div style={{ marginRight: '8px', lineHeight: 1 }}>{user.avatar}</div>
+                                        )
                                     ) : (
                                         <div className="avatar">
                                             {user.username ? user.username.charAt(0).toUpperCase() : 'U'}

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
-import API_URL from '../api/config';
+import apiClient from '../api/apiClient';
 
 const Login = () => {
     const { login } = useAuth();
@@ -25,7 +24,7 @@ const Login = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post(`${API_URL}/auth/login`, formData);
+            const response = await apiClient.post('/auth/login', formData);
             
             // Critical check: Ensure only admins can log into this panel
             if (!response.data.user.is_admin) {
@@ -34,7 +33,7 @@ const Login = () => {
                 return;
             }
 
-            login(response.data.token, response.data.user);
+            login(response.data.user);
             navigate('/');
             setLoading(false);
         } catch (err) {

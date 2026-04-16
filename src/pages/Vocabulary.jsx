@@ -36,8 +36,31 @@ const Vocabulary = () => {
 
     const filteredWords = currentCategory.words.filter(wordPair => 
         wordPair.en.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        wordPair.es.toLowerCase().includes(searchTerm.toLowerCase())
+        wordPair.es.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (wordPair.past && wordPair.past.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (wordPair.part && wordPair.part.toLowerCase().includes(searchTerm.toLowerCase()))
     );
+
+    const playAudio = (text) => {
+        if (!text || typeof text !== 'string') return;
+        
+        // Prevenir spam de clicks: ignoramos la petición si actualmente ya está pronuciando algo
+        if (window.speechSynthesis.speaking) return;
+
+        const cleanText = text.split('/')[0].trim();
+        
+        // Evita que la API se quede "atascada" si hubo errores previos
+        window.speechSynthesis.cancel(); 
+        
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9; // Un poco más lento para mejor claridad
+        
+        // Manejador de errores por si falla
+        utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
+        
+        window.speechSynthesis.speak(utterance);
+    };
 
     return (
         <div className="container py-4">
@@ -83,6 +106,61 @@ const Vocabulary = () => {
                     margin-top: 2rem;
                     animation: fadeIn 0.5s ease;
                 }
+                .words-grid.words-grid-verbs {
+                    grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+                }
+                .verb-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 1fr;
+                    gap: 0.5rem;
+                    text-align: center;
+                }
+                .verb-column {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    padding: 0 0.5rem;
+                }
+                .verb-label {
+                    font-size: 0.75rem;
+                    font-weight: bold;
+                    color: var(--color-texto-secundario);
+                    text-transform: uppercase;
+                    margin-bottom: 0.5rem;
+                    opacity: 0.7;
+                    letter-spacing: 0.5px;
+                }
+                .verb-es {
+                    border-top: none;
+                    margin-top: 0;
+                    padding-top: 0;
+                }
+                .vocab-es-small {
+                    font-size: 0.95rem;
+                    color: var(--color-texto-secundario);
+                    font-weight: 400;
+                    margin-top: 0.3rem;
+                    text-align: center;
+                }
+                @media (max-width: 768px) {
+                    .words-grid.words-grid-verbs {
+                        grid-template-columns: 1fr;
+                    }
+                    .verb-grid {
+                        grid-template-columns: 1fr;
+                        gap: 1rem;
+                    }
+                    .verb-column {
+                        border-left: none !important;
+                        border-right: none !important;
+                        border-bottom: 1px solid var(--color-borde);
+                        padding-bottom: 1rem;
+                    }
+                    .verb-column:last-child {
+                        border-bottom: none;
+                        padding-bottom: 0;
+                    }
+                }
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
@@ -124,24 +202,61 @@ const Vocabulary = () => {
                     </div>
                 </div>
 
-                <div className="words-grid">
+                <div className={`words-grid ${activeTab.includes('Verbs') ? 'words-grid-verbs' : ''}`}>
                     {filteredWords.length > 0 ? (
-                        filteredWords.map((wordPair, idx) => (
+                        filteredWords.map((wordPair, idx) => {
+                            const isVerb = wordPair.past && wordPair.part;
+                            return (
                             <div key={idx} className="vocab-card">
-                                <span className="vocab-en">
-                                    <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }} 
-                                       onClick={() => {
-                                           const utterance = new SpeechSynthesisUtterance(wordPair.en);
-                                           utterance.lang = 'en-US';
-                                           window.speechSynthesis.speak(utterance);
-                                       }}
-                                       title="Escuchar pronunciación"></i>
-                                    {wordPair.en}
-                                </span>
-                                <div className="vocab-divider"></div>
-                                <span className="vocab-es">{wordPair.es}</span>
+                                {isVerb ? (
+                                    <>
+                                        <div className="verb-grid">
+                                            <div className="verb-column">
+                                                <span className="verb-label">Infinitivo</span>
+                                                <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
+                                                    <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }} 
+                                                       onClick={() => playAudio(wordPair.en)} 
+                                                       title="Escuchar infinitivo"></i>
+                                                    {wordPair.en}
+                                                </span>
+                                                <span className="vocab-es-small">{wordPair.es}</span>
+                                            </div>
+                                            <div className="verb-column" style={{ borderLeft: '1px solid var(--color-borde)', borderRight: '1px solid var(--color-borde)' }}>
+                                                <span className="verb-label">Pasado</span>
+                                                <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
+                                                    <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }} 
+                                                       onClick={() => playAudio(wordPair.past)} 
+                                                       title="Escuchar pasado"></i>
+                                                    {wordPair.past}
+                                                </span>
+                                                <span className="vocab-es-small">{wordPair.esPast || '-'}</span>
+                                            </div>
+                                            <div className="verb-column">
+                                                <span className="verb-label">Participio</span>
+                                                <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
+                                                    <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }} 
+                                                       onClick={() => playAudio(wordPair.part)} 
+                                                       title="Escuchar participio"></i>
+                                                    {wordPair.part}
+                                                </span>
+                                                <span className="vocab-es-small">{wordPair.esPart || '-'}</span>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="vocab-en">
+                                            <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }} 
+                                               onClick={() => playAudio(wordPair.en)}
+                                               title="Escuchar pronunciación"></i>
+                                            {wordPair.en}
+                                        </span>
+                                        <div className="vocab-divider"></div>
+                                        <span className="vocab-es">{wordPair.es}</span>
+                                    </>
+                                )}
                             </div>
-                        ))
+                        )})
                     ) : (
                         <div className="text-center py-5" style={{ gridColumn: '1 / -1' }}>
                             <i className="bi bi-search text-muted opacity-50 mb-3 d-block" style={{ fontSize: '3rem' }}></i>
