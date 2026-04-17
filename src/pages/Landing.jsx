@@ -26,7 +26,7 @@ const Landing = () => {
                                     <Link to="/learn" className="cta-button-primary">
                                         <i className="bi bi-play-circle-fill"></i> Continue Learning
                                     </Link>
-                                    <Link to="/learn" className="cta-button-secondary">
+                                    <Link to="/progress" className="cta-button-secondary">
                                         <i className="bi bi-graph-up"></i> View My Progress
                                     </Link>
                                 </>
