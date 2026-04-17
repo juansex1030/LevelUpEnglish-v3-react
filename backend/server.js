@@ -28,7 +28,7 @@ app.use(cookieParser());
 // Rate Limiting
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: process.env.NODE_ENV === 'production' ? 100 : 10000, // much higher in dev
+    max: process.env.NODE_ENV === 'production' ? 100 : 50000, // much higher in dev
     standardHeaders: true,
     legacyHeaders: false,
     message: { msg: 'Demasiadas peticiones, intente más tarde.' }

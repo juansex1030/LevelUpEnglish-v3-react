@@ -13,9 +13,10 @@ const Navbar = () => {
 
     useEffect(() => {
         const handleScroll = () => {
-            if (window.scrollY > 20) {
+            const offset = window.scrollY;
+            if (offset > 60) {
                 setScrolled(true);
-            } else {
+            } else if (offset < 10) {
                 setScrolled(false);
             }
         };
@@ -51,7 +52,6 @@ const Navbar = () => {
     return (
         <nav className={`modern-navbar ${scrolled ? 'scrolled' : ''}`}>
             <div className="navbar-container">
-                {/* Mobile Controls (Menu Toggle) */}
                 <div className="mobile-controls left">
                     <button 
                         className={`hamburger-btn ${isMenuOpen ? 'active' : ''}`}
@@ -61,9 +61,6 @@ const Navbar = () => {
                         <span></span>
                         <span></span>
                         <span></span>
-                    </button>
-                    <button className="theme-toggle-btn mobile-theme" onClick={toggleTheme} aria-label="Toggle theme">
-                        {theme === 'dark' ? <i className="bi bi-sun-fill text-warning"></i> : <i className="bi bi-moon-stars-fill text-primary"></i>}
                     </button>
                 </div>
 
@@ -75,8 +72,10 @@ const Navbar = () => {
                     <span className="brand-text">LevelUp<span className="brand-highlight">English</span></span>
                 </Link>
 
-                {/* Placeholder/Empty for desktop balance, but hidden in CSS if needed */}
-                <div className="nav-placeholder desktop-only"></div>
+                {/* Mobile Theme Toggle (Positioned via CSS in mobile, hidden in desktop) */}
+                <button className="theme-toggle-btn mobile-theme" onClick={toggleTheme} aria-label="Toggle theme">
+                    {theme === 'dark' ? <i className="bi bi-sun-fill text-warning"></i> : <i className="bi bi-moon-stars-fill text-primary"></i>}
+                </button>
 
                 {/* Navigation Links */}
                 <div className={`nav-menu ${isMenuOpen ? 'open' : ''}`}>

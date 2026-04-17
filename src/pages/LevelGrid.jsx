@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
-import { useProgress } from '../context/ProgressContext';
-import API_URL from '../api/config';
+import apiClient from '../api/apiClient';
 import AdBanner from '../components/AdBanner';
 import './LevelGrid.css';
+
+import { useAuth } from '../context/AuthContext';
+import { useProgress } from '../context/ProgressContext';
 
 const LevelGrid = () => {
     const { nivel } = useParams();
@@ -19,7 +19,7 @@ const LevelGrid = () => {
         const fetchTopics = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get(`${API_URL}/topics/${nivel}`);
+                const response = await apiClient.get(`/topics/${nivel}`);
                 setTopics(response.data.topics);
             } catch (error) {
                 console.error("Error fetching topics:", error);
