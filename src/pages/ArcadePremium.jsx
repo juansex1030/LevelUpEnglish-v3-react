@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import PracticeEngine from '../components/PracticeEngine';
 import './ArcadePremium.css';
 
@@ -11,12 +11,14 @@ const ArcadePremium = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
     
     const [topics, setTopics] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedLevel, setSelectedLevel] = useState('A1');
     const [activeGameTopic, setActiveGameTopic] = useState(null);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
+    const [gameLoading, setGameLoading] = useState(false);
 
     // =====================================================================
     // GUARDIA DE DESARROLLO (DEVELOPMENT GATE)
@@ -73,25 +75,42 @@ const ArcadePremium = () => {
         }
     };
 
-    const [gameLoading, setGameLoading] = useState(false);
-
-    const handlePlayArea = async (topic) => {
+    const handlePlayArea = (topic) => {
         if (!user || !user.is_premium) return;
-        
-        setGameLoading(true);
-        try {
-            const res = await apiClient.get(`/topics/${topic.level}/${topic.number}/premium`);
-            const completeTopic = { ...topic, premium_practice: res.data.premium_practice };
-            setActiveGameTopic(completeTopic);
-        } catch (err) {
-            console.error("Error loading arcade game:", err);
-            alert("Hubo un error al cargar el juego. Intente de nuevo.");
-        } finally {
-            setGameLoading(false);
-        }
+        setSearchParams({ topicId: topic.id.toString() });
     };
 
-    const searchParams = new URLSearchParams(location.search);
+    // --- Sync URL with Game State ---
+    useEffect(() => {
+        const topicId = searchParams.get('topicId');
+        if (!topicId) {
+            setActiveGameTopic(null);
+            return;
+        }
+
+        const fetchGame = async () => {
+            const topic = topics.find(t => t.id.toString() === topicId);
+            if (!topic) return;
+
+            setGameLoading(true);
+            try {
+                const res = await apiClient.get(`/topics/${topic.level}/${topic.number}/premium`);
+                const completeTopic = { ...topic, premium_practice: res.data.premium_practice };
+                setActiveGameTopic(completeTopic);
+            } catch (err) {
+                console.error("Error loading arcade game:", err);
+                alert("Hubo un error al cargar el juego. Intente de nuevo.");
+                setSearchParams({}); // Clear on error
+            } finally {
+                setGameLoading(false);
+            }
+        };
+
+        if (topics.length > 0) {
+            fetchGame();
+        }
+    }, [searchParams, topics]);
+
     const isSuccess = searchParams.get('success');
 
     if (loading) {
@@ -117,7 +136,7 @@ const ArcadePremium = () => {
         
         return (
             <div className="arcade-play-area container py-5">
-                <button className="btn btn-outline-secondary mb-4" onClick={() => setActiveGameTopic(null)}>
+                <button className="btn btn-outline-secondary mb-4" onClick={() => setSearchParams({})}>
                     <i className="bi bi-arrow-left"></i> Volver al Mapa Arcade
                 </button>
                 <div className="text-center mb-4">

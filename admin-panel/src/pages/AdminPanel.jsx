@@ -21,11 +21,12 @@ const AdminPanel = () => {
         setIsDarkMode(newTheme);
         localStorage.setItem('admin_theme', newTheme ? 'dark' : 'light');
     };
-    
+
     const [activeTab, setActiveTab] = useState('dashboard');
     const [userFilter, setUserFilter] = useState('all');
-    
+
     // --- DASHBOARD STATE ---
+    // --- STATS & LOGS STATE ---
     const [stats, setStats] = useState(null);
     const [users, setUsers] = useState([]);
     const [loadingDashboard, setLoadingDashboard] = useState(true);
@@ -33,10 +34,12 @@ const AdminPanel = () => {
     const [studentProgress, setStudentProgress] = useState(null);
     const [loadingProgress, setLoadingProgress] = useState(false);
     const [dashboardError, setDashboardError] = useState(null);
-
-    // --- LOGS STATE ---
     const [logs, setLogs] = useState([]);
     const [loadingLogs, setLoadingLogs] = useState(false);
+
+    // --- SUPPORT INBOX STATE ---
+    const [messages, setMessages] = useState([]);
+    const [loadingMessages, setLoadingMessages] = useState(false);
 
     // --- TOPICS CRUD STATE ---
     const [selectedLevel, setSelectedLevel] = useState('A1');
@@ -69,6 +72,8 @@ const AdminPanel = () => {
             loadAllTopicsForArcade();
         } else if (activeTab === 'activity') {
             loadLogs();
+        } else if (activeTab === 'inbox') {
+            loadMessages();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, selectedLevel]);
@@ -129,6 +134,28 @@ const AdminPanel = () => {
             console.error(err);
         } finally {
             setLoadingLogs(false);
+        }
+    };
+
+    // --- SUPPORT INBOX HANDLERS ---
+    const loadMessages = async () => {
+        try {
+            setLoadingMessages(true);
+            const res = await apiClient.get('/support/admin/messages');
+            setMessages(res.data.messages);
+        } catch (err) {
+            console.error('Error loading messages:', err);
+        } finally {
+            setLoadingMessages(false);
+        }
+    };
+
+    const handleMarkAsRead = async (id) => {
+        try {
+            await apiClient.put(`/support/admin/messages/${id}/read`);
+            setMessages(messages.map(m => m.id === id ? { ...m, status: 'read' } : m));
+        } catch (err) {
+            console.error('Error marking as read:', err);
         }
     };
 
@@ -211,12 +238,12 @@ const AdminPanel = () => {
     const openCreateTopic = () => {
         setEditingTopicId(null);
         setTopicForm({
-            level: selectedLevel, 
-            number: topics.length > 0 ? Math.max(...topics.map(t => t.number)) + 1 : 1, 
-            title: '', 
-            description: '', 
-            icon: 'bi-book-half', 
-            theory: '', 
+            level: selectedLevel,
+            number: topics.length > 0 ? Math.max(...topics.map(t => t.number)) + 1 : 1,
+            title: '',
+            description: '',
+            icon: 'bi-book-half',
+            theory: '',
             practice: '',
             premium_practice: '',
             arcade_enabled: true
@@ -232,7 +259,7 @@ const AdminPanel = () => {
             const res = await apiClient.get(`/admin/topics/${topicId}`);
             setTopicForm(res.data);
             setEditingTopicId(topicId);
-            
+
             // Link structured practice state
             try {
                 if (res.data.practice && res.data.practice.startsWith('{')) {
@@ -257,7 +284,7 @@ const AdminPanel = () => {
         e.preventDefault();
         try {
             const finalData = { ...topicForm };
-            
+
             // Sync current structured view to the active field before saving
             if (useStructuredPractice) {
                 if (isPremiumPracticeMode) {
@@ -266,7 +293,7 @@ const AdminPanel = () => {
                     finalData.practice = JSON.stringify(structuredPractice, null, 2);
                 }
             }
-            
+
             if (editingTopicId) {
                 await apiClient.put(`/admin/topics/${editingTopicId}`, finalData);
             } else {
@@ -282,13 +309,13 @@ const AdminPanel = () => {
 
     const togglePracticeMode = (toPremium) => {
         if (toPremium === isPremiumPracticeMode) return;
-        
+
         // 1. Save current structured state to the relevant form field
         const currentJson = JSON.stringify(structuredPractice, null, 2);
         const updatedForm = { ...topicForm };
         if (isPremiumPracticeMode) updatedForm.premium_practice = currentJson;
         else updatedForm.practice = currentJson;
-        
+
         // 2. Load the other field into structured state
         const targetString = toPremium ? updatedForm.premium_practice : updatedForm.practice;
         try {
@@ -303,7 +330,7 @@ const AdminPanel = () => {
             setStructuredPractice({ games: [] });
             setUseStructuredPractice(false);
         }
-        
+
         setTopicForm(updatedForm);
         setIsPremiumPracticeMode(toPremium);
     };
@@ -340,19 +367,19 @@ const AdminPanel = () => {
         const end = textarea.selectionEnd;
         const text = textarea.value;
         const selectedText = text.substring(start, end);
-        
+
         let before = text.substring(0, start);
         let after = text.substring(end);
-        
+
         let newTag = tag;
         let newClosing = closingTag || tag.replace('<', '</').split(' ')[0] + '>';
         if (tag.includes('/>')) newClosing = ''; // self-closing
 
         const insertion = `${newTag}${selectedText}${newClosing}`;
         const newValue = before + insertion + after;
-        
+
         setTopicForm(prev => ({ ...prev, theory: newValue }));
-        
+
         // Return focus
         setTimeout(() => {
             textarea.focus();
@@ -386,7 +413,7 @@ const AdminPanel = () => {
         const game = structuredPractice.games[gameIdx];
         let newQ = { q: '', a: '' };
         if (game.type === 'multiple_choice') newQ = { q: '', a: '', options: ['', '', ''] };
-        
+
         setStructuredPractice(prev => ({
             ...prev,
             games: prev.games.map((g, idx) => {
@@ -411,9 +438,9 @@ const AdminPanel = () => {
             ...prev,
             games: prev.games.map((g, idx) => {
                 if (idx !== gameIdx) return g;
-                return { 
-                    ...g, 
-                    questions: g.questions.map((q, qI) => qI === qIdx ? { ...q, [field]: value } : q) 
+                return {
+                    ...g,
+                    questions: g.questions.map((q, qI) => qI === qIdx ? { ...q, [field]: value } : q)
                 };
             })
         }));
@@ -424,7 +451,7 @@ const AdminPanel = () => {
 
     return (
         <div className={`d-flex admin-corporate pb-5 ${isDarkMode ? 'dark-mode' : ''}`} style={{ minHeight: '100vh', width: '100%' }}>
-            
+
             <style>{`
                 :root {
                     --admin-bg: #F8FAFC;
@@ -543,12 +570,12 @@ const AdminPanel = () => {
             `}</style>
 
             {/* ====== SIDEBAR ====== */}
-            <aside 
-                className="d-flex flex-column flex-shrink-0 p-4 admin-sidebar" 
-                style={{ 
-                    width: '280px', 
-                    position: 'sticky', 
-                    top: 0, 
+            <aside
+                className="d-flex flex-column flex-shrink-0 p-4 admin-sidebar"
+                style={{
+                    width: '280px',
+                    position: 'sticky',
+                    top: 0,
                     height: '100vh',
                     zIndex: 1040
                 }}
@@ -558,11 +585,11 @@ const AdminPanel = () => {
                         <i className="bi bi-shield-lock-fill text-primary fs-3 me-3"></i>
                         <span className="fs-4 fw-bold">AdminPanel</span>
                     </a>
-                    <button 
-                        className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center" 
+                    <button
+                        className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
                         onClick={toggleTheme}
-                        style={{ 
-                            width: '36px', height: '36px', 
+                        style={{
+                            width: '36px', height: '36px',
                             backgroundColor: isDarkMode ? '#334155' : '#F1F5F9',
                             color: isDarkMode ? '#F8FAFC' : '#0F172A',
                             border: 'none',
@@ -572,10 +599,10 @@ const AdminPanel = () => {
                         <i className={`bi ${isDarkMode ? 'bi-sun-fill' : 'bi-moon-fill'}`}></i>
                     </button>
                 </div>
-                
+
                 <ul className="nav flex-column mb-auto gap-2">
                     <li className="nav-item">
-                        <button 
+                        <button
                             className={`nav-link text-start w-100 rounded-3 admin-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
                             style={{ transition: 'all 0.2s' }}
                             onClick={() => setActiveTab('dashboard')}
@@ -584,7 +611,7 @@ const AdminPanel = () => {
                         </button>
                     </li>
                     <li className="nav-item">
-                        <button 
+                        <button
                             className={`nav-link text-start w-100 rounded-3 admin-nav-btn ${activeTab === 'topics' ? 'active' : ''}`}
                             style={{ transition: 'all 0.2s' }}
                             onClick={() => setActiveTab('topics')}
@@ -593,7 +620,21 @@ const AdminPanel = () => {
                         </button>
                     </li>
                     <li className="nav-item">
-                        <button 
+                        <button
+                            className={`nav-link text-start w-100 rounded-3 admin-nav-btn ${activeTab === 'inbox' ? 'active' : ''}`}
+                            style={{ transition: 'all 0.2s' }}
+                            onClick={() => setActiveTab('inbox')}
+                        >
+                            <i className="bi bi-inbox-fill me-2"></i> Support Inbox
+                            {messages.filter(m => m.status === 'unread').length > 0 && (
+                                <span className="badge rounded-circle bg-danger ms-2" style={{ padding: '4px 7px', fontSize: '10px' }}>
+                                    {messages.filter(m => m.status === 'unread').length}
+                                </span>
+                            )}
+                        </button>
+                    </li>
+                    <li className="nav-item">
+                        <button
                             className={`nav-link text-start w-100 rounded-3 admin-nav-btn ${activeTab === 'arcade' ? 'active' : ''}`}
                             style={{ transition: 'all 0.2s' }}
                             onClick={() => setActiveTab('arcade')}
@@ -602,7 +643,7 @@ const AdminPanel = () => {
                         </button>
                     </li>
                     <li className="nav-item border-top pt-2 mt-2" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0' }}>
-                        <button 
+                        <button
                             className={`nav-link text-start w-100 rounded-3 admin-nav-btn ${activeTab === 'activity' ? 'active' : ''}`}
                             style={{ transition: 'all 0.2s' }}
                             onClick={() => setActiveTab('activity')}
@@ -611,7 +652,7 @@ const AdminPanel = () => {
                         </button>
                     </li>
                 </ul>
-                
+
                 <hr style={{ borderColor: '#E2E8F0' }} />
                 <button className="btn btn-outline-danger w-100 rounded-3 text-start" onClick={handleExit}>
                     <i className="bi bi-box-arrow-left me-2"></i> Exit Admin
@@ -621,7 +662,7 @@ const AdminPanel = () => {
             {/* ====== MAIN CONTENT ====== */}
             <main className="flex-grow-1" style={{ overflowY: 'auto' }}>
                 <div className="container-fluid py-5 px-md-5" style={{ maxWidth: '1400px' }}>
-                    
+
                     {/* Header contextual */}
                     <div className="d-flex justify-content-between align-items-end mb-5 pb-3">
                         <div>
@@ -635,813 +676,890 @@ const AdminPanel = () => {
                         </div>
                     </div>
 
-            {/* ========== TAB: DASHBOARD ========== */}
-            {activeTab === 'dashboard' && (
-                <>
-                    {loadingDashboard ? (
-                        <div className="text-center py-5">
-                            <div className="spinner-border text-primary" role="status"></div>
-                            <p className="mt-2 text-muted">Loading dashboard...</p>
-                        </div>
-                    ) : dashboardError ? (
-                        <div className="alert alert-danger text-center py-4 rounded-pill">
-                            <i className="bi bi-exclamation-triangle me-2"></i>
-                            {dashboardError}
-                            <button className="btn btn-link py-0" onClick={loadDashboard}>Retry</button>
-                        </div>
-                    ) : (
+                    {/* ========== TAB: DASHBOARD ========== */}
+                    {activeTab === 'dashboard' && (
                         <>
-                            {/* ESTADÍSTICAS */}
-                            <div className="row g-4 mb-5">
-                                <div className="col-md-3">
-                                    <div className="admin-card d-flex align-items-center">
-                                        <div className="admin-stat-icon bg-primary bg-opacity-10 text-primary me-3">
-                                            <i className="bi bi-people-fill"></i>
+                            {loadingDashboard ? (
+                                <div className="text-center py-5">
+                                    <div className="spinner-border text-primary" role="status"></div>
+                                    <p className="mt-2 text-muted">Loading dashboard...</p>
+                                </div>
+                            ) : dashboardError ? (
+                                <div className="alert alert-danger text-center py-4 rounded-pill">
+                                    <i className="bi bi-exclamation-triangle me-2"></i>
+                                    {dashboardError}
+                                    <button className="btn btn-link py-0" onClick={loadDashboard}>Retry</button>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* ESTADÍSTICAS */}
+                                    <div className="row g-4 mb-5">
+                                        <div className="col-md-3">
+                                            <div className="admin-card d-flex align-items-center">
+                                                <div className="admin-stat-icon bg-primary bg-opacity-10 text-primary me-3">
+                                                    <i className="bi bi-people-fill"></i>
+                                                </div>
+                                                <div>
+                                                    <p className="admin-text-muted mb-0 small fw-semibold">Registered Users</p>
+                                                    <h3 className="admin-heading mb-0">{stats?.total_users || 0}</h3>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="admin-text-muted mb-0 small fw-semibold">Registered Users</p>
-                                            <h3 className="admin-heading mb-0">{stats?.total_users || 0}</h3>
+                                        <div className="col-md-3">
+                                            <div className="admin-card d-flex align-items-center">
+                                                <div className="admin-stat-icon bg-warning bg-opacity-10 text-warning me-3">
+                                                    <i className="bi bi-award-fill"></i>
+                                                </div>
+                                                <div>
+                                                    <p className="admin-text-muted mb-0 small fw-semibold">Premium Users</p>
+                                                    <h3 className="admin-heading mb-0">{users.filter(u => u.is_premium).length}</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="col-md-3">
+                                            <div className="admin-card d-flex align-items-center">
+                                                <div className="admin-stat-icon bg-success bg-opacity-10 text-success me-3">
+                                                    <i className="bi bi-journal-check"></i>
+                                                </div>
+                                                <div>
+                                                    <p className="admin-text-muted mb-0 small fw-semibold">Completed Topics</p>
+                                                    <h3 className="admin-heading mb-0">{stats?.completed_topics || 0}</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="col-md-3">
+                                            <div className="admin-card d-flex align-items-center">
+                                                <div className="admin-stat-icon bg-info bg-opacity-10 text-info me-3">
+                                                    <i className="bi bi-graph-up-arrow"></i>
+                                                </div>
+                                                <div>
+                                                    <p className="admin-text-muted mb-0 small fw-semibold">Progress Entries</p>
+                                                    <h3 className="admin-heading mb-0">{stats?.total_progress_entries || 0}</h3>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="col-md-3">
-                                    <div className="admin-card d-flex align-items-center">
-                                        <div className="admin-stat-icon bg-warning bg-opacity-10 text-warning me-3">
-                                            <i className="bi bi-award-fill"></i>
-                                        </div>
-                                        <div>
-                                            <p className="admin-text-muted mb-0 small fw-semibold">Premium Users</p>
-                                            <h3 className="admin-heading mb-0">{users.filter(u => u.is_premium).length}</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="col-md-3">
-                                    <div className="admin-card d-flex align-items-center">
-                                        <div className="admin-stat-icon bg-success bg-opacity-10 text-success me-3">
-                                            <i className="bi bi-journal-check"></i>
-                                        </div>
-                                        <div>
-                                            <p className="admin-text-muted mb-0 small fw-semibold">Completed Topics</p>
-                                            <h3 className="admin-heading mb-0">{stats?.completed_topics || 0}</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="col-md-3">
-                                    <div className="admin-card d-flex align-items-center">
-                                        <div className="admin-stat-icon bg-info bg-opacity-10 text-info me-3">
-                                            <i className="bi bi-graph-up-arrow"></i>
-                                        </div>
-                                        <div>
-                                            <p className="admin-text-muted mb-0 small fw-semibold">Progress Entries</p>
-                                            <h3 className="admin-heading mb-0">{stats?.total_progress_entries || 0}</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
-                            {/* CHARTS ROW */}
-                            <div className="row g-4 mb-5">
-                                {/* Bar Chart - Topic Progress */}
-                                <div className="col-lg-8">
-                                    <div className="admin-card h-100 d-flex flex-column">
-                                        <h4 className="admin-heading fs-6 mb-4">Topic Completion by Level</h4>
-                                        <div style={{ flex: 1, minHeight: '300px' }}>
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={stats?.chart_data || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                                                    <XAxis dataKey="name" stroke={isDarkMode ? '#94A3B8' : '#64748b'} axisLine={false} tickLine={false} tick={{ fontSize: 13 }} />
-                                                    <YAxis allowDecimals={false} stroke={isDarkMode ? '#94A3B8' : '#64748b'} axisLine={false} tickLine={false} tick={{ fontSize: 13 }} />
-                                                    <Tooltip 
-                                                        cursor={{ fill: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc' }}
-                                                        contentStyle={{ 
-                                                            backgroundColor: isDarkMode ? '#1E293B' : '#ffffff', 
-                                                            borderRadius: '8px', 
-                                                            border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`, 
-                                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)', 
-                                                            color: isDarkMode ? '#F8FAFC' : '#0f172a', 
-                                                            fontWeight: '500' 
-                                                        }}
-                                                    />
-                                                    <Bar dataKey="completados" fill={isDarkMode ? '#38BDF8' : '#0f172a'} radius={[4, 4, 0, 0]} barSize={40} />
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                {/* Donut Chart - Premium vs Free */}
-                                <div className="col-lg-4">
-                                    <div className="admin-card h-100 d-flex flex-column">
-                                        <h4 className="admin-heading fs-6 mb-4">Account Distribution</h4>
-                                        <div style={{ flex: 1, minHeight: '300px', position: 'relative' }}>
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
-                                                    <Pie
-                                                        data={[
-                                                            { name: 'Premium', value: users.filter(u => u.is_premium).length, color: isDarkMode ? '#38BDF8' : '#0f172a' },
-                                                            { name: 'Free', value: users.filter(u => !u.is_premium).length, color: isDarkMode ? '#334155' : '#cbd5e1' }
-                                                        ]}
-                                                        cx="50%"
-                                                        cy="50%"
-                                                        innerRadius={75}
-                                                        outerRadius={105}
-                                                        paddingAngle={3}
-                                                        dataKey="value"
-                                                        stroke="none"
-                                                    >
-                                                        {
-                                                            [
-                                                                { name: 'Premium', value: users.filter(u => u.is_premium).length, color: isDarkMode ? '#38BDF8' : '#0f172a' },
-                                                                { name: 'Free', value: users.filter(u => !u.is_premium).length, color: isDarkMode ? '#475569' : '#e2e8f0' }
-                                                            ].map((entry, index) => (
-                                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                                            ))
-                                                        }
-                                                    </Pie>
-                                                    <Tooltip 
-                                                        contentStyle={{ 
-                                                            backgroundColor: isDarkMode ? '#1E293B' : '#ffffff', 
-                                                            borderRadius: '8px', 
-                                                            border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`, 
-                                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)', 
-                                                            color: isDarkMode ? '#F8FAFC' : '#0f172a' 
-                                                        }}
-                                                        itemStyle={{ color: isDarkMode ? '#F8FAFC' : '#0f172a', fontWeight: 'bold' }}
-                                                    />
-                                                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '14px', color: isDarkMode ? '#94A3B8' : '#64748b' }} />
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                            {/* Center Label */}
-                                            <div style={{ position: 'absolute', top: '48%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
-                                                <div className="fs-2 fw-bold" style={{ color: isDarkMode ? '#F8FAFC' : '#0f172a', letterSpacing: '-1px' }}>{users.length}</div>
-                                                <div className="text-muted" style={{ fontSize: '0.65rem', fontWeight: '700', letterSpacing: '1px' }}>TOTAL</div>
+                                    {/* CHARTS ROW */}
+                                    <div className="row g-4 mb-5">
+                                        {/* Bar Chart - Topic Progress */}
+                                        <div className="col-lg-8">
+                                            <div className="admin-card h-100 d-flex flex-column">
+                                                <h4 className="admin-heading fs-6 mb-4">Topic Completion by Level</h4>
+                                                <div style={{ flex: 1, minHeight: '300px' }}>
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <BarChart data={stats?.chart_data || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
+                                                            <XAxis dataKey="name" stroke={isDarkMode ? '#94A3B8' : '#64748b'} axisLine={false} tickLine={false} tick={{ fontSize: 13 }} />
+                                                            <YAxis allowDecimals={false} stroke={isDarkMode ? '#94A3B8' : '#64748b'} axisLine={false} tickLine={false} tick={{ fontSize: 13 }} />
+                                                            <Tooltip
+                                                                cursor={{ fill: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc' }}
+                                                                contentStyle={{
+                                                                    backgroundColor: isDarkMode ? '#1E293B' : '#ffffff',
+                                                                    borderRadius: '8px',
+                                                                    border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+                                                                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)',
+                                                                    color: isDarkMode ? '#F8FAFC' : '#0f172a',
+                                                                    fontWeight: '500'
+                                                                }}
+                                                            />
+                                                            <Bar dataKey="completados" fill={isDarkMode ? '#38BDF8' : '#0f172a'} radius={[4, 4, 0, 0]} barSize={40} />
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
 
-                            {/* USER LIST */}
-                            <div className="admin-card p-0 overflow-hidden">
-                                <div className="border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0' }}>
-                                    <h4 className="admin-heading fs-5 mb-0">Registered Users</h4>
-                                        <div className="d-flex gap-2 align-items-center">
-                                            <div className="btn-group" role="group">
-                                                <button type="button" className={`btn btn-sm ${userFilter === 'all' ? 'admin-btn-primary' : (isDarkMode ? 'btn-outline-light text-light' : 'btn-outline-secondary text-dark')}`} onClick={() => setUserFilter('all')}>All</button>
-                                                <button type="button" className={`btn btn-sm ${userFilter === 'premium' ? 'admin-btn-primary' : (isDarkMode ? 'btn-outline-light text-light' : 'btn-outline-secondary text-dark')}`} onClick={() => setUserFilter('premium')}>Premium</button>
-                                                <button type="button" className={`btn btn-sm ${userFilter === 'admin' ? 'admin-btn-primary' : (isDarkMode ? 'btn-outline-light text-light' : 'btn-outline-secondary text-dark')}`} onClick={() => setUserFilter('admin')}>Admins</button>
-                                            </div>
-                                            <div className="input-group" style={{ width: '250px' }}>
-                                                <span className="input-group-text bg-transparent border-end-0" style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}` }}>
-                                                    <i className="bi bi-search admin-text-muted"></i>
-                                                </span>
-                                                <input 
-                                                    type="text" 
-                                                    className="form-control border-start-0 ps-0" 
-                                                    placeholder="Search user or email..." 
-                                                    style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}`, background: 'transparent' }}
-                                                    value={userSearchTerm}
-                                                    onChange={(e) => setUserSearchTerm(e.target.value)}
-                                                />
+                                        {/* Donut Chart - Premium vs Free */}
+                                        <div className="col-lg-4">
+                                            <div className="admin-card h-100 d-flex flex-column">
+                                                <h4 className="admin-heading fs-6 mb-4">Account Distribution</h4>
+                                                <div style={{ flex: 1, minHeight: '300px', position: 'relative' }}>
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <PieChart>
+                                                            <Pie
+                                                                data={[
+                                                                    { name: 'Premium', value: users.filter(u => u.is_premium).length, color: isDarkMode ? '#38BDF8' : '#0f172a' },
+                                                                    { name: 'Free', value: users.filter(u => !u.is_premium).length, color: isDarkMode ? '#334155' : '#cbd5e1' }
+                                                                ]}
+                                                                cx="50%"
+                                                                cy="50%"
+                                                                innerRadius={75}
+                                                                outerRadius={105}
+                                                                paddingAngle={3}
+                                                                dataKey="value"
+                                                                stroke="none"
+                                                            >
+                                                                {
+                                                                    [
+                                                                        { name: 'Premium', value: users.filter(u => u.is_premium).length, color: isDarkMode ? '#38BDF8' : '#0f172a' },
+                                                                        { name: 'Free', value: users.filter(u => !u.is_premium).length, color: isDarkMode ? '#475569' : '#e2e8f0' }
+                                                                    ].map((entry, index) => (
+                                                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                                                    ))
+                                                                }
+                                                            </Pie>
+                                                            <Tooltip
+                                                                contentStyle={{
+                                                                    backgroundColor: isDarkMode ? '#1E293B' : '#ffffff',
+                                                                    borderRadius: '8px',
+                                                                    border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+                                                                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)',
+                                                                    color: isDarkMode ? '#F8FAFC' : '#0f172a'
+                                                                }}
+                                                                itemStyle={{ color: isDarkMode ? '#F8FAFC' : '#0f172a', fontWeight: 'bold' }}
+                                                            />
+                                                            <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '14px', color: isDarkMode ? '#94A3B8' : '#64748b' }} />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                    {/* Center Label */}
+                                                    <div style={{ position: 'absolute', top: '48%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                                                        <div className="fs-2 fw-bold" style={{ color: isDarkMode ? '#F8FAFC' : '#0f172a', letterSpacing: '-1px' }}>{users.length}</div>
+                                                        <div className="text-muted" style={{ fontSize: '0.65rem', fontWeight: '700', letterSpacing: '1px' }}>TOTAL</div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="table-responsive p-0">
-                                        <table className="admin-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>ID</th>
-                                                    <th>User</th>
-                                                    <th>Email</th>
-                                                    <th>Joined</th>
-                                                    <th>Premium</th>
-                                                    <th>Last Active</th>
-                                                    <th>Role</th>
-                                                    <th className="text-end">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {users.filter(u => {
-                                                    if (userFilter === 'premium' && !u.is_premium) return false;
-                                                    if (userFilter === 'admin' && !u.is_admin) return false;
-                                                    return u.username.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
-                                                           u.email.toLowerCase().includes(userSearchTerm.toLowerCase());
-                                                }).map(u => (
-                                                    <tr key={u.id}>
-                                                        <td><span className="badge bg-secondary">#{u.id}</span></td>
-                                                        <td className="fw-semibold">
-                                                            <div className="d-flex align-items-center">
-                                                                {u.avatar && u.avatar !== 'default' ? (
-                                                                    u.avatar.startsWith('http') ? (
-                                                                        <img 
-                                                                            src={u.avatar} 
-                                                                            alt={u.username} 
-                                                                            className="rounded-circle me-2" 
-                                                                            style={{ width: '24px', height: '24px', objectFit: 'cover' }} 
-                                                                        />
-                                                                    ) : (
-                                                                        <div 
-                                                                            className="rounded-circle me-2 d-flex align-items-center justify-content-center border shadow-sm" 
-                                                                            style={{ 
-                                                                                width: '24px', 
-                                                                                height: '24px', 
-                                                                                fontSize: '14px', 
-                                                                                lineHeight: 1,
-                                                                                backgroundColor: 'var(--color-fondo-primario)',
-                                                                            }}
-                                                                        >
-                                                                            {u.avatar}
-                                                                        </div>
-                                                                    )
-                                                                ) : (
-                                                                    <img 
-                                                                        src={`https://ui-avatars.com/api/?name=${u.username}&background=random`} 
-                                                                        alt="avatar" 
-                                                                        className="rounded-circle me-2" 
-                                                                        style={{ width: '24px', height: '24px', objectFit: 'cover' }} 
-                                                                    />
-                                                                )}
-                                                                {u.username}
-                                                            </div>
-                                                        </td>
-                                                        <td className="text-muted small">{u.email}</td>
-                                                        <td className="text-muted small">
-                                                            {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                                                        </td>
-                                                        <td>
-                                                            {u.is_premium ? (
-                                                                <span className="badge" style={{ backgroundColor: '#F59E0B', color: '#fff' }}><i className="bi bi-award-fill me-1"></i> Pro</span>
-                                                            ) : (
-                                                                <span className="badge bg-light text-muted border">Free</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="text-muted small fw-semibold">
-                                                            {timeAgo(u.last_login_at)}
-                                                        </td>
-                                                        <td>
-                                                            {u.is_admin ? (
-                                                                <span className="badge bg-warning text-dark"><i className="bi bi-star-fill me-1"></i> Admin</span>
-                                                            ) : (
-                                                                <span className="badge bg-light text-dark border">Student</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="text-end">
-                                                            <div className="btn-group btn-group-sm">
-                                                                <button className="btn btn-outline-primary" title="Ver Progreso" onClick={() => handleViewProgress(u)}>
-                                                                    <i className="bi bi-eye"></i>
-                                                                </button>
-                                                                <button className="btn btn-outline-info" title="Reiniciar Progreso" onClick={() => handleResetProgress(u.id)}>
-                                                                    <i className="bi bi-arrow-counterclockwise"></i>
-                                                                </button>
-                                                                {u.id !== user.id && (
-                                                                    <>
-                                                                        <button className={`btn ${u.is_premium ? 'btn-outline-secondary' : 'btn-outline-warning'}`} title={u.is_premium ? "Revocar Premium" : "Otorgar Premium"} onClick={() => handleTogglePremium(u.id, u.is_premium)}>
-                                                                            <i className={`bi ${u.is_premium ? 'bi-award' : 'bi-award-fill'}`}></i>
-                                                                        </button>
-                                                                        <button className={`btn ${u.is_admin ? 'btn-outline-secondary' : 'btn-outline-success'}`} title={u.is_admin ? "Quitar Admin" : "Hacer Admin"} onClick={() => handleToggleRole(u.id, u.is_admin)}>
-                                                                            <i className={`bi ${u.is_admin ? 'bi-star' : 'bi-star-fill'}`}></i>
-                                                                        </button>
-                                                                        <button className="btn btn-outline-danger" title="Eliminar Usuario" onClick={() => handleDeleteUser(u.id)}>
-                                                                            <i className="bi bi-trash"></i>
-                                                                        </button>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {users.length === 0 && (
+
+                                    {/* USER LIST */}
+                                    <div className="admin-card p-0 overflow-hidden">
+                                        <div className="border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0' }}>
+                                            <h4 className="admin-heading fs-5 mb-0">Registered Users</h4>
+                                            <div className="d-flex gap-2 align-items-center">
+                                                <div className="btn-group" role="group">
+                                                    <button type="button" className={`btn btn-sm ${userFilter === 'all' ? 'admin-btn-primary' : (isDarkMode ? 'btn-outline-light text-light' : 'btn-outline-secondary text-dark')}`} onClick={() => setUserFilter('all')}>All</button>
+                                                    <button type="button" className={`btn btn-sm ${userFilter === 'premium' ? 'admin-btn-primary' : (isDarkMode ? 'btn-outline-light text-light' : 'btn-outline-secondary text-dark')}`} onClick={() => setUserFilter('premium')}>Premium</button>
+                                                    <button type="button" className={`btn btn-sm ${userFilter === 'admin' ? 'admin-btn-primary' : (isDarkMode ? 'btn-outline-light text-light' : 'btn-outline-secondary text-dark')}`} onClick={() => setUserFilter('admin')}>Admins</button>
+                                                </div>
+                                                <div className="input-group" style={{ width: '250px' }}>
+                                                    <span className="input-group-text bg-transparent border-end-0" style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}` }}>
+                                                        <i className="bi bi-search admin-text-muted"></i>
+                                                    </span>
+                                                    <input
+                                                        type="text"
+                                                        className="form-control border-start-0 ps-0"
+                                                        placeholder="Search user or email..."
+                                                        style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}`, background: 'transparent' }}
+                                                        value={userSearchTerm}
+                                                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="table-responsive p-0">
+                                            <table className="admin-table">
+                                                <thead>
                                                     <tr>
-                                                        <td colSpan="5" className="text-center py-4 text-muted">No registered users found.</td>
+                                                        <th>ID</th>
+                                                        <th>User</th>
+                                                        <th>Email</th>
+                                                        <th>Joined</th>
+                                                        <th>Premium</th>
+                                                        <th>Last Active</th>
+                                                        <th>Role</th>
+                                                        <th className="text-end">Actions</th>
                                                     </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    {users.filter(u => {
+                                                        if (userFilter === 'premium' && !u.is_premium) return false;
+                                                        if (userFilter === 'admin' && !u.is_admin) return false;
+                                                        return u.username.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                                                            u.email.toLowerCase().includes(userSearchTerm.toLowerCase());
+                                                    }).map(u => (
+                                                        <tr key={u.id}>
+                                                            <td><span className="badge bg-secondary">#{u.id}</span></td>
+                                                            <td className="fw-semibold">
+                                                                <div className="d-flex align-items-center">
+                                                                    {u.avatar && u.avatar !== 'default' ? (
+                                                                        u.avatar.startsWith('http') ? (
+                                                                            <img
+                                                                                src={u.avatar}
+                                                                                alt={u.username}
+                                                                                className="rounded-circle me-2"
+                                                                                style={{ width: '24px', height: '24px', objectFit: 'cover' }}
+                                                                            />
+                                                                        ) : (
+                                                                            <div
+                                                                                className="rounded-circle me-2 d-flex align-items-center justify-content-center border shadow-sm"
+                                                                                style={{
+                                                                                    width: '24px',
+                                                                                    height: '24px',
+                                                                                    fontSize: '14px',
+                                                                                    lineHeight: 1,
+                                                                                    backgroundColor: 'var(--color-fondo-primario)',
+                                                                                }}
+                                                                            >
+                                                                                {u.avatar}
+                                                                            </div>
+                                                                        )
+                                                                    ) : (
+                                                                        <img
+                                                                            src={`https://ui-avatars.com/api/?name=${u.username}&background=random`}
+                                                                            alt="avatar"
+                                                                            className="rounded-circle me-2"
+                                                                            style={{ width: '24px', height: '24px', objectFit: 'cover' }}
+                                                                        />
+                                                                    )}
+                                                                    {u.username}
+                                                                </div>
+                                                            </td>
+                                                            <td className="text-muted small">{u.email}</td>
+                                                            <td className="text-muted small">
+                                                                {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                                                            </td>
+                                                            <td>
+                                                                {u.is_premium ? (
+                                                                    <span className="badge" style={{ backgroundColor: '#F59E0B', color: '#fff' }}><i className="bi bi-award-fill me-1"></i> Pro</span>
+                                                                ) : (
+                                                                    <span className="badge bg-light text-muted border">Free</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="text-muted small fw-semibold">
+                                                                {timeAgo(u.last_login_at)}
+                                                            </td>
+                                                            <td>
+                                                                {u.is_admin ? (
+                                                                    <span className="badge bg-warning text-dark"><i className="bi bi-star-fill me-1"></i> Admin</span>
+                                                                ) : (
+                                                                    <span className="badge bg-light text-dark border">Student</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="text-end">
+                                                                <div className="btn-group btn-group-sm">
+                                                                    <button className="btn btn-outline-primary" title="Ver Progreso" onClick={() => handleViewProgress(u)}>
+                                                                        <i className="bi bi-eye"></i>
+                                                                    </button>
+                                                                    <button className="btn btn-outline-info" title="Reiniciar Progreso" onClick={() => handleResetProgress(u.id)}>
+                                                                        <i className="bi bi-arrow-counterclockwise"></i>
+                                                                    </button>
+                                                                    {u.id !== user.id && (
+                                                                        <>
+                                                                            <button className={`btn ${u.is_premium ? 'btn-outline-secondary' : 'btn-outline-warning'}`} title={u.is_premium ? "Revocar Premium" : "Otorgar Premium"} onClick={() => handleTogglePremium(u.id, u.is_premium)}>
+                                                                                <i className={`bi ${u.is_premium ? 'bi-award' : 'bi-award-fill'}`}></i>
+                                                                            </button>
+                                                                            <button className={`btn ${u.is_admin ? 'btn-outline-secondary' : 'btn-outline-success'}`} title={u.is_admin ? "Quitar Admin" : "Hacer Admin"} onClick={() => handleToggleRole(u.id, u.is_admin)}>
+                                                                                <i className={`bi ${u.is_admin ? 'bi-star' : 'bi-star-fill'}`}></i>
+                                                                            </button>
+                                                                            <button className="btn btn-outline-danger" title="Eliminar Usuario" onClick={() => handleDeleteUser(u.id)}>
+                                                                                <i className="bi bi-trash"></i>
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    {users.length === 0 && (
+                                                        <tr>
+                                                            <td colSpan="5" className="text-center py-4 text-muted">No registered users found.</td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
-                                </div>
+                                </>
+                            )}
                         </>
                     )}
-                </>
-            )}
 
-            {/* ========== TAB: ACTIVITY AND AUDIT ========== */}
-            {activeTab === 'activity' && (
-                <div className="admin-card p-0 overflow-hidden">
-                    <div className="border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ borderColor: '#E2E8F0' }}>
-                        <div>
-                            <h4 className="admin-heading fs-5 mb-0">System Activity Log</h4>
-                            <p className="admin-text-muted small mt-1 mb-0">Tracking sensitive admin actions. View only.</p>
-                        </div>
-                        <button className="btn admin-btn-primary btn-sm rounded-3 px-3 d-flex align-items-center" onClick={loadLogs} disabled={loadingLogs}>
-                            <i className={`bi bi-arrow-clockwise me-2 ${loadingLogs ? 'fa-spin' : ''}`}></i> Refresh
-                        </button>
-                    </div>
-                    {loadingLogs ? (
-                        <div className="text-center py-5">
-                            <div className="spinner-border text-primary" role="status"></div>
-                        </div>
-                    ) : (
-                        <div className="table-responsive p-0">
-                            <table className="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th>Time</th>
-                                        <th>Admin</th>
-                                        <th>Action</th>
-                                        <th>Target Info</th>
-                                        <th>Details</th>
-                                    </tr>
-                                </thead>
-                                    <tbody>
-                                        {logs.map(log => (
-                                            <tr key={log.id}>
-                                                <td className="text-muted small" style={{ whiteSpace: 'nowrap' }}>
-                                                    {new Date(log.created_at).toLocaleString()}
-                                                </td>
-                                                <td className="fw-bold text-primary">@{log.admin_name || 'System'}</td>
-                                                <td>
-                                                    <span className={`badge ${log.action.includes('DELETE') || log.action.includes('REVOKE') ? 'bg-danger' : 
-                                                                           log.action.includes('CREATE') || log.action.includes('GRANT') ? 'bg-success' : 'bg-info'}`}>
-                                                        {log.action}
-                                                    </span>
-                                                </td>
-                                                <td className="small">
-                                                    <span className="text-muted text-uppercase me-2">{log.target_type}</span>
-                                                    ID: #{log.target_id}
-                                                </td>
-                                                <td className="small text-muted" style={{ maxWidth: '250px' }}>
-                                                    {log.details ? (
-                                                        <div className="text-truncate" title={log.details}>{log.details}</div>
-                                                    ) : '-'}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {logs.length === 0 && (
+                    {/* ========== TAB: SUPPORT INBOX ========== */}
+                    {activeTab === 'inbox' && (
+                        <div className="admin-card p-0 overflow-hidden">
+                            <div className="border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ borderColor: '#E2E8F0' }}>
+                                <div>
+                                    <h4 className="admin-heading fs-5 mb-0">Support Inbox</h4>
+                                    <p className="admin-text-muted small mt-1 mb-0">Manage inquiries, complaints, and suggestions from your students.</p>
+                                </div>
+                                <button className="btn admin-btn-primary btn-sm rounded-3 px-3 d-flex align-items-center" onClick={loadMessages} disabled={loadingMessages}>
+                                    <i className={`bi bi-arrow-clockwise me-2 ${loadingMessages ? 'fa-spin' : ''}`}></i> Refresh
+                                </button>
+                            </div>
+
+                            {loadingMessages ? (
+                                <div className="text-center py-5">
+                                    <div className="spinner-border text-primary" role="status"></div>
+                                </div>
+                            ) : (
+                                <div className="table-responsive p-0">
+                                    <table className="admin-table">
+                                        <thead>
                                             <tr>
-                                                <td colSpan="5" className="text-center py-5 text-muted">
-                                                    <i className="bi bi-inbox fs-2 d-block mb-2"></i>
-                                                    No recent activity recorded.
-                                                </td>
+                                                <th>Date</th>
+                                                <th>Sender</th>
+                                                <th>Subject</th>
+                                                <th>Message</th>
+                                                <th className="text-end">Actions</th>
                                             </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                </div>
-            )}
-
-            {/* ========== TAB: TOPICS ========== */}
-            {activeTab === 'topics' && (
-                <div className="admin-card p-0 overflow-hidden">
-                    <div className="border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ borderColor: '#E2E8F0' }}>
-                        <div>
-                            <h4 className="admin-heading fs-5 mb-0">Topic Management</h4>
-                        </div>
-                        <div className="d-flex gap-2">
-                            <select 
-                                className="form-select form-select-sm border-0" 
-                                style={{ width: '100px', backgroundColor: '#F1F5F9', color: '#0F172A', fontWeight: 'bold' }}
-                                value={selectedLevel} 
-                                onChange={(e) => setSelectedLevel(e.target.value)}
-                            >
-                                <option value="A1">Level A1</option>
-                                <option value="A2">Level A2</option>
-                                <option value="B1">Level B1</option>
-                                <option value="B2">Level B2</option>
-                                <option value="C1">Level C1</option>
-                                <option value="C2">Level C2</option>
-                            </select>
-                            <button className="btn admin-btn-primary btn-sm rounded-3 d-flex align-items-center" onClick={() => handleOpenTopicModal()}>
-                                <i className="bi bi-plus-lg me-1"></i> New
-                            </button>
-                        </div>
-                    </div>
-                    {/* Buscador de temas */}
-                    <div className="p-3 border-bottom" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0', backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC' }}>
-                        <div className="input-group input-group-sm" style={{ width: '300px' }}>
-                            <span className="input-group-text bg-transparent border-end-0" style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}` }}>
-                                <i className="bi bi-search admin-text-muted"></i>
-                            </span>
-                            <input 
-                                type="text" 
-                                className="form-control border-start-0 ps-0" 
-                                placeholder="Search by title..." 
-                                style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}`, background: 'transparent' }}
-                                value={topicSearchTerm}
-                                onChange={(e) => setTopicSearchTerm(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                        {loadingTopics ? (
-                            <div className="text-center py-5">
-                                <div className="spinner-border text-primary" role="status"></div>
-                            </div>
-                        ) : (
-                            <div className="table-responsive p-0">
-                                <table className="admin-table">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Title</th>
-                                            <th>Description</th>
-                                            <th>Level</th>
-                                            <th className="text-end">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {topics.filter(t => 
-                                            t.title.toLowerCase().includes(topicSearchTerm.toLowerCase()) || 
-                                            t.description?.toLowerCase().includes(topicSearchTerm.toLowerCase())
-                                        ).map(t => (
-                                            <tr key={t.id}>
-                                                <td><span className="badge bg-secondary">{selectedLevel} - {t.number}</span></td>
-                                                <td className="fw-bold">
-                                                    <i className={`bi ${t.icon || 'bi-book'} text-primary me-2`}></i>
-                                                    {t.title}
-                                                </td>
-                                                <td className="text-muted small text-truncate" style={{ maxWidth: '250px' }}>
-                                                    {t.description}
-                                                </td>
-                                                <td><span className="badge bg-info text-dark">{t.level}</span></td>
-                                                <td className="text-end">
-                                                    <div className="btn-group btn-group-sm">
-                                                        <button className="btn btn-outline-primary" title="Editar" onClick={() => openEditTopic(t.id)}>
-                                                            <i className="bi bi-pencil"></i>
-                                                        </button>
-                                                        <button className="btn btn-outline-danger" title="Eliminar" onClick={() => deleteTopic(t.id)}>
-                                                            <i className="bi bi-trash"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {topics.length === 0 && (
-                                            <tr>
-                                                <td colSpan="5" className="text-center py-4 text-muted">No topics exist for this level.</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                </div>
-            )}
-
-            {/* ========== TAB: ARCADE ========== */}
-            {activeTab === 'arcade' && (
-                <div className="admin-card p-0 overflow-hidden">
-                    <div className="border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0' }}>
-                        <div>
-                            <h4 className="admin-heading fs-5 mb-0">Arcade Content Management</h4>
-                            <p className="admin-text-muted small mb-0">Control visibility and premium content for the Arcade.</p>
-                        </div>
-                        <div className="d-flex gap-2">
-                            <button className="btn admin-btn-primary btn-sm rounded-3 d-flex align-items-center" onClick={() => setActiveTab('topics')}>
-                                <i className="bi bi-plus-lg me-1"></i> Add Topic
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="p-3 border-bottom d-flex align-items-center justify-content-between" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0', backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC' }}>
-                        <div className="input-group input-group-sm" style={{ width: '300px' }}>
-                            <span className="input-group-text bg-transparent border-end-0" style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}` }}>
-                                <i className="bi bi-search admin-text-muted"></i>
-                            </span>
-                            <input 
-                                type="text" 
-                                className="form-control border-start-0 ps-0 text-dark" 
-                                placeholder="Filter arcade items..." 
-                                style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}`, background: 'transparent' }}
-                                value={topicSearchTerm}
-                                onChange={(e) => setTopicSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <div className="admin-text-muted small">
-                            Showing <strong>{topics.length}</strong> topics available for Arcade
-                        </div>
-                    </div>
-
-                    {loadingTopics ? (
-                        <div className="text-center py-5">
-                            <div className="spinner-border text-primary" role="status"></div>
-                        </div>
-                    ) : (
-                        <div className="table-responsive p-0">
-                            <table className="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th>Level</th>
-                                        <th>Topic Title</th>
-                                        <th>Free Practice</th>
-                                        <th>Premium Games</th>
-                                        <th className="text-center">Arcade Status</th>
-                                        <th className="text-end">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {topics.filter(t => 
-                                        t.title.toLowerCase().includes(topicSearchTerm.toLowerCase())
-                                    ).map(t => (
-                                        <tr key={t.id}>
-                                            <td><span className="badge bg-secondary">{t.level}</span></td>
-                                            <td className="fw-bold">{t.title}</td>
-                                            <td>
-                                                {t.practice && t.practice.length > 10 ? (
-                                                    <span className="text-success"><i className="bi bi-check-circle-fill me-1"></i> Configured</span>
-                                                ) : (
-                                                    <span className="text-muted"><i className="bi bi-dash-circle me-1"></i> Empty</span>
-                                                )}
-                                            </td>
-                                            <td>
-                                                {t.premium_practice && t.premium_practice.length > 10 ? (
-                                                    <span className="badge bg-warning text-dark"><i className="bi bi-star-fill me-1"></i> Premium Enabled</span>
-                                                ) : (
-                                                    <span className="text-muted"><i className="bi bi-plus-circle me-1"></i> Not set</span>
-                                                )}
-                                            </td>
-                                            <td className="text-center">
-                                                <div className="form-check form-switch d-inline-block">
-                                                    <input 
-                                                        className="form-check-input cur-pointer" 
-                                                        type="checkbox" 
-                                                        checked={t.arcade_enabled !== false} 
-                                                        onChange={() => handleToggleArcadeField(t.id, t.arcade_enabled !== false)}
-                                                    />
-                                                    <label className={`form-check-label small ms-1 ${t.arcade_enabled !== false ? 'text-success fw-bold' : 'text-danger'}`}>
-                                                        {t.arcade_enabled !== false ? 'Active' : 'Hidden'}
-                                                    </label>
-                                                </div>
-                                            </td>
-                                            <td className="text-end">
-                                                <button className="btn btn-sm btn-outline-primary rounded-pill px-3" onClick={() => openEditTopic(t.id)}>
-                                                    <i className="bi bi-pencil-square me-1"></i> Manage Games
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {topics.length === 0 && (
-                                        <tr>
-                                            <td colSpan="6" className="text-center py-5 text-muted">No topics found for the arcade.</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                        </thead>
+                                        <tbody>
+                                            {messages.map(msg => (
+                                                <tr key={msg.id} style={{ backgroundColor: msg.status === 'unread' ? 'rgba(var(--bs-primary-rgb), 0.05)' : 'transparent' }}>
+                                                    <td className="text-muted small" style={{ whiteSpace: 'nowrap' }}>
+                                                        {new Date(msg.created_at).toLocaleString()}
+                                                    </td>
+                                                    <td>
+                                                        <div className="fw-bold">{msg.name}</div>
+                                                        <div className="x-small text-muted">{msg.email}</div>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`badge rounded-pill ${
+                                                            msg.subject === 'Complaint' ? 'bg-danger' : 
+                                                            msg.subject === 'Suggestion' ? 'bg-success' : 
+                                                            msg.subject === 'Inquiry' ? 'bg-info' : 'bg-secondary'
+                                                        }`}>
+                                                            {msg.subject}
+                                                        </span>
+                                                    </td>
+                                                    <td className="small text-muted" style={{ maxWidth: '300px' }}>
+                                                        <div className="text-wrap">{msg.message}</div>
+                                                    </td>
+                                                    <td className="text-end">
+                                                        {msg.status === 'unread' ? (
+                                                            <button className="btn btn-sm btn-success rounded-pill px-3" onClick={() => handleMarkAsRead(msg.id)}>
+                                                                <i className="bi bi-check2-circle me-1"></i> Handle
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-muted small"><i className="bi bi-check2-all me-1"></i> Reviewed</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {messages.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="5" className="text-center py-5 text-muted">
+                                                        <i className="bi bi-inbox-fill fs-2 d-block mb-2"></i>
+                                                        Inbox is empty.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     )}
-                </div>
-            )}
 
-            {/* PROGRESS MODAL */}
-            {selectedStudent && (
-                 <div className="modal-backdrop fade show" style={{ opacity: 0.5 }}></div>
-            )}
-            {selectedStudent && (
-                 <div className="modal fade show d-block" tabIndex="-1" role="dialog" onClick={(e) => { if(e.target === e.currentTarget) closeProgressModal() }}>
-                    <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
-                        <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '1rem', background: 'var(--admin-card-bg)' }}>
-                             <div className="modal-header border-bottom-0 pb-0">
-                                 <h5 className="modal-title fw-bold" style={{ color: 'var(--admin-text-primary)'}}>
-                                     Progress for {selectedStudent.username}
-                                 </h5>
-                                 <button type="button" className="btn-close" onClick={closeProgressModal} aria-label="Close"></button>
-                             </div>
-                             <div className="modal-body p-4">
-                                 {loadingProgress ? (
-                                     <div className="text-center py-4">
-                                         <div className="spinner-border text-primary" role="status"></div>
-                                     </div>
-                                 ) : studentProgress ? (
-                                     <div>
-                                         <div className="d-flex align-items-center justify-content-between mb-4 p-3 rounded" style={{ backgroundColor: isDarkMode ? '#334155' : '#F1F5F9'}}>
-                                             <div>
-                                                 <span className="text-muted d-block small">Overall Progress</span>
-                                                 <h3 className="fw-bold mb-0 text-primary">{studentProgress.overall_percentage}%</h3>
-                                             </div>
-                                             <div className="text-end">
-                                                 <span className="text-muted d-block small">Completed Topics</span>
-                                                 <h4 className="fw-bold mb-0">{studentProgress.completed_topics} / {studentProgress.total_topics}</h4>
-                                             </div>
-                                         </div>
-                                         <h6 className="fw-bold mb-3 mt-4 text-muted">Performance by Level</h6>
-                                         <div className="row g-3">
-                                             {Object.entries(studentProgress.stats).map(([lvl, data]) => {
-                                                 const pct = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-                                                 const colors = { A1: '#F59E0B', A2: '#00ADB5', B1: '#00ADB5', B2: '#3B82F6', C1: '#10B981' };
-                                                 return (
-                                                     <div key={lvl} className="col-12">
-                                                         <div className="d-flex justify-content-between mb-1">
-                                                             <span className="fw-semibold small">{lvl}</span>
-                                                             <span className="small text-muted">{data.completed}/{data.total} ({pct}%)</span>
-                                                         </div>
-                                                         <div className="progress" style={{ height: '8px', backgroundColor: 'var(--color-borde)' }}>
-                                                             <div className="progress-bar" style={{ width: `${pct}%`, backgroundColor: colors[lvl] || '#bbb' }}></div>
-                                                         </div>
-                                                     </div>
-                                                 )
-                                             })}
-                                         </div>
-                                     </div>
-                                 ) : (
-                                     <div className="alert alert-danger">Error loading data.</div>
-                                 )}
-                             </div>
-                             <div className="modal-footer border-top-0 pt-0">
-                                 <button type="button" className="btn btn-secondary rounded-pill" onClick={closeProgressModal}>Close</button>
-                             </div> 
+                    {/* ========== TAB: ACTIVITY AND AUDIT ========== */}
+                    {activeTab === 'activity' && (
+                        <div className="admin-card p-0 overflow-hidden">
+                            <div className="border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ borderColor: '#E2E8F0' }}>
+                                <div>
+                                    <h4 className="admin-heading fs-5 mb-0">System Activity Log</h4>
+                                    <p className="admin-text-muted small mt-1 mb-0">Tracking sensitive admin actions. View only.</p>
+                                </div>
+                                <button className="btn admin-btn-primary btn-sm rounded-3 px-3 d-flex align-items-center" onClick={loadLogs} disabled={loadingLogs}>
+                                    <i className={`bi bi-arrow-clockwise me-2 ${loadingLogs ? 'fa-spin' : ''}`}></i> Refresh
+                                </button>
+                            </div>
+                            {loadingLogs ? (
+                                <div className="text-center py-5">
+                                    <div className="spinner-border text-primary" role="status"></div>
+                                </div>
+                            ) : (
+                                <div className="table-responsive p-0">
+                                    <table className="admin-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Admin</th>
+                                                <th>Action</th>
+                                                <th>Target Info</th>
+                                                <th>Details</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {logs.map(log => (
+                                                <tr key={log.id}>
+                                                    <td className="text-muted small" style={{ whiteSpace: 'nowrap' }}>
+                                                        {new Date(log.created_at).toLocaleString()}
+                                                    </td>
+                                                    <td className="fw-bold text-primary">@{log.admin_name || 'System'}</td>
+                                                    <td>
+                                                        <span className={`badge ${log.action.includes('DELETE') || log.action.includes('REVOKE') ? 'bg-danger' :
+                                                            log.action.includes('CREATE') || log.action.includes('GRANT') ? 'bg-success' : 'bg-info'}`}>
+                                                            {log.action}
+                                                        </span>
+                                                    </td>
+                                                    <td className="small">
+                                                        <span className="text-muted text-uppercase me-2">{log.target_type}</span>
+                                                        ID: #{log.target_id}
+                                                    </td>
+                                                    <td className="small text-muted" style={{ maxWidth: '250px' }}>
+                                                        {log.details ? (
+                                                            <div className="text-truncate" title={log.details}>{log.details}</div>
+                                                        ) : '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {logs.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="5" className="text-center py-5 text-muted">
+                                                        <i className="bi bi-inbox fs-2 d-block mb-2"></i>
+                                                        No recent activity recorded.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
-                    </div>
-                 </div>
-            )}
+                    )}
 
-            {/* TOPIC CRUD MODAL */}
-            {isTopicModalOpen && (
-                 <div className="modal-backdrop fade show" style={{ opacity: 0.5 }}></div>
-            )}
-            {isTopicModalOpen && (
-                 <div className="modal fade show d-block" tabIndex="-1" role="dialog" onClick={(e) => { if(e.target === e.currentTarget) setIsTopicModalOpen(false) }}>
-                    <div className="modal-dialog modal-xl modal-dialog-scrollable" role="document" style={{ maxHeight: '95vh' }}>
-                        <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '1rem', background: 'var(--admin-card-bg)', height: '100%' }}>
-                             <div className="modal-header border-bottom-0">
-                                 <h5 className="modal-title fw-bold" style={{ color: 'var(--admin-text-primary)'}}>
-                                     {editingTopicId ? `Edit Topic (${topicForm.level} - #${topicForm.number})` : 'Create New Topic'}
-                                 </h5>
-                                 <button type="button" className="btn-close" onClick={() => setIsTopicModalOpen(false)} aria-label="Close"></button>
-                             </div>
-                             <form onSubmit={saveTopic} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                                 <div className="modal-body p-4 pt-0" style={{ overflowY: 'auto', flex: 1 }}>
-                                     <div className="row g-3">
-                                        <div className="col-md-3">
-                                            <label className="form-label text-muted small fw-bold">Level</label>
-                                            <input type="text" className="form-control" name="level" value={topicForm.level} onChange={handleFormChange} required readOnly={editingTopicId !== null} />
-                                        </div>
-                                        <div className="col-md-3">
-                                            <label className="form-label text-muted small fw-bold"># Number</label>
-                                            <input type="number" className="form-control" name="number" value={topicForm.number} onChange={handleFormChange} required readOnly={editingTopicId !== null} />
-                                        </div>
-                                        <div className="col-md-6">
-                                            <label className="form-label text-muted small fw-bold">Icon (Bootstrap Class)</label>
-                                            <input type="text" className="form-control" name="icon" value={topicForm.icon} onChange={handleFormChange} placeholder="bi-book" required />
-                                        </div>
-                                        <div className="col-md-12">
-                                            <label className="form-label text-muted small fw-bold">Topic Title</label>
-                                            <input type="text" className="form-control" name="title" value={topicForm.title} onChange={handleFormChange} required />
-                                        </div>
-                                        <div className="col-md-12">
-                                            <label className="form-label text-muted small fw-bold">Short Description</label>
-                                            <textarea className="form-control" name="description" value={topicForm.description} onChange={handleFormChange} rows="2" required></textarea>
-                                        </div>
-                                        
-                                        <div className="col-md-12 mt-4">
-                                             <div className="d-flex justify-content-between align-items-center mb-2">
-                                                 <label className="form-label fw-bold text-primary mb-0">Theory Content</label>
-                                                 <div className="btn-group btn-group-sm mb-1">
-                                                     <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<b>', '</b>')}><b>B</b></button>
-                                                     <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<i>', '</i>')}><i>I</i></button>
-                                                     <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<h3 class="fw-bold text-primary mt-4">', '</h3>')} title="Heading">H</button>
-                                                     <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<ul>\n  <li>', '</li>\n</ul>')} title="Bullet List"><i className="bi bi-list-ul"></i></button>
-                                                     <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<div class="p-4 rounded-4 my-4 shadow-sm" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2);">\n  <h5 class="fw-bold text-primary mb-3"><i class="bi bi-book-half me-2"></i>Vocabulary</h5>\n  ', '\n</div>')} title="Vocab Box"><i className="bi bi-box"></i></button>
-                                                     <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<table class="table table-bordered mt-3"><thead><tr><th>English</th><th>Spanish</th></tr></thead><tbody><tr><td>', '</td><td></td></tr></tbody></table>')} title="Table"><i className="bi bi-grid-3x2"></i></button>
-                                                 </div>
-                                             </div>
-                                             <div className="row g-2">
-                                                 <div className="col-md-6">
-                                                     <textarea 
-                                                        ref={theoryTextareaRef}
-                                                        className="form-control font-monospace" 
-                                                        name="theory" 
-                                                        value={topicForm.theory || ''} 
-                                                        onChange={handleFormChange} 
-                                                        rows="12" 
-                                                        placeholder="Write HTML content here..."
-                                                        style={{ backgroundColor: 'var(--color-fondo-secundario)', fontSize: '0.85rem' }}
-                                                     ></textarea>
-                                                 </div>
-                                                 <div className="col-md-6">
-                                                     <div className="p-3 border rounded overflow-auto" style={{ height: 'calc(1.5em * 12 + 1.25rem + 2px)', background: 'var(--color-fondo-secundario)', fontSize: '0.9rem' }}>
-                                                         <span className="text-muted small d-block mb-2 border-bottom pb-1"><i className="bi bi-eye me-1"></i> Live Preview</span>
-                                                         <div dangerouslySetInnerHTML={{ __html: topicForm.theory || '<p class="text-muted">No content to preview.</p>' }} />
-                                                     </div>
-                                                 </div>
-                                             </div>
-                                         </div>
+                    {/* ========== TAB: TOPICS ========== */}
+                    {activeTab === 'topics' && (
+                        <div className="admin-card p-0 overflow-hidden">
+                            <div className="border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ borderColor: '#E2E8F0' }}>
+                                <div>
+                                    <h4 className="admin-heading fs-5 mb-0">Topic Management</h4>
+                                </div>
+                                <div className="d-flex gap-2">
+                                    <select
+                                        className="form-select form-select-sm border-0"
+                                        style={{ width: '100px', backgroundColor: '#F1F5F9', color: '#0F172A', fontWeight: 'bold' }}
+                                        value={selectedLevel}
+                                        onChange={(e) => setSelectedLevel(e.target.value)}
+                                    >
+                                        <option value="A1">Level A1</option>
+                                        <option value="A2">Level A2</option>
+                                        <option value="B1">Level B1</option>
+                                        <option value="B2">Level B2</option>
+                                        <option value="C1">Level C1</option>
+                                        <option value="C2">Level C2</option>
+                                    </select>
+                                    <button className="btn admin-btn-primary btn-sm rounded-3 d-flex align-items-center" onClick={() => handleOpenTopicModal()}>
+                                        <i className="bi bi-plus-lg me-1"></i> New
+                                    </button>
+                                </div>
+                            </div>
+                            {/* Buscador de temas */}
+                            <div className="p-3 border-bottom" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0', backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC' }}>
+                                <div className="input-group input-group-sm" style={{ width: '300px' }}>
+                                    <span className="input-group-text bg-transparent border-end-0" style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}` }}>
+                                        <i className="bi bi-search admin-text-muted"></i>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        className="form-control border-start-0 ps-0"
+                                        placeholder="Search by title..."
+                                        style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}`, background: 'transparent' }}
+                                        value={topicSearchTerm}
+                                        onChange={(e) => setTopicSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                            </div>
 
-                                         <div className="col-md-12 mt-4">
-                                            <div className="d-flex justify-content-between align-items-center mb-1">
-                                                <div className="d-flex gap-3">
-                                                    <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold ${!isPremiumPracticeMode ? 'btn-success' : 'btn-outline-success'}`} onClick={() => togglePracticeMode(false)}>
-                                                        <i className="bi bi-unlock me-2"></i>Free Practice
-                                                    </button>
-                                                    <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold ${isPremiumPracticeMode ? 'btn-warning text-dark' : 'btn-outline-warning'}`} onClick={() => togglePracticeMode(true)}>
-                                                        <i className="bi bi-star-fill me-2"></i>Premium Arcade
-                                                    </button>
+                            {loadingTopics ? (
+                                <div className="text-center py-5">
+                                    <div className="spinner-border text-primary" role="status"></div>
+                                </div>
+                            ) : (
+                                <div className="table-responsive p-0">
+                                    <table className="admin-table">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Title</th>
+                                                <th>Description</th>
+                                                <th>Level</th>
+                                                <th className="text-end">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {topics.filter(t =>
+                                                t.title.toLowerCase().includes(topicSearchTerm.toLowerCase()) ||
+                                                t.description?.toLowerCase().includes(topicSearchTerm.toLowerCase())
+                                            ).map(t => (
+                                                <tr key={t.id}>
+                                                    <td><span className="badge bg-secondary">{selectedLevel} - {t.number}</span></td>
+                                                    <td className="fw-bold">
+                                                        <i className={`bi ${t.icon || 'bi-book'} text-primary me-2`}></i>
+                                                        {t.title}
+                                                    </td>
+                                                    <td className="text-muted small text-truncate" style={{ maxWidth: '250px' }}>
+                                                        {t.description}
+                                                    </td>
+                                                    <td><span className="badge bg-info text-dark">{t.level}</span></td>
+                                                    <td className="text-end">
+                                                        <div className="btn-group btn-group-sm">
+                                                            <button className="btn btn-outline-primary" title="Editar" onClick={() => openEditTopic(t.id)}>
+                                                                <i className="bi bi-pencil"></i>
+                                                            </button>
+                                                            <button className="btn btn-outline-danger" title="Eliminar" onClick={() => deleteTopic(t.id)}>
+                                                                <i className="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {topics.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="5" className="text-center py-4 text-muted">No topics exist for this level.</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ========== TAB: ARCADE ========== */}
+                    {activeTab === 'arcade' && (
+                        <div className="admin-card p-0 overflow-hidden">
+                            <div className="border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0' }}>
+                                <div>
+                                    <h4 className="admin-heading fs-5 mb-0">Arcade Content Management</h4>
+                                    <p className="admin-text-muted small mb-0">Control visibility and premium content for the Arcade.</p>
+                                </div>
+                                <div className="d-flex gap-2">
+                                    <button className="btn admin-btn-primary btn-sm rounded-3 d-flex align-items-center" onClick={() => setActiveTab('topics')}>
+                                        <i className="bi bi-plus-lg me-1"></i> Add Topic
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="p-3 border-bottom d-flex align-items-center justify-content-between" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0', backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC' }}>
+                                <div className="input-group input-group-sm" style={{ width: '300px' }}>
+                                    <span className="input-group-text bg-transparent border-end-0" style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}` }}>
+                                        <i className="bi bi-search admin-text-muted"></i>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        className="form-control border-start-0 ps-0 text-dark"
+                                        placeholder="Filter arcade items..."
+                                        style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}`, background: 'transparent' }}
+                                        value={topicSearchTerm}
+                                        onChange={(e) => setTopicSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <div className="admin-text-muted small">
+                                    Showing <strong>{topics.length}</strong> topics available for Arcade
+                                </div>
+                            </div>
+
+                            {loadingTopics ? (
+                                <div className="text-center py-5">
+                                    <div className="spinner-border text-primary" role="status"></div>
+                                </div>
+                            ) : (
+                                <div className="table-responsive p-0">
+                                    <table className="admin-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Level</th>
+                                                <th>Topic Title</th>
+                                                <th>Free Practice</th>
+                                                <th>Premium Games</th>
+                                                <th className="text-center">Arcade Status</th>
+                                                <th className="text-end">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {topics.filter(t =>
+                                                t.title.toLowerCase().includes(topicSearchTerm.toLowerCase())
+                                            ).map(t => (
+                                                <tr key={t.id}>
+                                                    <td><span className="badge bg-secondary">{t.level}</span></td>
+                                                    <td className="fw-bold">{t.title}</td>
+                                                    <td>
+                                                        {t.practice && t.practice.length > 10 ? (
+                                                            <span className="text-success"><i className="bi bi-check-circle-fill me-1"></i> Configured</span>
+                                                        ) : (
+                                                            <span className="text-muted"><i className="bi bi-dash-circle me-1"></i> Empty</span>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        {t.premium_practice && t.premium_practice.length > 10 ? (
+                                                            <span className="badge bg-warning text-dark"><i className="bi bi-star-fill me-1"></i> Premium Enabled</span>
+                                                        ) : (
+                                                            <span className="text-muted"><i className="bi bi-plus-circle me-1"></i> Not set</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="text-center">
+                                                        <div className="form-check form-switch d-inline-block">
+                                                            <input
+                                                                className="form-check-input cur-pointer"
+                                                                type="checkbox"
+                                                                checked={t.arcade_enabled !== false}
+                                                                onChange={() => handleToggleArcadeField(t.id, t.arcade_enabled !== false)}
+                                                            />
+                                                            <label className={`form-check-label small ms-1 ${t.arcade_enabled !== false ? 'text-success fw-bold' : 'text-danger'}`}>
+                                                                {t.arcade_enabled !== false ? 'Active' : 'Hidden'}
+                                                            </label>
+                                                        </div>
+                                                    </td>
+                                                    <td className="text-end">
+                                                        <button className="btn btn-sm btn-outline-primary rounded-pill px-3" onClick={() => openEditTopic(t.id)}>
+                                                            <i className="bi bi-pencil-square me-1"></i> Manage Games
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {topics.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="6" className="text-center py-5 text-muted">No topics found for the arcade.</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* PROGRESS MODAL */}
+                    {selectedStudent && (
+                        <div className="modal-backdrop fade show" style={{ opacity: 0.5 }}></div>
+                    )}
+                    {selectedStudent && (
+                        <div className="modal fade show d-block" tabIndex="-1" role="dialog" onClick={(e) => { if (e.target === e.currentTarget) closeProgressModal() }}>
+                            <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
+                                <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '1rem', background: 'var(--admin-card-bg)' }}>
+                                    <div className="modal-header border-bottom-0 pb-0">
+                                        <h5 className="modal-title fw-bold" style={{ color: 'var(--admin-text-primary)' }}>
+                                            Progress for {selectedStudent.username}
+                                        </h5>
+                                        <button type="button" className="btn-close" onClick={closeProgressModal} aria-label="Close"></button>
+                                    </div>
+                                    <div className="modal-body p-4">
+                                        {loadingProgress ? (
+                                            <div className="text-center py-4">
+                                                <div className="spinner-border text-primary" role="status"></div>
+                                            </div>
+                                        ) : studentProgress ? (
+                                            <div>
+                                                <div className="d-flex align-items-center justify-content-between mb-4 p-3 rounded" style={{ backgroundColor: isDarkMode ? '#334155' : '#F1F5F9' }}>
+                                                    <div>
+                                                        <span className="text-muted d-block small">Overall Progress</span>
+                                                        <h3 className="fw-bold mb-0 text-primary">{studentProgress.overall_percentage}%</h3>
+                                                    </div>
+                                                    <div className="text-end">
+                                                        <span className="text-muted d-block small">Completed Topics</span>
+                                                        <h4 className="fw-bold mb-0">{studentProgress.completed_topics} / {studentProgress.total_topics}</h4>
+                                                    </div>
                                                 </div>
-                                                <div className="form-check form-switch">
-                                                    <input className="form-check-input" type="checkbox" id="practiceMode" checked={useStructuredPractice} onChange={(e) => setUseStructuredPractice(e.target.checked)} />
-                                                    <label className="form-check-label small fw-bold" htmlFor="practiceMode">Use Structured Builder</label>
+                                                <h6 className="fw-bold mb-3 mt-4 text-muted">Performance by Level</h6>
+                                                <div className="row g-3">
+                                                    {Object.entries(studentProgress.stats).map(([lvl, data]) => {
+                                                        const pct = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+                                                        const colors = { A1: '#F59E0B', A2: '#00ADB5', B1: '#00ADB5', B2: '#3B82F6', C1: '#10B981' };
+                                                        return (
+                                                            <div key={lvl} className="col-12">
+                                                                <div className="d-flex justify-content-between mb-1">
+                                                                    <span className="fw-semibold small">{lvl}</span>
+                                                                    <span className="small text-muted">{data.completed}/{data.total} ({pct}%)</span>
+                                                                </div>
+                                                                <div className="progress" style={{ height: '8px', backgroundColor: 'var(--color-borde)' }}>
+                                                                    <div className="progress-bar" style={{ width: `${pct}%`, backgroundColor: colors[lvl] || '#bbb' }}></div>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
                                                 </div>
                                             </div>
-                                            <div className="mb-3">
-                                                <p className="admin-text-muted x-small mb-0">
-                                                    {isPremiumPracticeMode 
-                                                        ? "Configuring minigames for the Premium Arcade section." 
-                                                        : "Configuring the standard practice available for all students."}
-                                                </p>
-                                            </div>
+                                        ) : (
+                                            <div className="alert alert-danger">Error loading data.</div>
+                                        )}
+                                    </div>
+                                    <div className="modal-footer border-top-0 pt-0">
+                                        <button type="button" className="btn btn-secondary rounded-pill" onClick={closeProgressModal}>Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
-                                            {!useStructuredPractice ? (
-                                                <textarea className="form-control font-monospace" name="practice" value={topicForm.practice || ''} onChange={handleFormChange} rows="6" style={{ backgroundColor: 'var(--color-fondo-secundario)', fontSize: '0.85rem' }} placeholder="Raw HTML or JSON script..."></textarea>
-                                            ) : (
-                                                <div className="p-4 border rounded-4 bg-dark shadow-inner" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                                                    <div className="d-flex justify-content-between align-items-center mb-4">
-                                                        <h6 className="mb-0 fw-bold">Games / Exercises</h6>
-                                                        <button type="button" className="btn btn-sm btn-outline-success" onClick={addGame}><i className="bi bi-plus-circle me-1"></i> Add Game</button>
+                    {/* TOPIC CRUD MODAL */}
+                    {isTopicModalOpen && (
+                        <div className="modal-backdrop fade show" style={{ opacity: 0.5 }}></div>
+                    )}
+                    {isTopicModalOpen && (
+                        <div className="modal fade show d-block" tabIndex="-1" role="dialog" onClick={(e) => { if (e.target === e.currentTarget) setIsTopicModalOpen(false) }}>
+                            <div className="modal-dialog modal-xl modal-dialog-scrollable" role="document" style={{ maxHeight: '95vh' }}>
+                                <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '1rem', background: 'var(--admin-card-bg)', height: '100%' }}>
+                                    <div className="modal-header border-bottom-0">
+                                        <h5 className="modal-title fw-bold" style={{ color: 'var(--admin-text-primary)' }}>
+                                            {editingTopicId ? `Edit Topic (${topicForm.level} - #${topicForm.number})` : 'Create New Topic'}
+                                        </h5>
+                                        <button type="button" className="btn-close" onClick={() => setIsTopicModalOpen(false)} aria-label="Close"></button>
+                                    </div>
+                                    <form onSubmit={saveTopic} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                                        <div className="modal-body p-4 pt-0" style={{ overflowY: 'auto', flex: 1 }}>
+                                            <div className="row g-3">
+                                                <div className="col-md-3">
+                                                    <label className="form-label text-muted small fw-bold">Level</label>
+                                                    <input type="text" className="form-control" name="level" value={topicForm.level} onChange={handleFormChange} required readOnly={editingTopicId !== null} />
+                                                </div>
+                                                <div className="col-md-3">
+                                                    <label className="form-label text-muted small fw-bold"># Number</label>
+                                                    <input type="number" className="form-control" name="number" value={topicForm.number} onChange={handleFormChange} required readOnly={editingTopicId !== null} />
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label text-muted small fw-bold">Icon (Bootstrap Class)</label>
+                                                    <input type="text" className="form-control" name="icon" value={topicForm.icon} onChange={handleFormChange} placeholder="bi-book" required />
+                                                </div>
+                                                <div className="col-md-12">
+                                                    <label className="form-label text-muted small fw-bold">Topic Title</label>
+                                                    <input type="text" className="form-control" name="title" value={topicForm.title} onChange={handleFormChange} required />
+                                                </div>
+                                                <div className="col-md-12">
+                                                    <label className="form-label text-muted small fw-bold">Short Description</label>
+                                                    <textarea className="form-control" name="description" value={topicForm.description} onChange={handleFormChange} rows="2" required></textarea>
+                                                </div>
+
+                                                <div className="col-md-12 mt-4">
+                                                    <div className="d-flex justify-content-between align-items-center mb-2">
+                                                        <label className="form-label fw-bold text-primary mb-0">Theory Content</label>
+                                                        <div className="btn-group btn-group-sm mb-1">
+                                                            <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<b>', '</b>')}><b>B</b></button>
+                                                            <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<i>', '</i>')}><i>I</i></button>
+                                                            <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<h3 class="fw-bold text-primary mt-4">', '</h3>')} title="Heading">H</button>
+                                                            <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<ul>\n  <li>', '</li>\n</ul>')} title="Bullet List"><i className="bi bi-list-ul"></i></button>
+                                                            <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<div class="p-4 rounded-4 my-4 shadow-sm" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2);">\n  <h5 class="fw-bold text-primary mb-3"><i class="bi bi-book-half me-2"></i>Vocabulary</h5>\n  ', '\n</div>')} title="Vocab Box"><i className="bi bi-box"></i></button>
+                                                            <button type="button" className="btn btn-outline-secondary" onClick={() => insertTag('<table class="table table-bordered mt-3"><thead><tr><th>English</th><th>Spanish</th></tr></thead><tbody><tr><td>', '</td><td></td></tr></tbody></table>')} title="Table"><i className="bi bi-grid-3x2"></i></button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="row g-2">
+                                                        <div className="col-md-6">
+                                                            <textarea
+                                                                ref={theoryTextareaRef}
+                                                                className="form-control font-monospace"
+                                                                name="theory"
+                                                                value={topicForm.theory || ''}
+                                                                onChange={handleFormChange}
+                                                                rows="12"
+                                                                placeholder="Write HTML content here..."
+                                                                style={{ backgroundColor: 'var(--color-fondo-secundario)', fontSize: '0.85rem' }}
+                                                            ></textarea>
+                                                        </div>
+                                                        <div className="col-md-6">
+                                                            <div className="p-3 border rounded overflow-auto" style={{ height: 'calc(1.5em * 12 + 1.25rem + 2px)', background: 'var(--color-fondo-secundario)', fontSize: '0.9rem' }}>
+                                                                <span className="text-muted small d-block mb-2 border-bottom pb-1"><i className="bi bi-eye me-1"></i> Live Preview</span>
+                                                                <div dangerouslySetInnerHTML={{ __html: topicForm.theory || '<p class="text-muted">No content to preview.</p>' }} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-md-12 mt-4">
+                                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                                        <div className="d-flex gap-3">
+                                                            <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold ${!isPremiumPracticeMode ? 'btn-success' : 'btn-outline-success'}`} onClick={() => togglePracticeMode(false)}>
+                                                                <i className="bi bi-unlock me-2"></i>Free Practice
+                                                            </button>
+                                                            <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold ${isPremiumPracticeMode ? 'btn-warning text-dark' : 'btn-outline-warning'}`} onClick={() => togglePracticeMode(true)}>
+                                                                <i className="bi bi-star-fill me-2"></i>Premium Arcade
+                                                            </button>
+                                                        </div>
+                                                        <div className="form-check form-switch">
+                                                            <input className="form-check-input" type="checkbox" id="practiceMode" checked={useStructuredPractice} onChange={(e) => setUseStructuredPractice(e.target.checked)} />
+                                                            <label className="form-check-label small fw-bold" htmlFor="practiceMode">Use Structured Builder</label>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mb-3">
+                                                        <p className="admin-text-muted x-small mb-0">
+                                                            {isPremiumPracticeMode
+                                                                ? "Configuring minigames for the Premium Arcade section."
+                                                                : "Configuring the standard practice available for all students."}
+                                                        </p>
                                                     </div>
 
-                                                    {structuredPractice.games?.map((game, gIdx) => (
-                                                        <div key={gIdx} className="card bg-secondary bg-opacity-10 border-secondary border-opacity-25 mb-4 shadow-sm">
-                                                            <div className="card-header d-flex justify-content-between align-items-center py-2 bg-dark bg-opacity-25 border-bottom-0">
-                                                                <span className="badge bg-primary">Game #{gIdx + 1}</span>
-                                                                <button type="button" className="btn btn-link text-danger p-0" onClick={() => removeGame(gIdx)}><i className="bi bi-trash"></i></button>
+                                                    {!useStructuredPractice ? (
+                                                        <textarea className="form-control font-monospace" name="practice" value={topicForm.practice || ''} onChange={handleFormChange} rows="6" style={{ backgroundColor: 'var(--color-fondo-secundario)', fontSize: '0.85rem' }} placeholder="Raw HTML or JSON script..."></textarea>
+                                                    ) : (
+                                                        <div className="p-4 border rounded-4 bg-dark shadow-inner" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                                                            <div className="d-flex justify-content-between align-items-center mb-4">
+                                                                <h6 className="mb-0 fw-bold">Games / Exercises</h6>
+                                                                <button type="button" className="btn btn-sm btn-outline-success" onClick={addGame}><i className="bi bi-plus-circle me-1"></i> Add Game</button>
                                                             </div>
-                                                            <div className="card-body p-3">
-                                                                <div className="row g-2 mb-3">
-                                                                    <div className="col-md-4">
-                                                                        <label className="small text-muted fw-bold">Type</label>
-                                                                        <select className="form-select form-select-sm" value={game.type} onChange={e => updateGame(gIdx, 'type', e.target.value)}>
-                                                                            <option value="multiple_choice">Multiple Choice</option>
-                                                                            <option value="fill_in">Fill In / Write</option>
-                                                                            <option value="unscramble">Unscramble</option>
-                                                                            <option value="matching">Matching</option>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div className="col-md-8">
-                                                                        <label className="small text-muted fw-bold">Title</label>
-                                                                        <input type="text" className="form-control form-control-sm" value={game.title} onChange={e => updateGame(gIdx, 'title', e.target.value)} />
-                                                                    </div>
-                                                                    <div className="col-12">
-                                                                        <label className="small text-muted fw-bold">Instruction</label>
-                                                                        <input type="text" className="form-control form-control-sm" value={game.instruction} onChange={e => updateGame(gIdx, 'instruction', e.target.value)} />
-                                                                    </div>
-                                                                </div>
 
-                                                                <div className="mt-3 ps-3 border-start border-primary border-2">
-                                                                    <div className="d-flex justify-content-between align-items-center mb-2">
-                                                                        <span className="small fw-bold">Questions</span>
-                                                                        <button type="button" className="btn btn-xs btn-outline-primary" onClick={() => addQuestion(gIdx)} style={{ fontSize: '0.7rem' }}>+ Add Question</button>
+                                                            {structuredPractice.games?.map((game, gIdx) => (
+                                                                <div key={gIdx} className="card bg-secondary bg-opacity-10 border-secondary border-opacity-25 mb-4 shadow-sm">
+                                                                    <div className="card-header d-flex justify-content-between align-items-center py-2 bg-dark bg-opacity-25 border-bottom-0">
+                                                                        <span className="badge bg-primary">Game #{gIdx + 1}</span>
+                                                                        <button type="button" className="btn btn-link text-danger p-0" onClick={() => removeGame(gIdx)}><i className="bi bi-trash"></i></button>
                                                                     </div>
-
-                                                                    {game.questions?.map((q, qIdx) => (
-                                                                        <div key={qIdx} className="mb-3 p-2 bg-dark rounded-3 position-relative">
-                                                                            <button type="button" className="btn-close btn-close-white position-absolute top-0 end-0 m-1" style={{ scale: '0.6' }} onClick={() => removeQuestion(gIdx, qIdx)}></button>
-                                                                            <div className="row g-2">
-                                                                                <div className="col-md-6">
-                                                                                    <label className="small text-muted" style={{ fontSize: '0.65rem' }}>Question / Prompt</label>
-                                                                                    <input type="text" className="form-control form-control-sm" value={q.q} onChange={e => updateQuestion(gIdx, qIdx, 'q', e.target.value)} />
-                                                                                </div>
-                                                                                <div className="col-md-6">
-                                                                                    <label className="small text-muted" style={{ fontSize: '0.65rem' }}>Answer</label>
-                                                                                    <input type="text" className="form-control form-control-sm border-success bg-success bg-opacity-10" value={q.a} onChange={e => updateQuestion(gIdx, qIdx, 'a', e.target.value)} />
-                                                                                </div>
-                                                                                {game.type === 'multiple_choice' && (
-                                                                                    <div className="col-12 mt-1">
-                                                                                        <label className="small text-muted d-block" style={{ fontSize: '0.65rem' }}>Options (comma separated)</label>
-                                                                                        <input type="text" className="form-control form-control-sm" value={q.options?.join(', ')} 
-                                                                                            onChange={e => updateQuestion(gIdx, qIdx, 'options', e.target.value.split(',').map(s => s.trim()))} 
-                                                                                            placeholder="Option A, Option B, Option C" />
-                                                                                    </div>
-                                                                                )}
+                                                                    <div className="card-body p-3">
+                                                                        <div className="row g-2 mb-3">
+                                                                            <div className="col-md-4">
+                                                                                <label className="small text-muted fw-bold">Type</label>
+                                                                                <select className="form-select form-select-sm" value={game.type} onChange={e => updateGame(gIdx, 'type', e.target.value)}>
+                                                                                    <option value="multiple_choice">Multiple Choice</option>
+                                                                                    <option value="fill_in">Fill In / Write</option>
+                                                                                    <option value="unscramble">Unscramble</option>
+                                                                                    <option value="matching">Matching</option>
+                                                                                </select>
+                                                                            </div>
+                                                                            <div className="col-md-8">
+                                                                                <label className="small text-muted fw-bold">Title</label>
+                                                                                <input type="text" className="form-control form-control-sm" value={game.title} onChange={e => updateGame(gIdx, 'title', e.target.value)} />
+                                                                            </div>
+                                                                            <div className="col-12">
+                                                                                <label className="small text-muted fw-bold">Instruction</label>
+                                                                                <input type="text" className="form-control form-control-sm" value={game.instruction} onChange={e => updateGame(gIdx, 'instruction', e.target.value)} />
                                                                             </div>
                                                                         </div>
-                                                                    ))}
+
+                                                                        <div className="mt-3 ps-3 border-start border-primary border-2">
+                                                                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                                                                <span className="small fw-bold">Questions</span>
+                                                                                <button type="button" className="btn btn-xs btn-outline-primary" onClick={() => addQuestion(gIdx)} style={{ fontSize: '0.7rem' }}>+ Add Question</button>
+                                                                            </div>
+
+                                                                            {game.questions?.map((q, qIdx) => (
+                                                                                <div key={qIdx} className="mb-3 p-2 bg-dark rounded-3 position-relative">
+                                                                                    <button type="button" className="btn-close btn-close-white position-absolute top-0 end-0 m-1" style={{ scale: '0.6' }} onClick={() => removeQuestion(gIdx, qIdx)}></button>
+                                                                                    <div className="row g-2">
+                                                                                        <div className="col-md-6">
+                                                                                            <label className="small text-muted" style={{ fontSize: '0.65rem' }}>Question / Prompt</label>
+                                                                                            <input type="text" className="form-control form-control-sm" value={q.q} onChange={e => updateQuestion(gIdx, qIdx, 'q', e.target.value)} />
+                                                                                        </div>
+                                                                                        <div className="col-md-6">
+                                                                                            <label className="small text-muted" style={{ fontSize: '0.65rem' }}>Answer</label>
+                                                                                            <input type="text" className="form-control form-control-sm border-success bg-success bg-opacity-10" value={q.a} onChange={e => updateQuestion(gIdx, qIdx, 'a', e.target.value)} />
+                                                                                        </div>
+                                                                                        {game.type === 'multiple_choice' && (
+                                                                                            <div className="col-12 mt-1">
+                                                                                                <label className="small text-muted d-block" style={{ fontSize: '0.65rem' }}>Options (comma separated)</label>
+                                                                                                <input type="text" className="form-control form-control-sm" value={q.options?.join(', ')}
+                                                                                                    onChange={e => updateQuestion(gIdx, qIdx, 'options', e.target.value.split(',').map(s => s.trim()))}
+                                                                                                    placeholder="Option A, Option B, Option C" />
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+
+                                                            <div className="mt-4 pt-3 border-top border-secondary border-opacity-25">
+                                                                <span className="text-muted x-small">Preview of active questions in PracticeEngine:</span>
+                                                                <div className="mt-2" style={{ maxHeight: '200px', overflowY: 'auto', pointerEvents: 'none', opacity: 0.6, scale: '0.9', transformOrigin: 'top' }}>
+                                                                    <PracticeEngine data={structuredPractice} />
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    ))}
-
-                                                    <div className="mt-4 pt-3 border-top border-secondary border-opacity-25">
-                                                        <span className="text-muted x-small">Preview of active questions in PracticeEngine:</span>
-                                                        <div className="mt-2" style={{ maxHeight: '200px', overflowY: 'auto', pointerEvents: 'none', opacity: 0.6, scale: '0.9', transformOrigin: 'top' }}>
-                                                            <PracticeEngine data={structuredPractice} />
-                                                        </div>
-                                                    </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                         </div>
-                                     </div>
-                                 </div>
-                                 <div className="modal-footer border-top-0 pt-0 pb-4 pe-4">
-                                     <button type="button" className="btn btn-outline-secondary rounded-pill fw-bold" onClick={() => setIsTopicModalOpen(false)}>Cancel</button>
-                                     <button type="submit" className="btn btn-primary rounded-pill fw-bold px-4 shadow-sm">
-                                         <i className="bi bi-save me-2"></i>Save Topic
-                                     </button>
-                                 </div>
-                             </form>
+                                            </div>
+                                        </div>
+                                        <div className="modal-footer border-top-0 pt-0 pb-4 pe-4">
+                                            <button type="button" className="btn btn-outline-secondary rounded-pill fw-bold" onClick={() => setIsTopicModalOpen(false)}>Cancel</button>
+                                            <button type="submit" className="btn btn-primary rounded-pill fw-bold px-4 shadow-sm">
+                                                <i className="bi bi-save me-2"></i>Save Topic
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                 </div>
-            )}
+                    )}
                 </div>
             </main>
         </div>

@@ -14,6 +14,7 @@ const adminRoutes = require('./routes/admin.routes');
 const topicsRoutes = require('./routes/topics.routes');
 const progressRoutes = require('./routes/progress.routes');
 const stripeRoutes = require('./routes/stripe.routes');
+const supportRoutes = require('./routes/support.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +25,12 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet());
 app.use(hpp());
 app.use(cookieParser());
+
+// Logging (Moved to top)
+app.use((req, res, next) => {
+    console.log(`[Request] ${req.method} ${req.url}`);
+    next();
+});
 
 // Rate Limiting
 const apiLimiter = rateLimit({
@@ -55,18 +62,22 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Logging
-app.use((req, res, next) => {
-    console.log(`[Request] ${req.method} ${req.url}`);
-    next();
-});
-
 // Trust proxy for header-based IP/Security in Cloud environments
 if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
 // ======================
 // ROUTES
 // ======================
+
+// Health Check
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV,
+        db_connected: true // simplistic for now
+    });
+});
 
 // ⚠️ STRIPE WEBHOOK: Must be before express.json()
 app.use('/api/v1/stripe', stripeRoutes);
@@ -79,6 +90,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/topics', topicsRoutes);
 app.use('/api/v1/progress', progressRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/support', supportRoutes);
 
 // ======================
 // INITIALIZATION
@@ -116,27 +128,23 @@ const ensureInitialized = async () => {
 
 // Centralized Error Handler
 app.use((err, req, res, next) => {
-    console.error(`[Error] ${req.method} ${req.url}:`, err.stack);
+    const errorLog = {
+        method: req.method,
+        url: req.url,
+        message: err.message,
+        stack: err.stack,
+        timestamp: new Date().toISOString()
+    };
+    console.error(`[Error] ${req.method} ${req.url}:`, JSON.stringify(errorLog, null, 2));
+    
     const status = err.status || 500;
     const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message;
-    res.status(status).json({ msg: message });
+    res.status(status).json({ msg: message, error: process.env.NODE_ENV === 'development' ? err.message : undefined });
 });
-
-// ======================
-// ERROR HANDLING
-// ======================
 
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ msg: 'Ruta no encontrada' });
-});
-
-// Centralized Error Handler
-app.use((err, req, res, next) => {
-    console.error(`[Error] ${req.method} ${req.url}:`, err.stack);
-    const status = err.status || 500;
-    const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message;
-    res.status(status).json({ msg: message });
 });
 
 app.listen(PORT, async () => {
@@ -150,4 +158,24 @@ app.listen(PORT, async () => {
     } catch (err) {
         console.error('[Startup] Critical initialization error:', err.message);
     }
+    // Keep the process alive even if idle (failsafe for some environments)
+    setInterval(() => {
+        if (process.env.NODE_ENV === 'development') {
+            // Optional: console.debug('[KeepAlive] Event loop heartbeat');
+        }
+    }, 600000); // 10 minutes heartbeat
+});
+
+// Lifecycle Debugging
+process.on('exit', (code) => {
+    console.log(`[Lifecycle] Process exiting with code: ${code}`);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('[Lifecycle] Uncaught Exception:', err.stack);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[Lifecycle] Unhandled Rejection at:', promise, 'reason:', reason);
 });

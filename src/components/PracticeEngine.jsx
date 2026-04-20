@@ -87,6 +87,8 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
                         {game.type === 'sentence_builder' && <SentenceBuilderGame game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'trivia_game'      && <TriviaGame game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'fill_blanks_game' && <FillBlanksGame game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'reading_comprehension' && <ReadingComprehension game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'cloze_test'       && <ClozeTest game={game} onCorrect={() => handleCorrect(i)} />}
                     </div>
                 </div>
             ))}
@@ -216,27 +218,43 @@ const Matching = ({ game, onCorrect }) => {
     const check = () => {
         const allRight = game.questions.every((q, i) => selections[i] === q.a);
         if (allRight) {
-            setFb({ type: 'success', text: '✅ All matches are correct! Great job!' });
+            setFb({ type: 'success', text: '✅ All matches are correct! Excellent logic!' });
             setTimeout(() => { if (onCorrect) onCorrect(); }, 1400);
         } else {
-            setFb({ type: 'error', text: '❌ Some matches are incorrect. Try again!' });
+            setFb({ type: 'error', text: '❌ Some matches are incorrect. Check your connections!' });
         }
     };
 
     return (
-        <>
-            {game.questions.map((q, i) => (
-                <div key={i} className="d-flex align-items-center gap-3 mb-3">
-                    <span className="fw-semibold" style={{ minWidth: '120px' }}>{q.q}</span>
-                    <select className="form-select w-auto" onChange={e => setSelections(s => ({ ...s, [i]: e.target.value }))}>
-                        <option value="">Choose...</option>
-                        {shuffled.map((a, j) => <option key={j} value={a}>{a}</option>)}
-                    </select>
-                </div>
-            ))}
-            <button className="btn btn-primary" onClick={check}>Check</button>
+        <div className="matching-game animate__animated animate__fadeIn">
+            <div className="list-group shadow-sm mb-4">
+                {game.questions.map((q, i) => (
+                    <div key={i} className="list-group-item d-md-flex align-items-center justify-content-between p-3 gap-3 border-0 rounded-3 mb-2" style={{ background: 'rgba(255,255,255,0.03)', transition: 'all 0.2s' }}>
+                        <div className="matching-question flex-grow-1">
+                            <span className="badge bg-secondary-subtle text-secondary me-2">{i + 1}</span>
+                            <span className="fw-medium text-light">{q.q}</span>
+                        </div>
+                        <div className="matching-selector mt-2 mt-md-0 d-flex align-items-center" style={{ minWidth: '180px' }}>
+                            <i className="bi bi-arrow-right-short text-warning me-2 fs-4"></i>
+                            <select 
+                                className="form-select form-select-sm bg-dark text-light border-secondary" 
+                                style={{ boxShadow: 'none' }}
+                                onChange={e => setSelections(s => ({ ...s, [i]: e.target.value }))}
+                            >
+                                <option value="">Select match...</option>
+                                {shuffled.map((a, j) => <option key={j} value={a}>{a}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div className="text-center">
+                <button className="btn btn-warning btn-lg px-5 rounded-pill fw-bold shadow-sm" onClick={check}>
+                    <i className="bi bi-check-circle me-2"></i> Verify All Connections
+                </button>
+            </div>
             <Feedback fb={fb} />
-        </>
+        </div>
     );
 };
 
@@ -923,6 +941,188 @@ const FillBlanksGame = ({ game, onCorrect }) => {
                 </div>
             </form>
             {status === 'incorrect' && (<div className="text-danger fw-bold mt-3 animate__animated animate__fadeIn">¡Inténtalo de nuevo! Asegúrate de escribirlo correctamente.</div>)}
+        </div>
+    );
+};
+
+/* ── 13. Reading Comprehension Game (Premium Arcade) ─────────────────────── */
+const ReadingComprehension = ({ game, onCorrect }) => {
+    const [qIdx, setQIdx] = useState(0);
+    const [selectedOption, setSelectedOption] = useState(null);
+    const [status, setStatus] = useState('playing');
+    const [score, setScore] = useState(0);
+
+    const question = game.questions && game.questions[qIdx];
+
+    const handleSelect = (idx) => {
+        if (status !== 'playing') return;
+        setSelectedOption(idx);
+
+        if (idx === question.correctIdx) {
+            setStatus('correct');
+            setScore(s => s + 1);
+        } else {
+            setStatus('incorrect');
+        }
+
+        setTimeout(() => {
+            if (qIdx + 1 < game.questions.length) {
+                setQIdx(i => i + 1);
+                setSelectedOption(null);
+                setStatus('playing');
+            } else {
+                setStatus('won_all');
+                if (onCorrect) onCorrect();
+            }
+        }, 2000);
+    };
+
+    if (status === 'won_all') {
+        return (
+            <div className="text-center p-4">
+                <h2 className="text-warning mb-3"><i className="bi bi-trophy-fill me-2"></i>Reading Completed!</h2>
+                <h4 className="text-white">Final Score: {score} / {game.questions.length}</h4>
+                <div className="progress mt-4 bg-dark" style={{ height: '15px' }}>
+                    <div className="progress-bar bg-success" style={{ width: `${(score / game.questions.length) * 100}%` }}></div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="reading-comp-container px-3">
+            <div className="row g-4">
+                {/* Left Panel: The Text */}
+                <div className="col-lg-6">
+                    <div className="reading-text-pane p-4 rounded bg-dark border border-secondary shadow-sm" 
+                         style={{ maxHeight: '500px', overflowY: 'auto', lineHeight: '1.8', color: '#e0e0e0', fontSize: '1.1rem' }}>
+                        <h5 className="text-warning mb-3 fw-bold"><i className="bi bi-file-text me-2"></i>Reading Passage</h5>
+                        <div style={{ whiteSpace: 'pre-wrap' }}>{game.text}</div>
+                    </div>
+                </div>
+
+                {/* Right Panel: The Question */}
+                <div className="col-lg-6">
+                    <div className="question-pane p-4 rounded bg-dark border border-secondary shadow-sm h-100">
+                        <div className="d-flex justify-content-between mb-4">
+                            <span className="badge bg-secondary p-2">Question {qIdx + 1} of {game.questions.length}</span>
+                        </div>
+                        
+                        <h4 className="mb-4 text-white fw-bold">{question.question}</h4>
+
+                        <div className="d-flex flex-column gap-3">
+                            {question.options.map((opt, idx) => {
+                                let bg = '#2c3144'; let border = '2px solid transparent';
+                                if (selectedOption !== null) {
+                                    if (idx === question.correctIdx) { bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; }
+                                    else if (selectedOption === idx) { bg = 'rgba(220,53,69,0.2)'; border = '2px solid #dc3545'; }
+                                }
+                                return (
+                                    <button key={idx} className="btn text-start p-3 fw-bold text-white shadow-sm"
+                                        style={{ background: bg, border: border, transition: 'all 0.2s' }}
+                                        onClick={() => handleSelect(idx)} disabled={selectedOption !== null}>
+                                        {opt}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {selectedOption !== null && (
+                            <div className={`mt-4 p-2 rounded text-center fw-bold animate__animated animate__fadeIn ${selectedOption === question.correctIdx ? 'text-success' : 'text-danger'}`}
+                                 style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                {selectedOption === question.correctIdx ? '✅ Correct Answer!' : `❌ Incorrect. The right answer was: ${question.options[question.correctIdx]}`}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/* ── 14. Cloze Test Game (Premium Arcade) ────────────────────────────────── */
+const ClozeTest = ({ game, onCorrect }) => {
+    const [userAnswers, setUserAnswers] = useState({});
+    const [selectedGap, setSelectedGap] = useState(0);
+    const [fb, setFb] = useState(null);
+    const [isFinished, setIsFinished] = useState(false);
+
+    const wordBank = React.useMemo(() => {
+        const words = [...(game.answers || []), ...(game.distractors || [])];
+        return stableShuffle(words);
+    }, [game]);
+
+    const handleWordSelect = (word) => {
+        if (isFinished) return;
+        setUserAnswers(prev => ({ ...prev, [selectedGap]: word }));
+        // Auto-advance to next empty gap if possible
+        const nextGap = Array.from({ length: game.answers.length }).findIndex((_, i) => !userAnswers[i] && i !== selectedGap);
+        if (nextGap !== -1) setSelectedGap(nextGap);
+    };
+
+    const checkAll = () => {
+        const correct = game.answers && game.answers.every((ans, i) => userAnswers[i] === ans);
+        if (correct) {
+            setFb({ type: 'success', text: '✅ Perfect! The text is complete and correct.' });
+            setIsFinished(true);
+            setTimeout(() => onCorrect && onCorrect(), 2000);
+        } else {
+            setFb({ type: 'error', text: '❌ Some words are in the wrong place. Try again!' });
+        }
+    };
+
+    const renderText = () => {
+        const parts = game.text.split(/\{\{\d+\}\}/);
+        return (
+            <div className="cloze-text lh-lg fs-5 text-start p-4 bg-dark border border-secondary rounded shadow-sm" style={{ color: '#e0e0e0' }}>
+                {parts.map((part, i) => (
+                    <React.Fragment key={i}>
+                        {part}
+                        {i < game.answers.length && (
+                            <button 
+                                className={`btn btn-sm mx-1 px-3 fw-bold animate__animated ${selectedGap === i ? 'btn-outline-warning border-2' : (userAnswers[i] ? 'btn-primary' : 'btn-outline-secondary')}`}
+                                style={{ minWidth: '80px', textTransform: 'none' }}
+                                onClick={() => setSelectedGap(i)}
+                            >
+                                {userAnswers[i] || `(${i + 1})`}
+                            </button>
+                        )}
+                    </React.Fragment>
+                ))}
+            </div>
+        );
+    };
+
+    return (
+        <div className="cloze-test-container">
+            {renderText()}
+
+            <div className="word-bank mt-4 p-3 bg-black rounded border border-secondary shadow-inner">
+                <p className="text-secondary small mb-3 fw-bold"><i className="bi bi-box-fill me-2"></i>WORD BANK (Select a gap, then pick a word)</p>
+                <div className="d-flex flex-wrap justify-content-center gap-2">
+                    {wordBank.map((word, idx) => (
+                        <button 
+                            key={idx} 
+                            className={`btn btn-outline-info fw-bold py-2 px-3 rounded-pill transition-all ${Object.values(userAnswers).includes(word) ? 'opacity-50 grayscale' : 'hover-glow'}`}
+                            onClick={() => handleWordSelect(word)}
+                            disabled={isFinished}
+                        >
+                            {word}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="text-center mt-4">
+                <button 
+                    className="btn btn-warning btn-lg px-5 rounded-pill fw-bold shadow" 
+                    onClick={checkAll}
+                    disabled={isFinished || Object.keys(userAnswers).length < game.answers.length}
+                >
+                    <i className="bi bi-file-check me-2"></i> Verify Paragraph
+                </button>
+            </div>
+            <Feedback fb={fb} />
         </div>
     );
 };

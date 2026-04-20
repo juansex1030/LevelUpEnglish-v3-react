@@ -1,0 +1,54 @@
+.support-page {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+}
+
+.support-card {
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid rgba(var(--bs-emphasis-color-rgb), 0.1);
+    background: var(--bs-body-bg);
+}
+
+.support-info-sidebar {
+    background: linear-gradient(135deg, var(--bs-primary) 0%, #0052cc 100%);
+}
+
+.info-icon {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.1);
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+}
+
+.form-control, .form-select {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    border: 1.5px solid rgba(var(--bs-emphasis-color-rgb), 0.1);
+    background: rgba(var(--bs-emphasis-color-rgb), 0.02);
+    transition: all 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    background: var(--bs-body-bg);
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 4px rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.glass-card {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+[data-bs-theme='dark'] .support-card {
+    background: #121212;
+}
+
+[data-bs-theme='dark'] .glass-card {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}

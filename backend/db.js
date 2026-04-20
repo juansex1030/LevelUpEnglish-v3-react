@@ -12,7 +12,7 @@ const commonPoolOptions = {
     max: Number(process.env.PGPOOL_MAX || 20),
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
     connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || 15000),
-    allowExitOnIdle: true,
+    allowExitOnIdle: false,
 };
 
 const pool = hasDatabaseUrl
@@ -29,7 +29,20 @@ const pool = hasDatabaseUrl
         ...commonPoolOptions,
     });
 
-const query = (text, params = []) => pool.query(text, params);
+const query = async (text, params = []) => {
+    try {
+        const start = Date.now();
+        const res = await pool.query(text, params);
+        const duration = Date.now() - start;
+        if (process.env.NODE_ENV === 'development') {
+            // console.log('[Database] Query executed', { text, duration, rows: res.rowCount });
+        }
+        return res;
+    } catch (err) {
+        console.error('[Database] Query Error:', { text, message: err.message, stack: err.stack });
+        throw err;
+    }
+};
 
 const initDatabase = async () => {
     await query(`
@@ -105,6 +118,19 @@ const initDatabase = async () => {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     `);
+    
+    await query(`
+        CREATE TABLE IF NOT EXISTS support_messages (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            message TEXT NOT NULL,
+            status TEXT DEFAULT 'unread',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
 
     const jsonPath = path.join(__dirname, 'data', 'topics.json');
     if (!fs.existsSync(jsonPath)) {
@@ -113,22 +139,30 @@ const initDatabase = async () => {
     }
 
     const topicsData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    console.log(`[Database] Attempting to sync ${topicsData.length} topics...`);
     const client = await pool.connect();
+    console.log('[Database] Client connected for seeding.');
     try {
         await client.query('BEGIN');
         for (const topic of topicsData) {
+            // Ensure premium_practice is stored as a stringified JSON if it's an object in the JSON file
+            const premiumPractice = typeof topic.premium_practice === 'object' 
+                ? JSON.stringify(topic.premium_practice) 
+                : topic.premium_practice;
+
             await client.query(
                 `
-                INSERT INTO topics (number, level, title, description, icon, theory, practice)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                INSERT INTO topics (number, level, title, description, icon, theory, practice, premium_practice)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 ON CONFLICT (level, number) DO UPDATE SET
                     title = EXCLUDED.title,
                     description = EXCLUDED.description,
                     icon = EXCLUDED.icon,
                     theory = EXCLUDED.theory,
-                    practice = EXCLUDED.practice
+                    practice = EXCLUDED.practice,
+                    premium_practice = EXCLUDED.premium_practice
                 `,
-                [topic.number, topic.level, topic.title, topic.description, topic.icon, topic.theory, topic.practice]
+                [topic.number, topic.level, topic.title, topic.description, topic.icon, topic.theory, topic.practice, premiumPractice]
             );
         }
         await client.query('COMMIT');

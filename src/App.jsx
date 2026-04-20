@@ -4,6 +4,7 @@ import { ProgressProvider } from './context/ProgressContext'
 
 // Layouts & Global Components
 import Navbar from './components/Navbar'
+import Footer from './components/Footer'
 import WelcomeToast from './components/WelcomeToast'
 
 // Pages
@@ -16,8 +17,9 @@ import TopicViewer from './pages/TopicViewer'
 import Diccionario from './pages/Diccionario'
 import ProgressDashboard from './pages/ProgressDashboard'
 import Vocabulary from './pages/Vocabulary'
-import Profile from './pages/Profile'
 import ArcadePremium from './pages/ArcadePremium'
+import Support from './pages/Support'
+import Profile from './pages/Profile'
 
 function App() {
   return (
@@ -39,8 +41,10 @@ function App() {
               <Route path="/progress" element={<ProgressDashboard />} />
               <Route path="/arcade" element={<ArcadePremium />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/support" element={<Support />} />
             </Routes>
           </main>
+          <Footer />
         </div>
       </ProgressProvider>
     </AuthProvider>
