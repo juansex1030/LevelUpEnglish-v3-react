@@ -26,7 +26,6 @@ const authenticateToken = (req, res, next) => {
 
     // Fallback to Authorization header if no cookie (useful for mobile or non-browser clients)
     if (!token) {
-        if (process.env.NODE_ENV !== 'production') {
         const authHeader = req.headers['authorization'];
         token = authHeader && authHeader.split(' ')[1];
     }
