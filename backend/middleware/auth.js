@@ -10,9 +10,19 @@ if (!SECRET_KEY) {
 const ACTUAL_SECRET = SECRET_KEY || 'levelup-dev-secret-key';
 
 const authenticateToken = (req, res, next) => {
-    // Check cookies first (HttpOnly)
-    // Prioritize admin_token if both exist on localhost
-    let token = req.cookies?.admin_token || req.cookies?.token;
+    // Logic to select the correct cookie based on the route to avoid session bleeding on localhost
+    const isAdminRoute = req.path.startsWith('/admin') || (req.path.startsWith('/api/v1/admin'));
+    
+    // For /me endpoint, we need to be careful. 
+    // We check the 'referer' or a custom header to see if it's the admin panel calling.
+    const isFromAdminPanel = req.headers.referer?.includes('5174') || req.headers.referer?.includes('admin');
+
+    let token = null;
+    if (isAdminRoute || (req.path.includes('/auth/me') && isFromAdminPanel)) {
+        token = req.cookies?.admin_token;
+    } else {
+        token = req.cookies?.token;
+    }
 
     // Fallback to Authorization header if no cookie (useful for mobile or non-browser clients)
     if (!token) {

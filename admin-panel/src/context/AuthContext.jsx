@@ -7,20 +7,24 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const verifyAdmin = async () => {
+  const verifyAdmin = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await apiClient.get('/auth/me');
       
-      if (!res.data.user.is_admin) {
-          logout();
+      if (!res.data.user || !res.data.user.is_admin) {
+          setUser(null);
       } else {
           setUser(res.data.user);
       }
     } catch (error) {
-      setUser(null);
+      // Only clear user if it's a definitive auth error (401/403)
+      if (error.response && [401, 403].includes(error.response.status)) {
+          setUser(null);
+      }
+      console.error("Admin verification failed", error.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
