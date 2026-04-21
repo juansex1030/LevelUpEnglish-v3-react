@@ -16,7 +16,7 @@ const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'Lax', // Changed from Strict to Lax for better compatibility
-    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    maxAge: 90 * 24 * 60 * 60 * 1000 // 90 days
 };
 
 const setAuthCookie = (res, user, token) => {
@@ -197,6 +197,7 @@ router.post('/google', async (req, res, next) => {
                 user = newUser.rows[0];
                 // New Google User: Send Welcome Email
                 sendWelcomeEmail(user.email, user.username).catch(err => console.error('[Mailer] Google welcome email failed:', err.message));
+            }
         }
 
         const appToken = generateToken(user);

@@ -49,7 +49,7 @@ const generateToken = (user) => {
             avatar: user.avatar 
         }, 
         ACTUAL_SECRET,
-        { expiresIn: '7d' } // Tokens now expire in 7 days
+        { expiresIn: '30d' } // Tokens now expire in 30 days
     );
 };
 

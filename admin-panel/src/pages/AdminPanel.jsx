@@ -239,8 +239,8 @@ const AdminPanel = () => {
         
         if (!targetUser) return;
 
-        const days = Number(daysInput);
-        if (!days || days < 1) {
+        const days = parseInt(daysInput, 10);
+        if (isNaN(days) || days < 1) {
             setMembershipModal(prev => ({ ...prev, error: 'Por favor ingresa un número de días válido (mínimo 1).' }));
             return;
         }
@@ -274,7 +274,8 @@ const AdminPanel = () => {
             }));
         } catch (err) {
             console.error('[Admin] Extension fail:', err);
-            setMembershipModal(prev => ({ ...prev, loading: false, error: err.response?.data?.error || 'Error al extender la membresía.' }));
+            const errorMsg = err.response?.data?.error || err.response?.data?.msg || err.message || 'Error al extender la membresía.';
+            setMembershipModal(prev => ({ ...prev, loading: false, error: errorMsg }));
         }
     };
 

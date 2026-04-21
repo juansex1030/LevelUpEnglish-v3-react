@@ -87,7 +87,7 @@ const Navbar = () => {
                         </li>
                         <li>
                             <Link className={`nav-link ${location.pathname === '/arcade' ? 'active' : ''} text-warning fw-bold`} to="/arcade" onClick={closeMenu} style={{ letterSpacing: '0.5px' }}>
-                                👾 Arcade
+                                <span className="nav-emoji">👾</span> Arcade
                             </Link>
                         </li>
                         <li>
@@ -128,7 +128,7 @@ const Navbar = () => {
                     </ul>
 
                     {/* Right Side Actions */}
-                    <div className="nav-actions" style={{ marginLeft: '1.5rem' }}>
+                    <div className="nav-actions">
                         <button className="theme-toggle-btn desktop-theme" onClick={toggleTheme} aria-label="Toggle theme" title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}>
                             {theme === 'dark' ? <i className="bi bi-sun-fill text-warning"></i> : <i className="bi bi-moon-stars-fill text-primary"></i>}
                         </button>

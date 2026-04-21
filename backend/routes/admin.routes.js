@@ -130,11 +130,11 @@ router.put('/users/:id/premium', async (req, res, next) => {
         const existing = (await query('SELECT id, is_premium, premium_until FROM users WHERE id = $1', [userId])).rows[0];
         if (!existing) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-        // Only allow increasing — extend from whichever is later: now or current expiry
+        // Force integer casting for PostgreSQL interval multiplication to prevent type errors
         const result = await query(
             `UPDATE users
              SET is_premium = true,
-                 premium_until = GREATEST(COALESCE(premium_until, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP) + (INTERVAL '1 day' * $1)
+                 premium_until = GREATEST(COALESCE(premium_until, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP) + ($1 * INTERVAL '1 day')
              WHERE id = $2
              RETURNING is_premium, premium_until`,
             [addDays, userId]
@@ -146,7 +146,12 @@ router.put('/users/:id/premium', async (req, res, next) => {
         await logAdminAction(req, `MANUAL_EXTEND_${addDays}D`, 'user', userId, { days: addDays });
         res.json({ success: true, is_premium: updated.is_premium, premium_until: updated.premium_until });
     } catch (err) {
-        console.error('[Admin] Premium extend error:', err.message);
+        console.error('[Admin] Premium extend ERROR details:', {
+            userId,
+            addDays,
+            message: err.message,
+            stack: err.stack
+        });
         next(err);
     }
 });
