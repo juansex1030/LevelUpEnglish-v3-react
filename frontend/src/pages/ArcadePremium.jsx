@@ -205,7 +205,7 @@ const ArcadePremium = () => {
                             Obtén acceso por **30 días** a todos los juegos interactivos premium.
                         </p>
                         <button className="btn btn-secondary btn-lg fw-bold px-5 rounded-pill shadow" disabled>
-                            <i className="bi bi-clock-history me-2"></i> No disponible por ahora
+                            <i className="bi bi-clock-history me-2"></i> Próximamente
                         </button>
                     </div>
                 )}
