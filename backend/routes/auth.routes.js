@@ -21,7 +21,7 @@ const COOKIE_OPTIONS = {
 
 const setAuthCookie = (req, res, user, token) => {
     const isProd = process.env.NODE_ENV === 'production';
-    const appSource = req.headers['x-app-source']; // 'admin' or 'frontend'
+    const appSource = req.headers['x-app-source']?.toLowerCase(); // 'admin' or 'frontend'
     
     // Use admin_token ONLY if explicitly logging in from the admin panel
     const useAdminCookie = appSource === 'admin';
