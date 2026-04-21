@@ -19,18 +19,23 @@ const COOKIE_OPTIONS = {
     maxAge: 90 * 24 * 60 * 60 * 1000 // 90 days
 };
 
-const setAuthCookie = (res, user, token) => {
+const setAuthCookie = (req, res, user, token) => {
     const isProd = process.env.NODE_ENV === 'production';
-    const isAdmin = !!user.is_admin;
+    const appSource = req.headers['x-app-source']?.toLowerCase(); // 'admin' or 'frontend'
+    
+    // Use admin_token ONLY if explicitly logging in from the admin panel
+    const useAdminCookie = appSource === 'admin';
 
     const cookieOptions = {
         ...COOKIE_OPTIONS,
-        // Upgrade to Strict for admin tokens in production for maximum CSRF protection
-        sameSite: (isProd && isAdmin) ? 'Strict' : 'Lax',
-        secure: isProd
+        // In production (Vercel), we MUST use SameSite: None and Secure: true for cookies to work across domains/subdomains.
+        // In development, SameSite: Lax is easier.
+        sameSite: isProd ? 'None' : 'Lax',
+        secure: isProd,
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days (matches JWT usually)
     };
 
-    const name = isAdmin ? 'admin_token' : 'token';
+    const name = useAdminCookie ? 'admin_token' : 'token';
     res.cookie(name, token, cookieOptions);
 };
 
@@ -52,7 +57,7 @@ router.post('/register', async (req, res, next) => {
         const user = newUser.rows[0];
         const token = generateToken(user);
         
-        setAuthCookie(res, user, token);
+        setAuthCookie(req, res, user, token);
         
         res.status(201).json({ 
             user: { 
@@ -75,18 +80,26 @@ router.post('/register', async (req, res, next) => {
 
 router.post('/login', async (req, res, next) => {
     const { email, password } = req.body;
+    console.log(`[Auth] Login attempt for: ${email}`);
     try {
         const result = await query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
 
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        if (!user) {
+            console.warn(`[Auth] User not found: ${email}`);
+            return res.status(401).json({ msg: 'Invalid credentials' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            console.warn(`[Auth] Password mismatch for: ${email}`);
             return res.status(401).json({ msg: 'Invalid credentials' });
         }
 
         await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP, otp_attempts = 0 WHERE id = $1', [user.id]);
 
         const token = generateToken(user);
-        setAuthCookie(res, user, token);
+        setAuthCookie(req, res, user, token);
 
         res.json({ 
             user: { 
@@ -201,7 +214,7 @@ router.post('/google', async (req, res, next) => {
         }
 
         const appToken = generateToken(user);
-        setAuthCookie(res, user, appToken);
+        setAuthCookie(req, res, user, appToken);
 
         // Update last_login_at for telemetry
         await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
@@ -261,7 +274,7 @@ router.put('/profile', authenticateToken, async (req, res, next) => {
         }
 
         const token = generateToken({ ...user, username: updatedUsername, avatar: updatedAvatar });
-        setAuthCookie(res, { ...user, username: updatedUsername, avatar: updatedAvatar }, token);
+        setAuthCookie(req, res, { ...user, username: updatedUsername, avatar: updatedAvatar }, token);
 
         res.json({ 
             msg: 'Perfil actualizado exitosamente', 

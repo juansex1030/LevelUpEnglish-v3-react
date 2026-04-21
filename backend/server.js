@@ -42,28 +42,36 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
+// Trust proxy for header-based IP/Security in Cloud environments
+app.set('trust proxy', 1);
+
 // CORS Configuration
 const corsOptions = {
     origin: (origin, callback) => {
-        const allowedOrigins = [/^https?:\/\/localhost(:\d+)?$/];
+        // Robust origin matching:
+        // 1. Allow if no origin (e.g., local tools, server-to-server)
+        // 2. Allow any 'localhost' or '127.0.0.1' in dev
+        // 3. Allow origins specified in FRONTEND_URL env var
+        
+        const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+        
+        const allowedOrigins = [];
         if (process.env.FRONTEND_URL) {
             process.env.FRONTEND_URL.split(',').forEach(url => allowedOrigins.push(url.trim()));
         }
 
-        if (!origin || allowedOrigins.some(ao => (typeof ao === 'string' ? ao === origin : ao.test(origin)))) {
+        if (!origin || isLocal || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            console.warn(`[CORS] Request blocked from origin: ${origin}. If this is legitimate, add it to FRONTEND_URL in .env`);
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-App-Source'],
 };
 app.use(cors(corsOptions));
-
-// Trust proxy for header-based IP/Security in Cloud environments
-if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
 // ======================
 // ROUTES

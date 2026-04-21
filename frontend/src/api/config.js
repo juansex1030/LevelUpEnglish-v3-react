@@ -1,7 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || (
-	import.meta.env.PROD
-		? 'https://level-up-english-v3-react.vercel.app/api/v1'
-		: 'http://localhost:3000/api/v1'
+    import.meta.env.PROD
+        ? '/api/v1' // Uses relative path for production (Vercel rewrites)
+        : 'http://localhost:3000/api/v1'
 );
 
 export default API_URL;

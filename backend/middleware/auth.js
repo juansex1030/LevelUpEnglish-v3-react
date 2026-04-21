@@ -10,12 +10,25 @@ if (!SECRET_KEY) {
 const ACTUAL_SECRET = SECRET_KEY || 'levelup-dev-secret-key';
 
 const authenticateToken = (req, res, next) => {
-    // Check cookies first (HttpOnly)
-    // Prioritize admin_token if both exist on localhost
-    let token = req.cookies?.admin_token || req.cookies?.token;
+    // Priority-based token selection for maximum stability
+    const appSource = req.headers['x-app-source']?.toLowerCase();
+    const isAdminRoute = req.path.startsWith('/admin') || (req.path.includes('/api/v1/admin')) || (req.path.includes('/api/v1/auth/me') && appSource === 'admin');
+    
+    let token = null;
+
+    if (isAdminRoute) {
+        // For admin routes, we MUST prioritize admin_token to avoid session bleeding
+        token = req.cookies?.admin_token || req.cookies?.token;
+    } else {
+        // For frontend routes, prioritize standard token
+        token = req.cookies?.token || req.cookies?.admin_token;
+    }
 
     // Fallback to Authorization header if no cookie (useful for mobile or non-browser clients)
     if (!token) {
+        if (process.env.NODE_ENV !== 'production') {
+            console.debug(`[Auth] No token found for source: ${appSource || 'unknown'}, path: ${req.path}`);
+        }
         const authHeader = req.headers['authorization'];
         token = authHeader && authHeader.split(' ')[1];
     }

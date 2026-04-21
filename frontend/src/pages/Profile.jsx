@@ -360,7 +360,7 @@ const Profile = () => {
                                 <div className="p-3 rounded-3 text-center" style={{ backgroundColor: 'var(--color-fondo-secundario)', border: '1px solid var(--color-borde)' }}>
                                     <p className="mb-2" style={{ color: 'var(--color-texto-secundario)' }}>Actualmente estás en el <strong>Plan Gratuito</strong>.</p>
                                     <button className="btn btn-sm rounded-pill px-4 fw-bold text-white-50 bg-secondary" disabled>
-                                        <i className="bi bi-clock-history me-2"></i> No disponible por ahora
+                                        <i className="bi bi-clock-history me-2"></i> Próximamente
                                     </button>
                                 </div>
                             )}

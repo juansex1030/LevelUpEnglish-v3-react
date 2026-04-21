@@ -202,10 +202,10 @@ const ArcadePremium = () => {
                         <i className="bi bi-lock-fill display-3 text-white mb-3 shadow-icon"></i>
                         <h2 className="text-white fw-bold mb-3">Zona Bloqueada</h2>
                         <p className="text-white-50 fs-5 mb-4">
-                            Obtén acceso por **30 días** a todos los juegos interactivos premium.
+                            ¡Lleva tu inglés al siguiente nivel! Con **LevelUp Premium** desbloqueas acceso ilimitado a juegos exclusivos, desafíos avanzados y contenido seleccionado para acelerar tu aprendizaje.
                         </p>
                         <button className="btn btn-secondary btn-lg fw-bold px-5 rounded-pill shadow" disabled>
-                            <i className="bi bi-clock-history me-2"></i> No disponible por ahora
+                            <i className="bi bi-clock-history me-2"></i> Próximamente
                         </button>
                     </div>
                 )}
