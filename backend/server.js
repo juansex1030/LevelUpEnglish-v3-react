@@ -77,6 +77,16 @@ app.use(cors(corsOptions));
 // ROUTES
 // ======================
 
+// Root Route
+app.get('/', (req, res) => {
+    res.json({
+        status: 'online',
+        message: 'Level Up English API is running correctly',
+        version: '1.0.0',
+        environment: process.env.NODE_ENV
+    });
+});
+
 // Health Check
 app.get('/api/health', (req, res) => {
     res.json({
