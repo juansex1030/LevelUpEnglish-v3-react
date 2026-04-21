@@ -6,6 +6,7 @@ const apiClient = axios.create({
     withCredentials: true, // Crucial for HttpOnly Cookies
     headers: {
         'Content-Type': 'application/json',
+        'X-App-Source': 'admin'
     },
 });
 
