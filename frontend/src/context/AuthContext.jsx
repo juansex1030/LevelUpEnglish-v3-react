@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Logout failed at server level", error);
     } finally {
+      localStorage.removeItem('token');
       setUser(null);
     }
   };

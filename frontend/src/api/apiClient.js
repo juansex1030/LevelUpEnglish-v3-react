@@ -10,6 +10,15 @@ const apiClient = axios.create({
     },
 });
 
+// Request Interceptor: Attach token from localStorage if present (fallback for blocked cookies)
+apiClient.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 // Interceptor: Handle global errors (like 401 Unauthorized)
 apiClient.interceptors.response.use(
     (response) => response,

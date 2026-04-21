@@ -26,11 +26,15 @@ const Login = () => {
         try {
             const response = await apiClient.post('/auth/login', formData);
             
-            // Critical check: Ensure only admins can log into this panel
             if (!response.data.user.is_admin) {
                 setError('Acceso denegado. No tienes permisos de administrador.');
                 setLoading(false);
                 return;
+            }
+
+            // Fallback for blocked cookies: save token to localStorage
+            if (response.data.token) {
+                localStorage.setItem('admin_token', response.data.token);
             }
 
             login(response.data.user);

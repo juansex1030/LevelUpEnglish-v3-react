@@ -38,6 +38,9 @@ const Login = () => {
 
         try {
             const response = await apiClient.post('/auth/login', formData);
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+            }
             login(response.data.user);
             sessionStorage.setItem('show_welcome', 'true');
             navigate('/learn');
@@ -95,6 +98,9 @@ const Login = () => {
             const res = await apiClient.post('/auth/google', {
                 token: credentialResponse.credential
             });
+            if (res.data.token) {
+                localStorage.setItem('token', res.data.token);
+            }
             login(res.data.user);
             sessionStorage.setItem('show_welcome', 'true');
             navigate('/learn');

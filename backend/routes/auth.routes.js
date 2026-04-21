@@ -57,6 +57,7 @@ router.post('/register', async (req, res, next) => {
         setAuthCookie(req, res, user, token);
         
         res.status(201).json({ 
+            token, // Returning token for localStorage fallback
             user: { 
                 id: user.id, username: user.username, email: user.email, 
                 is_admin: user.is_admin, is_premium: user.is_premium, 
@@ -99,6 +100,7 @@ router.post('/login', async (req, res, next) => {
         setAuthCookie(req, res, user, token);
 
         res.json({ 
+            token, // Returning token for localStorage fallback
             user: { 
                 id: user.id, username: user.username, email: user.email, 
                 is_admin: user.is_admin, is_premium: user.is_premium, 
@@ -217,6 +219,7 @@ router.post('/google', async (req, res, next) => {
         await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
         res.json({ 
+            token: appToken, // Returning token for localStorage fallback
             user: { 
                 id: user.id, username: user.username, email: user.email, 
                 is_admin: user.is_admin, is_premium: user.is_premium, 
