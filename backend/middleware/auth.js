@@ -27,17 +27,21 @@ const authenticateToken = (req, res, next) => {
     // Fallback to Authorization header if no cookie (useful for mobile or non-browser clients)
     if (!token) {
         if (process.env.NODE_ENV !== 'production') {
-            console.debug(`[Auth] No token found for source: ${appSource || 'unknown'}, path: ${req.path}`);
-        }
         const authHeader = req.headers['authorization'];
         token = authHeader && authHeader.split(' ')[1];
     }
 
-    if (!token) return res.status(401).json({ msg: 'No token provided' });
+    if (!token) {
+        if (process.env.NODE_ENV !== 'production') {
+            console.debug(`[Auth] No token found for source: ${appSource || 'unknown'}, path: ${req.path}`);
+        }
+        return res.status(401).json({ msg: 'No session found. Please login.' });
+    }
 
     jwt.verify(token, ACTUAL_SECRET, (err, user) => {
         if (err) {
-            const msg = err.name === 'TokenExpiredError' ? 'La sesión ha expirado. Inicia sesión de nuevo.' : 'Token inválido o expirado';
+            console.error(`[Auth] JWT Verification Failed: ${err.message} (Source: ${appSource})`);
+            const msg = err.name === 'TokenExpiredError' ? 'La sesión ha expirado. Inicia sesión de nuevo.' : 'Sesión inválida o expirada';
             return res.status(403).json({ msg });
         }
         req.user = user;
