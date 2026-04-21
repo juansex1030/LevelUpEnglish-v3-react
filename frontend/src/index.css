@@ -148,6 +148,11 @@ body:not([data-bs-theme="dark"]) .navbar-brand:hover .brand-logo-box {
     color: var(--color-texto-principal);
     padding: 0.75rem 1rem;
     border-radius: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .form-control:focus {

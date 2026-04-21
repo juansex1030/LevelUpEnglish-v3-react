@@ -245,6 +245,10 @@ body.light-mode .modern-navbar.scrolled {
 .username {
     font-weight: 600;
     font-size: 0.95rem;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .user-dropdown-menu {
@@ -291,7 +295,11 @@ body.light-mode .modern-navbar.scrolled {
     margin: 0;
     font-size: 0.85rem;
     color: var(--color-texto-secundario);
-    word-break: break-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
 }
 
 .dropdown-item {
