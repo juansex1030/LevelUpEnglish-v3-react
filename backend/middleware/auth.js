@@ -10,19 +10,18 @@ if (!SECRET_KEY) {
 const ACTUAL_SECRET = SECRET_KEY || 'levelup-dev-secret-key';
 
 const authenticateToken = (req, res, next) => {
-    // Strict session isolation using custom X-App-Source header
-    // Using lowercase access as Express lowercases all incoming headers
+    // Priority-based token selection for maximum stability
     const appSource = req.headers['x-app-source']?.toLowerCase();
-    const isAdminRoute = req.path.startsWith('/admin') || (req.path.includes('/api/v1/admin'));
+    const isAdminRoute = req.path.startsWith('/admin') || (req.path.includes('/api/v1/admin')) || (req.path.includes('/api/v1/auth/me') && appSource === 'admin');
     
     let token = null;
 
-    if (appSource === 'admin' || isAdminRoute) {
-        // Strictly use admin_token for Admin Panel or Admin Routes
-        token = req.cookies?.admin_token;
+    if (isAdminRoute) {
+        // For admin routes, we MUST prioritize admin_token to avoid session bleeding
+        token = req.cookies?.admin_token || req.cookies?.token;
     } else {
-        // Strictly use standard token for Frontend
-        token = req.cookies?.token;
+        // For frontend routes, prioritize standard token
+        token = req.cookies?.token || req.cookies?.admin_token;
     }
 
     // Fallback to Authorization header if no cookie (useful for mobile or non-browser clients)
