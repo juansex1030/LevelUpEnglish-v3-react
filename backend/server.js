@@ -45,14 +45,18 @@ app.use('/api/', apiLimiter);
 // CORS Configuration
 const corsOptions = {
     origin: (origin, callback) => {
-        const allowedOrigins = [/^https?:\/\/localhost(:\d+)?$/];
+        // Allow localhost and 127.0.0.1 on any port during development
+        const localRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+        
+        const allowedOrigins = [];
         if (process.env.FRONTEND_URL) {
             process.env.FRONTEND_URL.split(',').forEach(url => allowedOrigins.push(url.trim()));
         }
 
-        if (!origin || allowedOrigins.some(ao => (typeof ao === 'string' ? ao === origin : ao.test(origin)))) {
+        if (!origin || localRegex.test(origin) || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            console.warn(`[CORS] Blocked request from origin: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     },

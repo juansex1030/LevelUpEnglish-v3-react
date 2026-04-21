@@ -79,11 +79,19 @@ router.post('/register', async (req, res, next) => {
 
 router.post('/login', async (req, res, next) => {
     const { email, password } = req.body;
+    console.log(`[Auth] Login attempt for: ${email}`);
     try {
         const result = await query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
 
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        if (!user) {
+            console.warn(`[Auth] User not found: ${email}`);
+            return res.status(401).json({ msg: 'Invalid credentials' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            console.warn(`[Auth] Password mismatch for: ${email}`);
             return res.status(401).json({ msg: 'Invalid credentials' });
         }
 
