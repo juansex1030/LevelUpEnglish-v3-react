@@ -12,7 +12,7 @@ const AdminPanel = () => {
     const handleExit = async () => {
         await logout();
         // Force redirect to the student site (main app)
-        window.location.href = 'http://localhost:5173/';
+        window.location.href = '/';
     };
     const [isDarkMode, setIsDarkMode] = useState(localStorage.getItem('admin_theme') === 'dark');
 
@@ -58,23 +58,35 @@ const AdminPanel = () => {
     const [topicSearchTerm, setTopicSearchTerm] = useState('');
     const theoryTextareaRef = React.useRef(null);
 
+    // --- MEMBERSHIP MODAL STATE ---
+    const [membershipModal, setMembershipModal] = useState({ 
+        open: false, 
+        targetUserId: null, 
+        daysInput: 30, 
+        loading: false, 
+        error: null, 
+        success: null 
+    });
+
     useEffect(() => {
+        let isMounted = true;
+        
         if (!user) return;
-        if (!user.is_admin) {
+       if (!user.is_admin) {
             navigate('/');
             return;
         }
-        if (activeTab === 'dashboard') {
-            loadDashboard();
-        } else if (activeTab === 'topics') {
-            loadTopics();
-        } else if (activeTab === 'arcade') {
-            loadAllTopicsForArcade();
-        } else if (activeTab === 'activity') {
-            loadLogs();
-        } else if (activeTab === 'inbox') {
-            loadMessages();
-        }
+        const loadData = async () => {
+            if (activeTab === 'dashboard') await loadDashboard();
+            else if (activeTab === 'topics') await loadTopics();
+            else if (activeTab === 'arcade') await loadAllTopicsForArcade();
+            else if (activeTab === 'activity') await loadLogs();
+            else if (activeTab === 'inbox') await loadMessages();
+        };
+
+        loadData();
+
+        return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, selectedLevel]);
 
@@ -150,14 +162,6 @@ const AdminPanel = () => {
         }
     };
 
-    const handleMarkAsRead = async (id) => {
-        try {
-            await apiClient.put(`/support/admin/messages/${id}/read`);
-            setMessages(messages.map(m => m.id === id ? { ...m, status: 'read' } : m));
-        } catch (err) {
-            console.error('Error marking as read:', err);
-        }
-    };
 
     const timeAgo = (dateStr) => {
         if (!dateStr) return 'Never';
@@ -177,19 +181,132 @@ const AdminPanel = () => {
         if (!window.confirm(`¿Seguro que deseas ${currentIsAdmin ? 'quitar' : 'dar'} el rol de Administrador a este usuario?`)) return;
         try {
             const res = await apiClient.put(`/admin/users/${targetUserId}/role`, {});
-            setUsers(users.map(u => u.id === targetUserId ? { ...u, is_admin: res.data.is_admin } : u));
+            // Use functional update to avoid stale 'users' reference
+            setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, is_admin: res.data.is_admin } : u));
         } catch (err) {
+            console.error('Role toggle fail:', err);
             alert(err.response?.data?.error || 'Error al cambiar rol');
         }
     };
 
-    const handleTogglePremium = async (targetUserId, currentIsPremium) => {
-        if (!window.confirm(`¿Seguro que deseas ${currentIsPremium ? 'quitar' : 'dar'} el Premium a este usuario?`)) return;
+    // removed handleTogglePremium (using modal instead)
+
+    const openMembershipModal = (user) => {
+        setMembershipModal({ 
+            open: true, 
+            targetUserId: user.id, 
+            daysInput: 30, 
+            loading: false, 
+            error: null, 
+            success: null 
+        });
+    };
+
+    const closeMembershipModal = () => {
+        setMembershipModal(prev => ({ 
+            ...prev, 
+            open: false, 
+            targetUserId: null, 
+            error: null, 
+            success: null 
+        }));
+    };
+
+    const handleMarkAsRead = async (id) => {
         try {
-            const res = await apiClient.put(`/admin/users/${targetUserId}/premium`, {});
-            setUsers(users.map(u => u.id === targetUserId ? { ...u, is_premium: res.data.is_premium } : u));
+            await apiClient.put(`/support/admin/messages/${id}/read`);
+            setMessages(prev => prev.map(m => m.id === id ? { ...m, status: 'read' } : m));
         } catch (err) {
-            alert(err.response?.data?.error || 'Error al cambiar premium');
+            console.error('Error marking as read:', err);
+            alert('No se pudo actualizar el mensaje.');
+        }
+    };
+
+    const handleToggleArcadeField = async (topicId, currentVal) => {
+        try {
+            const newVal = !currentVal;
+            await apiClient.put(`/admin/topics/${topicId}`, { arcade_enabled: newVal });
+            setTopics(prev => prev.map(t => t.id === topicId ? { ...t, arcade_enabled: newVal } : t));
+        } catch (err) {
+            console.error('Error toggling arcade field:', err);
+            alert('Error al actualizar el estado del Arcade.');
+        }
+    };
+
+    const handleApplyExtension = async () => {
+        const { targetUserId, daysInput } = membershipModal;
+        const targetUser = users.find(u => u.id === targetUserId);
+        
+        if (!targetUser) return;
+
+        const days = Number(daysInput);
+        if (!days || days < 1) {
+            setMembershipModal(prev => ({ ...prev, error: 'Por favor ingresa un número de días válido (mínimo 1).' }));
+            return;
+        }
+
+        setMembershipModal(prev => ({ ...prev, loading: true, error: null, success: null }));
+        
+        try {
+            const res = await apiClient.put('/admin/users/' + targetUserId + '/premium', { days });
+            console.log('[Admin] Extension response:', res.data);
+            
+            const updatedUserData = { 
+                is_premium: res.data.is_premium, 
+                premium_until: res.data.premium_until 
+            };
+
+            // Update main list
+            setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, ...updatedUserData } : u));
+            
+            let expiryText = 'Error al calcular fecha';
+            if (res.data.premium_until) {
+                const dateObj = new Date(res.data.premium_until);
+                if (!isNaN(dateObj)) {
+                    expiryText = dateObj.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+                }
+            }
+
+            setMembershipModal(prev => ({
+                ...prev,
+                loading: false,
+                success: '✅ ¡Listo! La membresía de ' + targetUser.username + ' fue extendida ' + days + ' días. Nuevo vencimiento: ' + expiryText + '.'
+            }));
+        } catch (err) {
+            console.error('[Admin] Extension fail:', err);
+            setMembershipModal(prev => ({ ...prev, loading: false, error: err.response?.data?.error || 'Error al extender la membresía.' }));
+        }
+    };
+
+    const handleRevokeFromModal = async () => {
+        const { targetUserId } = membershipModal;
+        const targetUser = users.find(u => u.id === targetUserId);
+        if (!targetUser) return;
+        
+        console.log('[Admin] Attempting to revoke user:', targetUserId);
+        
+        if (!window.confirm('\u00bfSeguro que deseas REVOCAR el Premium de @' + targetUser.username + '?\nEl acceso quedar\u00e1 cancelado de inmediato.')) {
+            return;
+        }
+
+        setMembershipModal(prev => ({ ...prev, loading: true, error: null, success: null }));
+        
+        try {
+            const res = await apiClient.put('/admin/users/' + targetUserId + '/revoke');
+            console.log('[Admin] Revoke success:', res.data);
+            
+            // Update main list
+            setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, is_premium: false, premium_until: null } : u));
+            
+            setMembershipModal(prev => ({
+                ...prev,
+                loading: false,
+                success: '❌ Membresía de @' + targetUser.username + ' revocada. El usuario es ahora Free.'
+            }));
+        } catch (err) {
+            console.error('[Admin] Revoke error:', err);
+            const errorMsg = err.response?.data?.error || err.response?.data?.msg || 'Error al revocar la membresía.';
+            setMembershipModal(prev => ({ ...prev, loading: false, error: errorMsg }));
         }
     };
 
@@ -197,9 +314,10 @@ const AdminPanel = () => {
         if (!window.confirm('¿ELIMINAR DEFINITIVAMENTE a este usuario? Esta acción borrará todo su progreso y no se puede deshacer.')) return;
         try {
             await apiClient.delete(`/admin/users/${targetUserId}`);
-            setUsers(users.filter(u => u.id !== targetUserId));
+            setUsers(prev => prev.filter(u => u.id !== targetUserId));
             setStats(prev => ({ ...prev, total_users: prev.total_users - 1 }));
         } catch (err) {
+            console.error('Delete user fail:', err);
             alert(err.response?.data?.error || 'Error al eliminar usuario');
         }
     };
@@ -350,14 +468,6 @@ const AdminPanel = () => {
         setTopicForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
-    const handleToggleArcadeField = async (topicId, currentStatus) => {
-        try {
-            await apiClient.put(`/admin/topics/${topicId}`, { ...topics.find(t => t.id === topicId), arcade_enabled: !currentStatus });
-            setTopics(topics.map(t => t.id === topicId ? { ...t, arcade_enabled: !currentStatus } : t));
-        } catch (err) {
-            alert('Error toggling arcade status');
-        }
-    };
 
     const insertTag = (tag, closingTag = '') => {
         const textarea = theoryTextareaRef.current;
@@ -746,7 +856,7 @@ const AdminPanel = () => {
                                         <div className="col-lg-8">
                                             <div className="admin-card h-100 d-flex flex-column">
                                                 <h4 className="admin-heading fs-6 mb-4">Topic Completion by Level</h4>
-                                                <div style={{ flex: 1, minHeight: '300px' }}>
+                                                <div style={{ width: '100%', height: '350px' }}>
                                                     <ResponsiveContainer width="100%" height="100%">
                                                         <BarChart data={stats?.chart_data || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
@@ -774,7 +884,7 @@ const AdminPanel = () => {
                                         <div className="col-lg-4">
                                             <div className="admin-card h-100 d-flex flex-column">
                                                 <h4 className="admin-heading fs-6 mb-4">Account Distribution</h4>
-                                                <div style={{ flex: 1, minHeight: '300px', position: 'relative' }}>
+                                                <div style={{ width: '100%', height: '350px', position: 'relative' }}>
                                                     <ResponsiveContainer width="100%" height="100%">
                                                         <PieChart>
                                                             <Pie
@@ -792,10 +902,10 @@ const AdminPanel = () => {
                                                             >
                                                                 {
                                                                     [
-                                                                        { name: 'Premium', value: users.filter(u => u.is_premium).length, color: isDarkMode ? '#38BDF8' : '#0f172a' },
-                                                                        { name: 'Free', value: users.filter(u => !u.is_premium).length, color: isDarkMode ? '#475569' : '#e2e8f0' }
-                                                                    ].map((entry, index) => (
-                                                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                                                        { id: 'premium', name: 'Premium', value: users.filter(u => u.is_premium).length, color: isDarkMode ? '#38BDF8' : '#0f172a' },
+                                                                        { id: 'free', name: 'Free', value: users.filter(u => !u.is_premium).length, color: isDarkMode ? '#475569' : '#e2e8f0' }
+                                                                    ].map((entry) => (
+                                                                        <Cell key={`pie-cell-${entry.id}`} fill={entry.color} />
                                                                     ))
                                                                 }
                                                             </Pie>
@@ -936,8 +1046,12 @@ const AdminPanel = () => {
                                                                     </button>
                                                                     {u.id !== user.id && (
                                                                         <>
-                                                                            <button className={`btn ${u.is_premium ? 'btn-outline-secondary' : 'btn-outline-warning'}`} title={u.is_premium ? "Revocar Premium" : "Otorgar Premium"} onClick={() => handleTogglePremium(u.id, u.is_premium)}>
-                                                                                <i className={`bi ${u.is_premium ? 'bi-award' : 'bi-award-fill'}`}></i>
+                                                                            <button
+                                                                                className="btn btn-outline-warning"
+                                                                                title="Gestionar Membres\u00eda"
+                                                                                onClick={() => openMembershipModal(u)}
+                                                                            >
+                                                                                <i className="bi bi-award-fill me-1"></i>Gestionar
                                                                             </button>
                                                                             <button className={`btn ${u.is_admin ? 'btn-outline-secondary' : 'btn-outline-success'}`} title={u.is_admin ? "Quitar Admin" : "Hacer Admin"} onClick={() => handleToggleRole(u.id, u.is_admin)}>
                                                                                 <i className={`bi ${u.is_admin ? 'bi-star' : 'bi-star-fill'}`}></i>
@@ -1561,6 +1675,138 @@ const AdminPanel = () => {
                         </div>
                     )}
                 </div>
+
+                {/* ===== MEMBERSHIP MANAGEMENT MODAL ===== */}
+                {(() => {
+                    if (!membershipModal.open || !membershipModal.targetUserId) return null;
+                    const modalUser = users.find(u => u.id === membershipModal.targetUserId);
+                    if (!modalUser) return null;
+
+                    return (
+                        <div
+                            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onClick={(e) => { if (e.target === e.currentTarget) closeMembershipModal(); }}
+                        >
+                            <div style={{ maxWidth: '480px', width: '90%' }}>
+                                <div className="shadow-lg" style={{ borderRadius: '16px', overflow: 'hidden', border: 'none', background: isDarkMode ? '#1E293B' : '#fff' }}>
+
+                                    {/* Header */}
+                                    <div style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <i className="bi bi-award-fill text-white fs-4"></i>
+                                            <div>
+                                                <div className="fw-bold text-white" style={{ fontSize: '1.1rem' }}>Gestionar Membresía</div>
+                                                <small className="text-white opacity-75">@{modalUser.username}</small>
+                                            </div>
+                                        </div>
+                                        <button className="btn-close btn-close-white" onClick={closeMembershipModal}></button>
+                                    </div>
+
+                                    {/* Body */}
+                                    <div className="p-4">
+                                        {/* Status Card */}
+                                        <div className="rounded-3 p-3 mb-4" style={{ background: isDarkMode ? '#0F172A' : '#F8FAFC', border: '1px solid ' + (isDarkMode ? '#334155' : '#E2E8F0') }}>
+                                            <div className="d-flex justify-content-between align-items-center mb-1">
+                                                <span className="small fw-semibold" style={{ color: isDarkMode ? '#94A3B8' : '#64748B' }}>Estado actual</span>
+                                                {modalUser.is_premium
+                                                    ? <span className="badge" style={{ backgroundColor: '#F59E0B' }}>🏅 Pro Activo</span>
+                                                    : <span className="badge bg-secondary">Free</span>}
+                                            </div>
+                                            <div className="d-flex justify-content-between align-items-center">
+                                                <span className="small fw-semibold" style={{ color: isDarkMode ? '#94A3B8' : '#64748B' }}>Vence el</span>
+                                                <span className={'fw-bold small ' + (modalUser.premium_until ? (new Date(modalUser.premium_until).getTime() > Date.now() ? 'text-success' : 'text-danger') : 'text-muted')}>
+                                                    {(() => {
+                                                        if (!modalUser.premium_until) return '— Sin fecha asignada';
+                                                        const d = new Date(modalUser.premium_until);
+                                                        return isNaN(d.getTime()) ? 'Fecha inválida' : d.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+                                                    })()}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Quick Buttons */}
+                                        <p className="small fw-semibold mb-2" style={{ color: isDarkMode ? '#94A3B8' : '#64748B' }}>Accesos rápidos</p>
+                                        <div className="d-flex gap-2 mb-3">
+                                            {[7, 30, 90].map(d => (
+                                                <button
+                                                    key={d}
+                                                    className="btn btn-sm flex-fill"
+                                                    style={{ background: Number(membershipModal.daysInput) === d ? '#F59E0B' : (isDarkMode ? '#334155' : '#F1F5F9'), color: Number(membershipModal.daysInput) === d ? '#fff' : (isDarkMode ? '#E2E8F0' : '#0F172A'), border: 'none', fontWeight: 'bold', borderRadius: '8px' }}
+                                                    onClick={() => setMembershipModal(prev => ({ ...prev, daysInput: d, error: null, success: null }))}
+                                                >
+                                                    +{d} días
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Custom Input */}
+                                        <p className="small fw-semibold mb-2" style={{ color: isDarkMode ? '#94A3B8' : '#64748B' }}>O ingresa un número personalizado</p>
+                                        <div className="input-group mb-3">
+                                            <span className="input-group-text" style={{ background: isDarkMode ? '#334155' : '#F1F5F9', borderColor: isDarkMode ? '#475569' : '#CBD5E1', color: isDarkMode ? '#E2E8F0' : '#0F172A' }}>
+                                                <i className="bi bi-calendar-plus"></i>
+                                            </span>
+                                            <input
+                                                type="number" min="1" max="1095"
+                                                className="form-control"
+                                                style={{ background: isDarkMode ? '#0F172A' : '#fff', color: isDarkMode ? '#E2E8F0' : '#0F172A', borderColor: isDarkMode ? '#475569' : '#CBD5E1' }}
+                                                value={membershipModal.daysInput}
+                                                onChange={e => setMembershipModal(prev => ({ ...prev, daysInput: e.target.value, error: null, success: null }))}
+                                                placeholder="Días a añadir..."
+                                            />
+                                            <span className="input-group-text" style={{ background: isDarkMode ? '#334155' : '#F1F5F9', borderColor: isDarkMode ? '#475569' : '#CBD5E1', color: isDarkMode ? '#94A3B8' : '#64748B', fontSize: '0.8rem' }}>días</span>
+                                        </div>
+
+                                        {membershipModal.error && (
+                                            <div className="alert alert-danger py-2 px-3 small rounded-3 border-0 shadow-sm mb-3">
+                                                <i className="bi bi-exclamation-triangle-fill me-2"></i>{membershipModal.error}
+                                            </div>
+                                        )}
+                                        {membershipModal.success && (
+                                            <div className="alert alert-success py-2 px-3 small rounded-3 border-0 shadow-sm mb-3 animate__animated animate__fadeIn">
+                                                <i className="bi bi-check-circle-fill me-2"></i>{membershipModal.success}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="d-flex justify-content-between align-items-center px-4 pb-4 mt-2">
+                                        <div className="d-flex gap-3">
+                                            <button 
+                                                className="btn btn-sm btn-outline-secondary rounded-pill px-3" 
+                                                onClick={closeMembershipModal}
+                                                style={{ transition: 'all 0.2s' }}
+                                            >
+                                                Cerrar
+                                            </button>
+                                            {modalUser.is_premium && (
+                                                <button 
+                                                    className="btn btn-sm btn-outline-danger rounded-pill px-3 d-flex align-items-center justify-content-center" 
+                                                    onClick={(e) => { e.stopPropagation(); handleRevokeFromModal(); }} 
+                                                    disabled={membershipModal.loading}
+                                                    style={{ transition: 'all 0.2s', minWidth: '100px', height: '36px' }}
+                                                >
+                                                    <i className="bi bi-x-circle me-1"></i>
+                                                    <span className="fw-semibold">Revocar</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                        <button
+                                            className="btn btn-sm rounded-pill px-4 fw-bold text-white"
+                                            style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', border: 'none' }}
+                                            disabled={membershipModal.loading}
+                                            onClick={handleApplyExtension}
+                                        >
+                                            {membershipModal.loading
+                                                ? <><span className="spinner-border spinner-border-sm me-2"></span>Aplicando...</>
+                                                : <><i className="bi bi-plus-circle-fill me-2"></i>Aplicar +{membershipModal.daysInput} días</>
+                                            }
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
             </main>
         </div>
     );

@@ -66,11 +66,26 @@ const ArcadePremium = () => {
 
         setCheckoutLoading(true);
         try {
-            const res = await apiClient.post('/checkout', {});
-            window.location.href = res.data.url;
+            const res = await apiClient.post('/epayco/checkout-session', {});
+            const sessionId = res.data.session_id;
+
+            if (window.ePayco) {
+                const handler = window.ePayco.checkout.configure({
+                    key: import.meta.env.VITE_EPAYCO_PUBLIC_KEY || 'TU_PUBLIC_KEY_AQUI',
+                    test: import.meta.env.DEV
+                });
+
+                handler.open({
+                    external: 'true',
+                    session_id: sessionId
+                });
+            } else {
+                throw new Error("ePayco SDK no cargado");
+            }
         } catch (err) {
-            console.error("Stripe Checkout Error", err);
-            alert("No se pudo iniciar el pago. Verifica la configuración de Stripe.");
+            console.error("ePayco Checkout Error", err);
+            alert("No se pudo iniciar el pago. Intente nuevamente.");
+        } finally {
             setCheckoutLoading(false);
         }
     };
@@ -171,6 +186,15 @@ const ArcadePremium = () => {
                             <i className="bi bi-stars"></i> ¡Pago completado! Bienvenido al modo Premium.
                         </div>
                     )}
+
+                    {user && user.is_premium && user.premium_until && (
+                        <div className="mt-2">
+                            <span className="badge bg-dark-subtle text-muted border px-3 py-2 rounded-pill">
+                                <i className="bi bi-calendar-event me-2 text-info"></i>
+                                Acceso Premium hasta: {new Date(user.premium_until).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {user && !user.is_premium && (
@@ -178,10 +202,10 @@ const ArcadePremium = () => {
                         <i className="bi bi-lock-fill display-3 text-white mb-3 shadow-icon"></i>
                         <h2 className="text-white fw-bold mb-3">Zona Bloqueada</h2>
                         <p className="text-white-50 fs-5 mb-4">
-                            Obtén acceso de por vida a los 10 juegos interactivos organizados de A1 a C1.
+                            Obtén acceso por **30 días** a todos los juegos interactivos premium.
                         </p>
                         <button className="btn btn-warning btn-lg fw-bold px-5 rounded-pill shadow" onClick={handleCheckout} disabled={checkoutLoading}>
-                            {checkoutLoading ? 'Conectando seguro...' : 'Desbloquear Todo - $9.99'}
+                            {checkoutLoading ? 'Conectando seguro...' : 'Desbloquear 30 días - $9.990 COP'}
                         </button>
                     </div>
                 )}

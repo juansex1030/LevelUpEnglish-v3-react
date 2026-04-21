@@ -13,7 +13,7 @@ const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
 const topicsRoutes = require('./routes/topics.routes');
 const progressRoutes = require('./routes/progress.routes');
-const stripeRoutes = require('./routes/stripe.routes');
+const epaycoRoutes = require('./routes/epayco.routes');
 const supportRoutes = require('./routes/support.routes');
 
 const app = express();
@@ -79,9 +79,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// ⚠️ STRIPE WEBHOOK: Must be before express.json()
-app.use('/api/v1/stripe', stripeRoutes);
-
 // Body Parser
 app.use(express.json({ limit: '10kb' }));
 
@@ -91,6 +88,7 @@ app.use('/api/v1/topics', topicsRoutes);
 app.use('/api/v1/progress', progressRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/support', supportRoutes);
+app.use('/api/v1/epayco', epaycoRoutes);
 
 // ======================
 // INITIALIZATION
@@ -99,20 +97,31 @@ app.use('/api/v1/support', supportRoutes);
 let bootstrapPromise;
 const initializeAdmin = async () => {
     try {
-        const adminEmail = 'juanse1030@gmail.com';
+        const adminEmail = process.env.ADMIN_EMAIL || 'juanse1030@gmail.com';
         const adminUser = await query('SELECT id FROM users WHERE email = $1', [adminEmail]);
 
         if (adminUser.rows.length === 0) {
+            const isProd = process.env.NODE_ENV === 'production';
+            const defaultPass = process.env.DEFAULT_ADMIN_PASSWORD;
+
+            if (isProd && !defaultPass) {
+                console.error('[Auth] FATAL: DEFAULT_ADMIN_PASSWORD is required in production.');
+                throw new Error('Insecure admin initialization prevented.');
+            }
+
             // Securely hash the default admin password
-            const hashedPassword = await bcrypt.hash(process.env.DEFAULT_ADMIN_PASSWORD || 'admin1234', 10);
+            const hashedPassword = await bcrypt.hash(defaultPass || 'admin1234', 10);
+            const adminUsername = adminEmail.split('@')[0];
+
             await query(
                 'INSERT INTO users (username, email, password, is_admin) VALUES ($1, $2, $3, $4)',
-                ['juanse1030', adminEmail, hashedPassword, true]
+                [adminUsername, adminEmail, hashedPassword, true]
             );
-            console.log('[Auth] Default admin user created (Safe check).');
+            console.log('[Auth] Default admin user created (' + adminEmail + ').');
         }
     } catch (error) {
         console.error("[Auth] Admin initialization error:", error.message);
+        if (process.env.NODE_ENV === 'production') process.exit(1);
     }
 };
 

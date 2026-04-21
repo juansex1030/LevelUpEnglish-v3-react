@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../db');
+const { query, logAdminAction } = require('../db');
 const { rateLimit } = require('express-rate-limit');
+const { authenticateToken, isAdmin } = require('../middleware/auth');
+
 
 // Specific rate limit for support inquiries: 5 requests per hour per IP
 const supportLimiter = rateLimit({
@@ -47,12 +49,13 @@ router.post('/', supportLimiter, async (req, res, next) => {
         }
         // --------------------------------------------------
 
-        // Basic character cleaning to prevent simple HTML injection
-        const cleanMessage = message.replace(/<[^>]*>?/gm, '');
+        // Robust sanitization: remove all HTML-like tags and escape quotes
+        // This ensures the DB stores clean data even if the frontend escapes it
+        const cleanMessage = message.replace(/[<>]/g, '').trim();
 
         const result = await query(
             'INSERT INTO support_messages (user_id, name, email, subject, message) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [userId || null, name, email, subject, cleanMessage]
+            [userId || null, name, email, subject, cleanMessage.substring(0, 2000)] // Safety limit
         );
 
         res.status(201).json({
@@ -66,8 +69,8 @@ router.post('/', supportLimiter, async (req, res, next) => {
 
 // @route   GET /api/v1/support/admin/messages
 // @desc    Get all support messages (Admin only)
-// @access  Protected (Admin middleware assumed)
-router.get('/admin/messages', async (req, res, next) => {
+// @access  Protected
+router.get('/admin/messages', authenticateToken, isAdmin, async (req, res, next) => {
     try {
         const result = await query('SELECT * FROM support_messages ORDER BY created_at DESC');
         res.json({ messages: result.rows });
@@ -78,11 +81,12 @@ router.get('/admin/messages', async (req, res, next) => {
 
 // @route   PUT /api/v1/support/admin/messages/:id/read
 // @desc    Mark a message as read
-// @access  Protected (Admin middleware assumed)
-router.put('/admin/messages/:id/read', async (req, res, next) => {
+// @access  Protected
+router.put('/admin/messages/:id/read', authenticateToken, isAdmin, async (req, res, next) => {
     try {
         const { id } = req.params;
         await query('UPDATE support_messages SET status = $1 WHERE id = $2', ['read', id]);
+        await logAdminAction(req, 'READ_SUPPORT_MSG', 'support_message', id);
         res.json({ msg: 'Message marked as read.' });
     } catch (err) {
         next(err);

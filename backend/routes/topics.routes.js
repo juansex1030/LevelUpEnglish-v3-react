@@ -32,8 +32,11 @@ router.get('/:level', async (req, res, next) => {
 router.get('/:level/:number/premium', authenticateToken, async (req, res, next) => {
     const { level, number } = req.params;
     try {
-        // Ensure only premium users can fetch this
-        if (!req.user.is_premium && !req.user.is_admin) {
+        // --- NEW SECURITY POLICY: Live DB check for premium status ---
+        // We do NOT trust the token alone for sensitive premium data
+        const userStatus = (await query('SELECT is_premium, is_admin FROM users WHERE id = $1', [req.user.id])).rows[0];
+        
+        if (!userStatus || (!userStatus.is_premium && !userStatus.is_admin)) {
             return res.status(403).json({ error: 'Premium subscription required' });
         }
 

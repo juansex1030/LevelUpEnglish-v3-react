@@ -2,20 +2,13 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/mailer');
 const { OAuth2Client } = require('google-auth-library');
 const { query } = require('../db');
 const { authenticateToken, generateToken } = require('../middleware/auth');
 
 const googleClient = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
 
 const isUniqueViolation = (error) => error && error.code === '23505';
 
@@ -27,8 +20,18 @@ const COOKIE_OPTIONS = {
 };
 
 const setAuthCookie = (res, user, token) => {
-    const name = user.is_admin ? 'admin_token' : 'token';
-    res.cookie(name, token, COOKIE_OPTIONS);
+    const isProd = process.env.NODE_ENV === 'production';
+    const isAdmin = !!user.is_admin;
+
+    const cookieOptions = {
+        ...COOKIE_OPTIONS,
+        // Upgrade to Strict for admin tokens in production for maximum CSRF protection
+        sameSite: (isProd && isAdmin) ? 'Strict' : 'Lax',
+        secure: isProd
+    };
+
+    const name = isAdmin ? 'admin_token' : 'token';
+    res.cookie(name, token, cookieOptions);
 };
 
 // --- AUTH API ---
@@ -55,9 +58,13 @@ router.post('/register', async (req, res, next) => {
             user: { 
                 id: user.id, username: user.username, email: user.email, 
                 is_admin: user.is_admin, is_premium: user.is_premium, 
+                premium_until: user.premium_until,
                 avatar: user.avatar, created_at: user.created_at 
             } 
         });
+
+        // Async welcome email (don't block the response)
+        sendWelcomeEmail(user.email, user.username).catch(err => console.error('[Mailer] Welcome email failed:', err.message));
     } catch (error) {
         if (isUniqueViolation(error)) {
             return res.status(400).json({ msg: 'El nombre de usuario o correo ya está en uso' });
@@ -114,27 +121,13 @@ router.post('/forgot-password', async (req, res, next) => {
 
         await query('UPDATE users SET reset_otp = $1, reset_otp_expires_at = $2 WHERE email = $3', [otp, expiresAt, email]);
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Level Up English - Password Reset OTP',
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                    <h2>Password Reset Request</h2>
-                    <p>You have requested to reset your password. Use the following 6-digit code to proceed:</p>
-                    <h1 style="color: #059669; letter-spacing: 5px; font-size: 32px; padding: 10px; background: #ecfdf5; display: inline-block; border-radius: 8px;">${otp}</h1>
-                    <p>This code will expire in 15 minutes.</p>
-                </div>
-            `
-        };
-
-        transporter.sendMail(mailOptions, (error) => {
-            if (error) {
-                console.error("Error sending OTP email:", error);
-                return res.status(500).json({ msg: 'Error sending email' });
-            }
+        try {
+            await sendPasswordResetEmail(email, otp);
             res.json({ msg: 'If the email exists, an OTP has been sent.' });
-        });
+        } catch (error) {
+            console.error("Error sending OTP email:", error);
+            res.status(500).json({ msg: 'Error sending email' });
+        }
     } catch (error) {
         next(error);
     }
@@ -202,11 +195,15 @@ router.post('/google', async (req, res, next) => {
                     [username, email, googleId, picture || 'default']
                 );
                 user = newUser.rows[0];
-            }
+                // New Google User: Send Welcome Email
+                sendWelcomeEmail(user.email, user.username).catch(err => console.error('[Mailer] Google welcome email failed:', err.message));
         }
 
         const appToken = generateToken(user);
         setAuthCookie(res, user, appToken);
+
+        // Update last_login_at for telemetry
+        await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
         res.json({ 
             user: { 
@@ -224,7 +221,7 @@ router.post('/google', async (req, res, next) => {
 router.get('/me', authenticateToken, async (req, res, next) => {
     try {
         await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [req.user.id]);
-        const userResult = await query('SELECT id, username, email, is_admin, is_premium, avatar, created_at, last_login_at FROM users WHERE id = $1', [req.user.id]);
+        const userResult = await query('SELECT id, username, email, is_admin, is_premium, premium_until, avatar, created_at, last_login_at FROM users WHERE id = $1', [req.user.id]);
         res.json({ user: userResult.rows[0] || null });
     } catch (error) {
         next(error);
@@ -267,10 +264,41 @@ router.put('/profile', authenticateToken, async (req, res, next) => {
 
         res.json({ 
             msg: 'Perfil actualizado exitosamente', 
-            user: { id: user.id, username: updatedUsername, email: user.email, is_admin: user.is_admin, is_premium: user.is_premium, avatar: updatedAvatar } 
+            user: { 
+                id: user.id, username: updatedUsername, email: user.email, 
+                is_admin: user.is_admin, is_premium: user.is_premium, 
+                premium_until: user.premium_until,
+                avatar: updatedAvatar 
+            } 
         });
     } catch (error) {
         if (isUniqueViolation(error)) return res.status(400).json({ msg: 'El nombre de usuario ya está en uso' });
+        next(error);
+    }
+});
+
+// --- SELF-SERVICE SUBSCRIPTION CANCELLATION ---
+// Cancellation means: no future charges. Access continues until premium_until expires naturally.
+
+router.delete('/subscription', authenticateToken, async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const user = (await query('SELECT id, is_premium, premium_until FROM users WHERE id = $1', [userId])).rows[0];
+
+        if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
+        if (!user.is_premium) return res.status(400).json({ msg: 'No tienes una suscripción Premium activa.' });
+
+        // We do NOT revoke access — user keeps premium until premium_until expires.
+        // Since ePayco does not auto-charge, there is no recurring billing to stop.
+        // This endpoint simply confirms the cancellation intent for the user's records.
+        console.log(`[Auth] User #${userId} confirmed subscription cancellation. Access continues until: ${user.premium_until}`);
+
+        res.json({
+            success: true,
+            premium_until: user.premium_until,
+            msg: `Tu suscripción ha sido cancelada. Tu acceso Premium se mantendrá activo hasta que venza el período ya pagado.`
+        });
+    } catch (error) {
         next(error);
     }
 });

@@ -33,14 +33,33 @@ const query = async (text, params = []) => {
     try {
         const start = Date.now();
         const res = await pool.query(text, params);
-        const duration = Date.now() - start;
-        if (process.env.NODE_ENV === 'development') {
-            // console.log('[Database] Query executed', { text, duration, rows: res.rowCount });
-        }
+        // ... duration tracking removed for brevity, check original if needed
         return res;
     } catch (err) {
-        console.error('[Database] Query Error:', { text, message: err.message, stack: err.stack });
+        // Optimized error log: don't leak query text to public if this ever hits client headers
+        console.error('[Database] Query Error:', { message: err.message });
         throw err;
+    }
+};
+
+/**
+ * Enhanced Audit Logging
+ * captures IP and User Agent for administrative actions.
+ */
+const logAdminAction = async (req, action, targetType, targetId = null, details = null) => {
+    try {
+        const metadata = {
+            ip: req.ip || req.headers['x-forwarded-for'],
+            ua: req.headers['user-agent']
+        };
+        const finalDetails = { ...(details || {}), _meta: metadata };
+        
+        await query(
+            'INSERT INTO audit_logs (admin_id, action, target_type, target_id, details) VALUES ($1, $2, $3, $4, $5)',
+            [req.user.id, action, targetType, targetId, JSON.stringify(finalDetails)]
+        );
+    } catch (err) {
+        console.error("[Audit] Audit log failed (Central):", err.message);
     }
 };
 
@@ -76,6 +95,7 @@ const initDatabase = async () => {
     // --- Automigrate: Ensure columns exist ---
     const columnsToEnsure = [
         { table: 'users', column: 'is_premium', type: 'BOOLEAN DEFAULT FALSE' },
+        { table: 'users', column: 'premium_until', type: 'TIMESTAMP DEFAULT NULL' },
         { table: 'users', column: 'reset_otp', type: 'VARCHAR(10)' },
         { table: 'users', column: 'reset_otp_expires_at', type: 'TIMESTAMP' },
         { table: 'users', column: 'google_id', type: 'VARCHAR(255) UNIQUE' },
@@ -85,12 +105,17 @@ const initDatabase = async () => {
         { table: 'topics', column: 'premium_practice', type: 'JSONB DEFAULT NULL' }
     ];
 
+    const allowedTables = ['users', 'topics'];
     for (const { table, column, type } of columnsToEnsure) {
+        if (!allowedTables.includes(table)) continue;
+
+        // Note: DO blocks don't support bind parameters easily. 
+        // Since 'table' and 'column' are from our hardcoded list above, interpolation is safe here.
         await query(`
             DO $$
             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='${table}' AND column_name='${column}') THEN
-                    EXECUTE 'ALTER TABLE ${table} ADD COLUMN ${column} ' || '${type}';
+                    EXECUTE 'ALTER TABLE ${table} ADD COLUMN ${column} ${type}';
                 END IF;
             END
             $$;
@@ -180,4 +205,5 @@ module.exports = {
     pool,
     query,
     initDatabase,
+    logAdminAction,
 };

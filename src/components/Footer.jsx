@@ -18,19 +18,19 @@ const Footer = () => {
                             We power your English learning with interactive tools, advanced theory, and immersive practice.
                         </p>
                         <div className="social-links d-flex gap-3 mt-3">
-                            <a href="#" className="social-icon"><i className="bi bi-facebook"></i></a>
+                            <a href="https://www.facebook.com/Lvupenglish" target="_blank" rel="noopener noreferrer" className="social-icon"><i className="bi bi-facebook"></i></a>
                             <a href="#" className="social-icon"><i className="bi bi-instagram"></i></a>
-                            <a href="#" className="social-icon"><i className="bi bi-twitter-x"></i></a>
-                            <a href="#" className="social-icon"><i className="bi bi-linkedin"></i></a>
                         </div>
                     </div>
                     
                     <div className="col-sm-6 col-md-3 col-lg-2">
                         <h6 className="footer-title">Platform</h6>
                         <ul className="footer-links list-unstyled">
-                            <li><Link to="/learn">All Topics</Link></li>
                             <li><Link to="/niveles/a1">A1 Level</Link></li>
+                            <li><Link to="/niveles/a2">A2 Level</Link></li>
                             <li><Link to="/niveles/b1">B1 Level</Link></li>
+                            <li><Link to="/niveles/b2">B2 Level</Link></li>
+                            <li><Link to="/niveles/c1">C1 Level</Link></li>
                             <li><Link to="/arcade">Arcade Premium</Link></li>
                         </ul>
                     </div>

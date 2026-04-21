@@ -55,14 +55,14 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
     return (
         <div className="practice-engine">
             {data.games.map((game, i) => (
-                <div key={i} className="mb-5 p-4 bg-dark rounded shadow-sm border border-secondary" style={{ position: 'relative' }}>
+                <div key={i} className="mb-5 p-4 bg-dark text-white rounded shadow-sm border border-secondary" style={{ position: 'relative' }}>
                     <div className="d-flex align-items-center mb-3 border-bottom border-secondary pb-3">
                         <div className="game-icon bg-gradient me-3 p-3 rounded-circle shadow-sm" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
                             <span className="fs-3">🎮</span>
                         </div>
                         <div>
                             <h4 className="fw-bold mb-1 text-white">{game.title}</h4>
-                            <p className="text-secondary mb-0">{game.instruction}</p>
+                            <p className="text-white-50 mb-0">{game.instruction}</p>
                         </div>
 
                         {completedQuestions.has(`${i}`) && (
@@ -213,44 +213,52 @@ const Unscramble = ({ game, onCorrect }) => {
 const Matching = ({ game, onCorrect }) => {
     const [selections, setSelections] = useState({});
     const [fb, setFb] = useState(null);
-    const shuffled = React.useMemo(() => stableShuffle(game.questions.map(q => q.a)), [game]);
+    
+    // Limit to 8 items to keep UI clean
+    const limitedQuestions = React.useMemo(() => (game.questions || []).slice(0, 8), [game.questions]);
+    const shuffledOptions = React.useMemo(() => stableShuffle(limitedQuestions.map(q => q.a)), [limitedQuestions]);
 
     const check = () => {
-        const allRight = game.questions.every((q, i) => selections[i] === q.a);
+        const allRight = limitedQuestions.every((q, i) => selections[i] === q.a);
         if (allRight) {
-            setFb({ type: 'success', text: '✅ All matches are correct! Excellent logic!' });
+            setFb({ type: 'success', text: '✅ ¡Excelente! Todas las conexiones son correctas.' });
             setTimeout(() => { if (onCorrect) onCorrect(); }, 1400);
         } else {
-            setFb({ type: 'error', text: '❌ Some matches are incorrect. Check your connections!' });
+            setFb({ type: 'error', text: '❌ Algunas conexiones no son correctas. ¡Sigue intentando!' });
         }
     };
 
     return (
         <div className="matching-game animate__animated animate__fadeIn">
-            <div className="list-group shadow-sm mb-4">
-                {game.questions.map((q, i) => (
-                    <div key={i} className="list-group-item d-md-flex align-items-center justify-content-between p-3 gap-3 border-0 rounded-3 mb-2" style={{ background: 'rgba(255,255,255,0.03)', transition: 'all 0.2s' }}>
-                        <div className="matching-question flex-grow-1">
-                            <span className="badge bg-secondary-subtle text-secondary me-2">{i + 1}</span>
-                            <span className="fw-medium text-light">{q.q}</span>
+            <div className="d-grid gap-4 mb-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))' }}>
+                {limitedQuestions.map((q, i) => (
+                    <div key={i} className="d-flex align-items-center justify-content-between p-4 gap-4 rounded-4 shadow-lg" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(15px)', transition: 'all 0.3s ease' }}>
+                        <div className="matching-question flex-grow-1 d-flex align-items-start" style={{ minWidth: '0' }}>
+                            <span className="badge bg-primary rounded-circle text-white me-3 d-flex align-items-center justify-content-center" style={{ width: '28px', height: '28px', flexShrink: 0, fontSize: '0.8rem' }}>{i + 1}</span>
+                            <div className="text-light fw-bold" style={{ fontSize: '1.05rem', lineHeight: '1.4', whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'left' }}>
+                                {q.q}
+                            </div>
                         </div>
-                        <div className="matching-selector mt-2 mt-md-0 d-flex align-items-center" style={{ minWidth: '180px' }}>
-                            <i className="bi bi-arrow-right-short text-warning me-2 fs-4"></i>
+                        <div className="matching-selector" style={{ minWidth: '180px', flexShrink: 0 }}>
                             <select 
-                                className="form-select form-select-sm bg-dark text-light border-secondary" 
-                                style={{ boxShadow: 'none' }}
+                                className="form-select bg-dark text-light border-secondary w-100" 
+                                style={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', padding: '10px', fontSize: '0.9rem', cursor: 'pointer' }}
                                 onChange={e => setSelections(s => ({ ...s, [i]: e.target.value }))}
                             >
-                                <option value="">Select match...</option>
-                                {shuffled.map((a, j) => <option key={j} value={a}>{a}</option>)}
+                                <option value="">Match...</option>
+                                {shuffledOptions.map((a, j) => <option key={j} value={a}>{a}</option>)}
                             </select>
                         </div>
                     </div>
                 ))}
             </div>
             <div className="text-center">
-                <button className="btn btn-warning btn-lg px-5 rounded-pill fw-bold shadow-sm" onClick={check}>
-                    <i className="bi bi-check-circle me-2"></i> Verify All Connections
+                <button 
+                    className="btn btn-primary btn-lg px-5 rounded-pill fw-bold shadow" 
+                    onClick={check}
+                    style={{ background: 'linear-gradient(135deg, #0072ff 0%, #00c6ff 100%)', border: 'none' }}
+                >
+                    <i className="bi bi-check-all me-2"></i> Verificar Resultados
                 </button>
             </div>
             <Feedback fb={fb} />
@@ -328,10 +336,12 @@ const NumberWords = ({ game, onCorrect }) => {
 
 /* ── 7. Memory Game (Premium Arcade) ─────────────────────────────────── */
 const MemoryGame = ({ game, onCorrect }) => {
+    // Limit to exactly 6 pairs for a clean grid
+    const [pairs] = useState(() => (game.pairs || []).slice(0, 6));
+
     const [cards] = useState(() => {
-        if (!game.pairs) return [];
         const deck = [];
-        game.pairs.forEach((pair, i) => {
+        pairs.forEach((pair, i) => {
             deck.push({ id: `emoji-${i}`, matchId: i, type: 'emoji', content: pair.emoji });
             deck.push({ id: `word-${i}`, matchId: i, type: 'word', content: pair.word });
         });
@@ -356,8 +366,8 @@ const MemoryGame = ({ game, onCorrect }) => {
             if (first.matchId === second.matchId) {
                 setMatchedIds(prev => {
                     const newMatches = [...prev, first.matchId];
-                    if (newMatches.length === game.pairs.length) {
-                        setTimeout(() => onCorrect && onCorrect(), 1000);
+                    if (newMatches.length === pairs.length) {
+                        setTimeout(() => onCorrect && onCorrect(), 1200);
                     }
                     return newMatches;
                 });
@@ -368,25 +378,90 @@ const MemoryGame = ({ game, onCorrect }) => {
         }
     };
 
+    // Responsive font scaling for long text
+    const getFontSize = (text) => {
+        if (!text) return '1.1rem';
+        const len = text.length;
+        if (len > 30) return '0.7rem';
+        if (len > 20) return '0.8rem';
+        if (len > 12) return '0.9rem';
+        if (len >= 8) return '1rem'; // "Language" is 8 chars, fits better at 1rem
+        return '1.1rem';
+    };
+
     return (
-        <div className="memory-game-container text-center">
-            <div className="d-flex justify-content-between mb-4">
-                <span className="badge bg-info p-2">Movimientos: {moves}</span>
-                <span className="badge bg-success p-2">Parejas: {matchedIds.length} / {game.pairs?.length}</span>
+        <div className="memory-game-container text-center animate__animated animate__fadeIn">
+            <div className="d-flex justify-content-between align-items-center mb-4 p-3 rounded" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <div className="text-secondary small fw-bold">MOVES: <span className="text-info">{moves}</span></div>
+                <div className="text-secondary small fw-bold">PAIRS: <span className="text-success">{matchedIds.length} / {pairs.length}</span></div>
             </div>
-            <div className="d-flex flex-wrap justify-content-center gap-3">
+            
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))',
+                gap: '15px',
+                maxWidth: '700px',
+                margin: '0 auto'
+            }}>
                 {cards.map((card, i) => {
                     const isFlipped = flippedIdxs.includes(i) || matchedIds.includes(card.matchId);
                     return (
                         <div key={card.id} onClick={() => handleFlip(i)}
-                            style={{ width: '100px', height: '140px', cursor: 'pointer', perspective: '1000px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <div style={{ width: '100%', height: '100%', transition: 'transform 0.6s', transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', position: 'relative' }}>
+                            style={{ 
+                                height: '145px', 
+                                cursor: 'pointer', 
+                                perspective: '1000px',
+                                position: 'relative'
+                            }}>
+                            <div style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)', 
+                                transformStyle: 'preserve-3d', 
+                                transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', 
+                                position: 'relative' 
+                            }}>
                                 {/* Front (Hidden) */}
-                                <div style={{ position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden', background: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', borderRadius: '12px', border: '2px solid white', boxShadow: '0 4px 8px rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '2rem' }}>❓</div>
-                                {/* Back (Revealed) */}
-                                <div style={{ position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden', background: 'white', borderRadius: '12px', border: '2px solid #ff9a9e', display: 'flex', justifyContent: 'center', alignItems: 'center', transform: 'rotateY(180deg)', fontSize: card.type === 'emoji' ? '3rem' : '1.2rem', fontWeight: 'bold', color: '#333', textAlign: 'center', wordBreak: 'break-word', padding: '5px' }}>
+                                <div style={{ 
+                                    position: 'absolute', 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    backfaceVisibility: 'hidden', 
+                                    background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)', 
+                                    borderRadius: '16px', 
+                                    border: '2px solid rgba(255,255,255,0.1)', 
+                                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)', 
+                                    display: 'flex', 
+                                    justifyContent: 'center', 
+                                    alignItems: 'center', 
+                                    fontSize: '2.5rem' 
+                                }}>
+                                    <span style={{ opacity: 0.5 }}>?</span>
+                                </div>
+                                
+                                {/* Back (Revealed) - Glassmorphism style */}
+                                <div style={{ 
+                                    position: 'absolute', 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    backfaceVisibility: 'hidden', 
+                                    background: 'rgba(255, 255, 255, 0.95)', 
+                                    borderRadius: '16px', 
+                                    border: '3px solid #1e3c72', 
+                                    display: 'flex', 
+                                    justifyContent: 'center', 
+                                    alignItems: 'center', 
+                                    transform: 'rotateY(180deg)', 
+                                    fontSize: (card.type === 'emoji' && card.content && card.content.length <= 2) ? '2.8rem' : getFontSize(card.content), 
+                                    fontWeight: '700', 
+                                    color: '#0f2027', 
+                                    textAlign: 'center', 
+                                    padding: '10px',
+                                    boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                                    overflow: 'hidden'
+                                }}>
                                     {card.type === 'emoji' && typeof card.content === 'string' && card.content.startsWith('/assets/') ? (
-                                        <img src={card.content} alt="icon" style={{ width: '85%', height: '85%', objectFit: 'contain' }} />
+                                        <img src={card.content} alt="icon" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
                                     ) : (
                                         card.content
                                     )}
@@ -396,9 +471,11 @@ const MemoryGame = ({ game, onCorrect }) => {
                     );
                 })}
             </div>
-            {matchedIds.length === game.pairs?.length && (
-                <div className="alert alert-success mt-4 fw-bold animate__animated animate__tada">
-                    ¡Felicidades! Completaste el juego en {moves} movimientos.
+            
+            {matchedIds.length === pairs.length && (
+                <div className="alert alert-success mt-4 fw-bold animate__animated animate__bounceIn shadow-lg border-0" style={{ background: 'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)', color: 'white' }}>
+                    <i className="bi bi-trophy-fill me-2"></i>
+                    ¡Impresionante! Has encontrado todas las parejas.
                 </div>
             )}
         </div>

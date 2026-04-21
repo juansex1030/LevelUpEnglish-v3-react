@@ -1,20 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../db');
+const { query, logAdminAction } = require('../db');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 
 // --- HELPERS ---
 
-const logAdminAction = async (adminId, action, targetType, targetId = null, details = null) => {
-    try {
-        await query(
-            'INSERT INTO audit_logs (admin_id, action, target_type, target_id, details) VALUES ($1, $2, $3, $4, $5)',
-            [adminId, action, targetType, targetId, details ? JSON.stringify(details) : null]
-        );
-    } catch (err) {
-        console.error("[Audit] Audit log failed:", err.message);
-    }
-};
+// --- HELPERS (Removed local logAdminAction, now using central import) ---
 
 const buildProgressSummary = async (userId) => {
     const progressResult = await query(
@@ -104,7 +95,7 @@ router.get('/stats', async (req, res, next) => {
 
 router.get('/users', async (req, res, next) => {
     try {
-        const users = (await query('SELECT id, username, email, is_admin, is_premium, avatar, created_at, last_login_at FROM users ORDER BY id')).rows;
+        const users = (await query('SELECT id, username, email, is_admin, is_premium, premium_until, avatar, created_at, last_login_at FROM users ORDER BY id')).rows;
         res.json({ users });
     } catch (err) {
         next(err);
@@ -120,7 +111,7 @@ router.put('/users/:id/role', async (req, res, next) => {
         
         const newRole = !user.is_admin;
         await query('UPDATE users SET is_admin = $1 WHERE id = $2', [newRole, id]);
-        await logAdminAction(req.user.id, newRole ? 'GRANT_ADMIN' : 'REVOKE_ADMIN', 'user', id);
+        await logAdminAction(req, newRole ? 'GRANT_ADMIN' : 'REVOKE_ADMIN', 'user', id);
         
         res.json({ success: true, is_admin: newRole });
     } catch (err) {
@@ -129,17 +120,65 @@ router.put('/users/:id/role', async (req, res, next) => {
 });
 
 router.put('/users/:id/premium', async (req, res, next) => {
-    const { id } = req.params;
+    const userId = Number(req.params.id);
+    const { days } = req.body;
+    const addDays = Number(days) || 30;
+
+    console.log(`[Admin] Premium extend request: userId=${userId}, days=${addDays}, by admin=${req.user.id}`);
+
     try {
-        const user = (await query('SELECT is_premium FROM users WHERE id = $1', [id])).rows[0];
-        if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-        
-        const newPremium = !user.is_premium;
-        await query('UPDATE users SET is_premium = $1 WHERE id = $2', [newPremium, id]);
-        await logAdminAction(req.user.id, newPremium ? 'GRANT_PREMIUM' : 'REVOKE_PREMIUM', 'user', id);
-        
-        res.json({ success: true, is_premium: newPremium });
+        const existing = (await query('SELECT id, is_premium, premium_until FROM users WHERE id = $1', [userId])).rows[0];
+        if (!existing) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        // Only allow increasing — extend from whichever is later: now or current expiry
+        const result = await query(
+            `UPDATE users
+             SET is_premium = true,
+                 premium_until = GREATEST(COALESCE(premium_until, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP) + (INTERVAL '1 day' * $1)
+             WHERE id = $2
+             RETURNING is_premium, premium_until`,
+            [addDays, userId]
+        );
+
+        const updated = result.rows[0];
+        console.log(`[Admin] Premium extended. New premium_until: ${updated.premium_until}`);
+
+        await logAdminAction(req, `MANUAL_EXTEND_${addDays}D`, 'user', userId, { days: addDays });
+        res.json({ success: true, is_premium: updated.is_premium, premium_until: updated.premium_until });
     } catch (err) {
+        console.error('[Admin] Premium extend error:', err.message);
+        next(err);
+    }
+});
+
+router.delete('/users/:id/premium', async (req, res, next) => {
+    const userId = Number(req.params.id);
+    console.log(`[Admin] Premium revoke request (DELETE): userId=${userId}, by admin=${req.user.id}`);
+    try {
+        const existing = (await query('SELECT id, is_premium FROM users WHERE id = $1', [userId])).rows[0];
+        if (!existing) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        await query('UPDATE users SET is_premium = false, premium_until = NULL WHERE id = $1', [userId]);
+        await logAdminAction(req, 'ADMIN_REVOKE_PREMIUM', 'user', userId);
+
+        console.log(`[Admin] Premium revoked for user #${userId}`);
+        res.json({ success: true, is_premium: false, premium_until: null });
+    } catch (err) {
+        console.error('[Admin] Premium revoke error:', err.message);
+        next(err);
+    }
+});
+
+// Added PUT alternative for environments that block DELETE
+router.put('/users/:id/revoke', async (req, res, next) => {
+    const userId = Number(req.params.id);
+    console.log(`[Admin] Premium revoke request (PUT): userId=${userId}, by admin=${req.user.id}`);
+    try {
+        await query('UPDATE users SET is_premium = false, premium_until = NULL WHERE id = $1', [userId]);
+        await logAdminAction(req, 'ADMIN_REVOKE_PREMIUM', 'user', userId);
+        res.json({ success: true, is_premium: false, premium_until: null });
+    } catch (err) {
+        console.error('[Admin] Revoke Error (PUT):', err.message);
         next(err);
     }
 });
@@ -147,7 +186,7 @@ router.put('/users/:id/premium', async (req, res, next) => {
 router.delete('/users/:id', async (req, res, next) => {
     try {
         await query('DELETE FROM users WHERE id = $1', [req.params.id]);
-        await logAdminAction(req.user.id, 'DELETE_USER', 'user', req.params.id);
+        await logAdminAction(req, 'DELETE_USER', 'user', req.params.id);
         res.json({ success: true });
     } catch (err) {
         next(err);
@@ -166,7 +205,7 @@ router.get('/users/:id/progress', async (req, res, next) => {
 router.delete('/users/:id/progress', async (req, res, next) => {
     try {
         await query('DELETE FROM progress WHERE user_id = $1', [req.params.id]);
-        await logAdminAction(req.user.id, 'RESET_PROGRESS', 'user', req.params.id);
+        await logAdminAction(req, 'RESET_PROGRESS', 'user', req.params.id);
         res.json({ success: true, msg: 'Progress reset successfully' });
     } catch (err) {
         next(err);
@@ -202,7 +241,7 @@ router.post('/topics', async (req, res, next) => {
             [number, level.toUpperCase(), title, description, icon, theory, practice, premium_practice, arcade_enabled !== undefined ? arcade_enabled : true]
         );
         const newId = result.rows[0].id;
-        await logAdminAction(req.user.id, 'CREATE_TOPIC', 'topic', newId, { title, level });
+        await logAdminAction(req, 'CREATE_TOPIC', 'topic', newId, { title, level });
         res.status(201).json({ id: newId });
     } catch (err) {
         next(err);
@@ -213,10 +252,18 @@ router.put('/topics/:id', async (req, res, next) => {
     const { title, description, icon, theory, practice, premium_practice, arcade_enabled } = req.body;
     try {
         await query(
-            'UPDATE topics SET title = $1, description = $2, icon = $3, theory = $4, practice = $5, premium_practice = $6, arcade_enabled = $7 WHERE id = $8',
+            `UPDATE topics SET 
+                title = COALESCE($1, title), 
+                description = COALESCE($2, description), 
+                icon = COALESCE($3, icon), 
+                theory = COALESCE($4, theory), 
+                practice = COALESCE($5, practice), 
+                premium_practice = COALESCE($6, premium_practice), 
+                arcade_enabled = COALESCE($7, arcade_enabled) 
+             WHERE id = $8`,
             [title, description, icon, theory, practice, premium_practice, arcade_enabled, req.params.id]
         );
-        await logAdminAction(req.user.id, 'UPDATE_TOPIC', 'topic', req.params.id, { title });
+        await logAdminAction(req, 'UPDATE_TOPIC', 'topic', req.params.id, { title: title || 'partial_update' });
         res.json({ success: true });
     } catch (err) {
         next(err);
@@ -226,8 +273,23 @@ router.put('/topics/:id', async (req, res, next) => {
 router.delete('/topics/:id', async (req, res, next) => {
     try {
         await query('DELETE FROM topics WHERE id = $1', [req.params.id]);
-        await logAdminAction(req.user.id, 'DELETE_TOPIC', 'topic', req.params.id);
+        await logAdminAction(req, 'DELETE_TOPIC', 'topic', req.params.id);
         res.json({ success: true });
+    } catch (err) {
+        next(err);
+    }
+});
+
+router.get('/logs', async (req, res, next) => {
+    try {
+        const result = await query(`
+            SELECT a.*, u.username as admin_name
+            FROM audit_logs a
+            LEFT JOIN users u ON a.admin_id = u.id
+            ORDER BY a.created_at DESC
+            LIMIT 100
+        `);
+        res.json({ logs: result.rows });
     } catch (err) {
         next(err);
     }

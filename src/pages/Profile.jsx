@@ -21,6 +21,28 @@ const Profile = () => {
     
     const [status, setStatus] = useState({ type: '', msg: '' });
     const [loading, setLoading] = useState(false);
+    const [cancelStatus, setCancelStatus] = useState({ loading: false, msg: '', type: '' });
+
+    const handleCancelSubscription = async () => {
+        const confirmed = window.confirm(
+            '¿Estás seguro de que deseas CANCELAR la renovación de tu suscripción Premium?\n\n' +
+            '• Tu acceso Premium seguirá activo hasta la fecha de vencimiento ya pagada.\n' +
+            '• No se realizarán cobros adicionales.\n' +
+            '• Si tienes un reclamo de reembolso, contáctanos primero.'
+        );
+        if (!confirmed) return;
+        setCancelStatus({ loading: true, msg: '', type: '' });
+        try {
+            const res = await apiClient.delete('/auth/subscription');
+            // Do NOT revoke is_premium — user keeps access until premium_until expires
+            const expiryMsg = res.data.premium_until
+                ? ` Tu acceso termina el ${new Date(res.data.premium_until).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}.`
+                : '';
+            setCancelStatus({ loading: false, msg: res.data.msg + expiryMsg, type: 'success' });
+        } catch (err) {
+            setCancelStatus({ loading: false, msg: err.response?.data?.msg || 'Error al cancelar. Intenta más tarde.', type: 'danger' });
+        }
+    };
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -288,6 +310,60 @@ const Profile = () => {
                                     )}
                                 </button>
                             </form>
+                        </div>
+
+                        {/* === SUBSCRIPTION STATUS SECTION === */}
+                        <div className="card-footer p-4 p-md-5 border-top" style={{ backgroundColor: 'var(--color-fondo-primario)', borderColor: 'var(--color-borde)' }}>
+                            <h5 className="mb-3 fw-bold" style={{ color: 'var(--color-texto-principal)' }}>
+                                <i className="bi bi-award-fill me-2" style={{ color: '#F59E0B' }}></i>Mi Suscripción
+                            </h5>
+
+                            {user.is_premium ? (
+                                <>
+                                    <div className="p-3 rounded-3 mb-3" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(217,119,6,0.08))', border: '1px solid rgba(245,158,11,0.3)' }}>
+                                        <div className="d-flex align-items-center justify-content-between mb-2">
+                                            <span className="fw-bold" style={{ color: '#D97706' }}>🏅 Plan Premium Activo</span>
+                                            <span className="badge" style={{ backgroundColor: '#F59E0B', color: '#fff', fontSize: '0.75rem' }}>PRO</span>
+                                        </div>
+                                        {user.premium_until && (
+                                            <p className="small mb-0" style={{ color: 'var(--color-texto-secundario)' }}>
+                                                Vence el <strong style={{ color: 'var(--color-texto-principal)' }}>
+                                                    {new Date(user.premium_until).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                                </strong>
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {cancelStatus.msg && (
+                                        <div className={`alert alert-${cancelStatus.type} small py-2 px-3 rounded-3 mb-3`}>{cancelStatus.msg}</div>
+                                    )}
+
+                                    <div className="p-3 rounded-3 mb-3" style={{ backgroundColor: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                                        <p className="small mb-0" style={{ color: 'var(--color-texto-secundario)' }}>
+                                            <i className="bi bi-info-circle me-1 text-danger"></i>
+                                            Cancelar tu suscripción <strong>no genera un reembolso automático</strong>. Si tienes un problema con tu pago, <a href="/support" style={{ color: 'var(--acento-primario)' }}>contáctanos primero</a>.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        className="btn btn-outline-danger btn-sm rounded-pill px-4 fw-bold"
+                                        onClick={handleCancelSubscription}
+                                        disabled={cancelStatus.loading}
+                                    >
+                                        {cancelStatus.loading
+                                            ? <><span className="spinner-border spinner-border-sm me-2"></span>Cancelando...</>
+                                            : <><i className="bi bi-x-circle me-2"></i>Cancelar Suscripción</>
+                                        }
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="p-3 rounded-3 text-center" style={{ backgroundColor: 'var(--color-fondo-secundario)', border: '1px solid var(--color-borde)' }}>
+                                    <p className="mb-2" style={{ color: 'var(--color-texto-secundario)' }}>Actualmente estás en el <strong>Plan Gratuito</strong>.</p>
+                                    <a href="/#premium" className="btn btn-sm rounded-pill px-4 fw-bold text-white" style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', border: 'none' }}>
+                                        <i className="bi bi-award-fill me-2"></i>Obtener Premium
+                                    </a>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
