@@ -22,16 +22,17 @@ const COOKIE_OPTIONS = {
 const setAuthCookie = (req, res, user, token) => {
     const isProd = process.env.NODE_ENV === 'production';
     const appSource = req.headers['x-app-source']; // 'admin' or 'frontend'
-    const isAdmin = !!user.is_admin;
-
+    
     // Use admin_token ONLY if explicitly logging in from the admin panel
     const useAdminCookie = appSource === 'admin';
 
     const cookieOptions = {
         ...COOKIE_OPTIONS,
-        // Upgrade to Strict for admin tokens in production for maximum CSRF protection
-        sameSite: (isProd && useAdminCookie) ? 'Strict' : 'Lax',
-        secure: isProd
+        // In production (Vercel), we MUST use SameSite: None and Secure: true for cookies to work across domains/subdomains.
+        // In development, SameSite: Lax is easier.
+        sameSite: isProd ? 'None' : 'Lax',
+        secure: isProd,
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days (matches JWT usually)
     };
 
     const name = useAdminCookie ? 'admin_token' : 'token';

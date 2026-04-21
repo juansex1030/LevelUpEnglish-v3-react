@@ -18,14 +18,17 @@ const authenticateToken = (req, res, next) => {
 
     if (appSource === 'admin' || isAdminRoute) {
         // Explicitly requested admin session or accessing admin route
-        token = req.cookies?.admin_token;
+        token = req.cookies?.admin_token || req.cookies?.token; // Fallback to token if admin_token missing (for transition)
     } else {
         // Frontend or other clients use standard token
-        token = req.cookies?.token;
+        token = req.cookies?.token || req.cookies?.admin_token; // Fallback to admin_token if token missing
     }
 
     // Fallback to Authorization header if no cookie (useful for mobile or non-browser clients)
     if (!token) {
+        if (process.env.NODE_ENV !== 'production') {
+            console.debug(`[Auth] No token found for source: ${appSource || 'unknown'}, path: ${req.path}`);
+        }
         const authHeader = req.headers['authorization'];
         token = authHeader && authHeader.split(' ')[1];
     }
