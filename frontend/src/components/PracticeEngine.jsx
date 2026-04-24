@@ -77,18 +77,17 @@ const PracticeEngine = ({ data, onScoreUpdate, initialCompleted = [] }) => {
                         <div className="game-icon bg-gradient me-3 p-3 rounded-circle shadow-sm" style={{ background: 'linear-gradient(135deg, var(--acento-primario) 0%, #2a5298 100%)' }}>
                             <span className="fs-3">🎮</span>
                         </div>
-                        <div>
-                            <h4 className="fw-bold mb-1" style={{ color: 'var(--color-texto-principal)' }}>{game.title}</h4>
+                        <div className="flex-grow-1">
+                            <div className="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                <h4 className="fw-bold mb-0" style={{ color: 'var(--color-texto-principal)' }}>{game.title}</h4>
+                                {completedQuestions.has(`${i}`) && (
+                                    <span className="badge bg-success rounded-pill py-1 px-2 shadow-sm animate__animated animate__zoomIn" style={{ fontSize: '0.75rem' }}>
+                                        <i className="bi bi-check-circle-fill me-1"></i>Completado
+                                    </span>
+                                )}
+                            </div>
                             <p className="mb-0" style={{ color: 'var(--color-texto-secundario)' }}>{game.instruction}</p>
                         </div>
-
-                        {completedQuestions.has(`${i}`) && (
-                            <div className="ms-auto animate__animated animate__zoomIn">
-                                <span className="badge bg-success rounded-pill p-2 px-3 shadow-sm">
-                                    <i className="bi bi-check-circle-fill me-2"></i>Completado
-                                </span>
-                            </div>
-                        )}
                     </div>
 
                     <div className="game-board position-relative" style={{ minHeight: '300px', filter: completedQuestions.has(`${i}`) ? 'brightness(0.7) grayscale(0.5)' : 'none', transition: 'all 0.5s', pointerEvents: completedQuestions.has(`${i}`) ? 'none' : 'auto' }}>

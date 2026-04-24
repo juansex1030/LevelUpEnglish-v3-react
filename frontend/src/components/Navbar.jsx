@@ -8,6 +8,7 @@ const Navbar = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [theme, setTheme] = useState(document.body.getAttribute('data-bs-theme') || 'dark');
 
@@ -77,7 +78,7 @@ const Navbar = () => {
                     {theme === 'dark' ? <i className="bi bi-sun-fill text-warning"></i> : <i className="bi bi-moon-stars-fill text-primary"></i>}
                 </button>
 
-                {/* Navigation Links */}
+                {/* Navigation Menu */}
                 <div className={`nav-menu ${isMenuOpen ? 'open' : ''}`}>
                     <ul className="nav-links">
                         <li>
@@ -127,15 +128,19 @@ const Navbar = () => {
                         </li>
                     </ul>
 
-                    {/* Right Side Actions */}
+                    {/* Right Side Actions (Profile & Theme) */}
                     <div className="nav-actions">
                         <button className="theme-toggle-btn desktop-theme" onClick={toggleTheme} aria-label="Toggle theme" title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}>
                             {theme === 'dark' ? <i className="bi bi-sun-fill text-warning"></i> : <i className="bi bi-moon-stars-fill text-primary"></i>}
                         </button>
 
                         {user ? (
-                            <div className="user-dropdown-container">
-                                <button className="user-profile-btn" style={{ fontSize: user?.avatar && user.avatar !== 'default' ? '1.5rem' : 'inherit' }}>
+                            <div className={`user-dropdown-container ${isUserMenuOpen ? 'active' : ''}`}>
+                                <button 
+                                    className="user-profile-btn" 
+                                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                    style={{ fontSize: user?.avatar && user.avatar !== 'default' ? '1.5rem' : 'inherit' }}
+                                >
                                     {user.avatar && user.avatar !== 'default' ? (
                                         user.avatar.startsWith('http') ? (
                                             <div className="avatar-img-wrapper" style={{ marginRight: '8px' }}>
@@ -155,9 +160,9 @@ const Navbar = () => {
                                         </div>
                                     )}
                                     <span className="username">{user.username || 'User'}</span>
-                                    <i className="bi bi-chevron-down ms-1 text-sm"></i>
+                                    <i className={`bi bi-chevron-${isUserMenuOpen ? 'up' : 'down'} ms-1 text-sm`}></i>
                                 </button>
-                                <div className="user-dropdown-menu">
+                                <div className={`user-dropdown-menu ${isUserMenuOpen ? 'show' : ''}`}>
                                     <div className="dropdown-header">
                                         <p className="user-email">{user.email}</p>
                                     </div>

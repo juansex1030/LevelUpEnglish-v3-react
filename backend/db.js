@@ -105,6 +105,9 @@ const initDatabase = async () => {
         { table: 'topics', column: 'premium_practice', type: 'JSONB DEFAULT NULL' }
     ];
 
+    // --- Critical Patch: Ensure password is NULLABLE (for Google users) ---
+    await query(`ALTER TABLE users ALTER COLUMN password DROP NOT NULL;`);
+
     const allowedTables = ['users', 'topics'];
     for (const { table, column, type } of columnsToEnsure) {
         if (!allowedTables.includes(table)) continue;
