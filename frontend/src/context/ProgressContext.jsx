@@ -72,8 +72,39 @@ export const ProgressProvider = ({ children }) => {
     }
   };
 
+  const updatePracticeProgress = async (level, topicNumber, completedGames) => {
+    if (!user) return false;
+    try {
+      await apiClient.post('/progress/practice', {
+        level,
+        topic_number: topicNumber,
+        completed_games: completedGames
+      });
+      // Refresh progress to sync local state
+      await fetchProgress();
+      return true;
+    } catch (error) {
+      console.error("Error updating practice progress:", error);
+      return false;
+    }
+  };
+
+  const resetPracticeProgress = async (level, topicNumber) => {
+    if (!user) return false;
+    try {
+      await apiClient.delete('/progress/practice', {
+        data: { level, topic_number: topicNumber }
+      });
+      await fetchProgress();
+      return true;
+    } catch (error) {
+      console.error("Error resetting practice progress:", error);
+      return false;
+    }
+  };
+
   return (
-    <ProgressContext.Provider value={{ progressData, loadingProgress, fetchProgress, markComplete }}>
+    <ProgressContext.Provider value={{ progressData, loadingProgress, fetchProgress, markComplete, updatePracticeProgress, resetPracticeProgress }}>
       {children}
     </ProgressContext.Provider>
   );

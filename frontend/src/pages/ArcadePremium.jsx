@@ -210,18 +210,19 @@ const ArcadePremium = () => {
                     </div>
                 )}
 
-                <ul className="nav nav-pills justify-content-center mb-5 arcade-nav">
-                    {LEVELS.map(lvl => (
-                        <li className="nav-item mx-2" key={lvl}>
+                <div className="arcade-nav-container mb-5 d-flex justify-content-center">
+                    <div className="arcade-nav-row d-flex align-items-center">
+                        {LEVELS.map(lvl => (
                             <button 
-                                className={`nav-link fw-bold px-4 rounded-pill ${selectedLevel === lvl ? 'active bg-warning text-dark' : 'text-muted'}`}
+                                key={lvl}
+                                className={`level-btn fw-bold rounded-pill ${selectedLevel === lvl ? 'active' : ''}`}
                                 onClick={() => setSelectedLevel(lvl)}
                             >
                                 {lvl}
                             </button>
-                        </li>
-                    ))}
-                </ul>
+                        ))}
+                    </div>
+                </div>
 
                 <div className="level-map position-relative">
                     <div className="row g-4">

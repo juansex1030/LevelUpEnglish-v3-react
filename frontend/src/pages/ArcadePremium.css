@@ -115,3 +115,54 @@
     z-index: 20;
     transition: all 0.3s;
 }
+
+/* Mobile Optimizations for Horizontal Levels */
+/* Level Selector Styles */
+.arcade-nav-container {
+    width: 100%;
+}
+
+.arcade-nav-row {
+    display: flex;
+    gap: 15px;
+}
+
+.level-btn {
+    border: none;
+    background: transparent;
+    color: var(--color-texto-secundario);
+    padding: 8px 24px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.level-btn.active {
+    background: #FFC107;
+    color: #000 !important;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.level-btn:hover:not(.active) {
+    background: rgba(255, 193, 7, 0.1);
+    color: #FFC107;
+}
+
+@media (max-width: 768px) {
+    .arcade-nav-row {
+        gap: 5px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .level-btn {
+        flex: 1;
+        padding: 8px 0;
+        font-size: 0.85rem;
+        border-radius: 10px !important;
+        text-align: center;
+    }
+    
+    .arcade-title {
+        font-size: 2rem;
+    }
+}

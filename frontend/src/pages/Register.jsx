@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 const Register = () => {
+    const { login } = useAuth();
     const navigate = useNavigate();
     
     const [formData, setFormData] = useState({
@@ -30,12 +32,15 @@ const Register = () => {
         setLoading(true);
 
         try {
-            await apiClient.post('/auth/register', formData);
+            const response = await apiClient.post('/auth/register', formData);
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+            }
+            if (response.data.user) {
+                login(response.data.user);
+            }
             setLoading(false);
-            // After register, the user is already logged in via cookie in the new backend logic.
-            // We can redirect to /learn or stay at /login. Let's redirect to /login for clarity
-            // or just trigger the auth context. Let's stay with /login for now as per current flow.
-            navigate('/login');
+            navigate('/learn');
         } catch (err) {
             setError(err.response?.data?.msg || err.response?.data?.error || 'Error al registrarse. Intenta nuevamente.');
             setLoading(false);

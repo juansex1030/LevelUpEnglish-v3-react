@@ -132,6 +132,17 @@ const initDatabase = async () => {
         );
     `);
 
+    // Ensure practice_progress column exists
+    await query(`
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='progress' AND column_name='practice_progress') THEN
+                ALTER TABLE progress ADD COLUMN practice_progress JSONB DEFAULT '[]'::jsonb;
+            END IF;
+        END
+        $$;
+    `);
+
     await query(`
         CREATE TABLE IF NOT EXISTS audit_logs (
             id SERIAL PRIMARY KEY,

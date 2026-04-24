@@ -28,12 +28,28 @@ const stableShuffle = (arr) => {
     return a;
 };
 
-const PracticeEngine = ({ data, onScoreUpdate }) => {
-    const [completedQuestions, setCompletedQuestions] = React.useState(new Set());
+const PracticeEngine = ({ data, onScoreUpdate, initialCompleted = [] }) => {
+    const [completedQuestions, setCompletedQuestions] = React.useState(new Set(initialCompleted.map(String)));
+    const lastTopicId = React.useRef(data?.id);
 
     useEffect(() => {
-        setCompletedQuestions(new Set());
-    }, [data]);
+        const isNewTopic = lastTopicId.current !== data?.id;
+        
+        if (isNewTopic) {
+            // Hard reset for new topic
+            setCompletedQuestions(new Set(initialCompleted.map(String)));
+            lastTopicId.current = data?.id;
+        } else if (initialCompleted.length > completedQuestions.size) {
+            // Only sync from props if it has MORE completed items (syncing from server)
+            // This prevents stale/slow fetchProgress calls from resetting recent local progress
+            setCompletedQuestions(prev => {
+                const newSet = new Set(prev);
+                initialCompleted.forEach(q => newSet.add(String(q)));
+                return newSet;
+            });
+        }
+    }, [data, initialCompleted]);
+
 
     if (!data || !data.games) return null;
 
@@ -48,21 +64,22 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
 
         if (onScoreUpdate) {
             const scorePercent = Math.round((newSet.size / totalQuestions) * 100);
-            onScoreUpdate(scorePercent);
+            const completedIndices = Array.from(newSet).map(Number);
+            onScoreUpdate(scorePercent, completedIndices);
         }
     };
 
     return (
         <div className="practice-engine">
             {data.games.map((game, i) => (
-                <div key={i} className="mb-5 p-4 bg-dark text-white rounded shadow-sm border border-secondary" style={{ position: 'relative' }}>
-                    <div className="d-flex align-items-center mb-3 border-bottom border-secondary pb-3">
-                        <div className="game-icon bg-gradient me-3 p-3 rounded-circle shadow-sm" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
+                <div key={i} className="mb-5 p-4 rounded shadow-sm border" style={{ position: 'relative', backgroundColor: 'var(--color-fondo-secundario)', color: 'var(--color-texto-principal)', borderColor: 'var(--color-borde)' }}>
+                    <div className="d-flex align-items-center mb-3 border-bottom pb-3" style={{ borderColor: 'var(--color-borde)' }}>
+                        <div className="game-icon bg-gradient me-3 p-3 rounded-circle shadow-sm" style={{ background: 'linear-gradient(135deg, var(--acento-primario) 0%, #2a5298 100%)' }}>
                             <span className="fs-3">🎮</span>
                         </div>
                         <div>
-                            <h4 className="fw-bold mb-1 text-white">{game.title}</h4>
-                            <p className="text-white-50 mb-0">{game.instruction}</p>
+                            <h4 className="fw-bold mb-1" style={{ color: 'var(--color-texto-principal)' }}>{game.title}</h4>
+                            <p className="mb-0" style={{ color: 'var(--color-texto-secundario)' }}>{game.instruction}</p>
                         </div>
 
                         {completedQuestions.has(`${i}`) && (
@@ -89,6 +106,7 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
                         {game.type === 'fill_blanks_game' && <FillBlanksGame game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'reading_comprehension' && <ReadingComprehension game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'cloze_test'       && <ClozeTest game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'snake_game'       && <SnakeGame game={game} onCorrect={() => handleCorrect(i)} />}
                     </div>
                 </div>
             ))}
@@ -134,7 +152,7 @@ const MultipleChoice = ({ game, onCorrect }) => {
 
     return (
         <>
-            <div className="text-center fs-5 fw-semibold mb-4 py-2 px-3 rounded" style={{ background: 'rgba(255,255,255,.05)' }}>{q.q}</div>
+            <div className="text-center fs-5 fw-semibold mb-4 py-2 px-3 rounded" style={{ background: 'var(--color-fondo)', color: 'var(--color-texto-principal)', border: '1px solid var(--color-borde)' }}>{q.q}</div>
             <div className="d-flex flex-wrap justify-content-center gap-2">
                 {shuffledOptions.map((opt, i) => (
                     <button key={i} className="btn btn-outline-primary px-4 py-2" onClick={() => choose(opt)}>{opt}</button>
@@ -167,7 +185,7 @@ const FillIn = ({ game, onCorrect }) => {
 
     return (
         <>
-            <div className="fs-5 fw-semibold mb-4 p-3 rounded text-center" style={{ background: 'rgba(255,255,255,.05)' }}>{q.q}</div>
+            <div className="fs-5 fw-semibold mb-4 p-3 rounded text-center" style={{ background: 'var(--color-fondo)', color: 'var(--color-texto-principal)', border: '1px solid var(--color-borde)' }}>{q.q}</div>
             <div className="d-flex gap-2 mb-2">
                 <input className="form-control" value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} />
                 <button className="btn btn-primary" onClick={check}>Check</button>
@@ -199,7 +217,7 @@ const Unscramble = ({ game, onCorrect }) => {
 
     return (
         <>
-            <div className="p-3 rounded mb-4 text-center" style={{ background: 'rgba(255,255,255,.05)' }}><span className="text-muted d-block small">Scrambled:</span><span className="fw-bold fs-5">{q.q}</span></div>
+            <div className="p-3 rounded mb-4 text-center" style={{ background: 'var(--color-fondo)', border: '1px solid var(--color-borde)' }}><span className="text-muted d-block small">Scrambled:</span><span className="fw-bold fs-5" style={{ color: 'var(--color-texto-principal)' }}>{q.q}</span></div>
             <div className="d-flex gap-2 mb-2">
                 <input className="form-control" value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} />
                 <button className="btn btn-primary" onClick={check}>Check</button>
@@ -232,17 +250,17 @@ const Matching = ({ game, onCorrect }) => {
         <div className="matching-game animate__animated animate__fadeIn">
             <div className="d-grid gap-4 mb-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))' }}>
                 {limitedQuestions.map((q, i) => (
-                    <div key={i} className="d-flex align-items-center justify-content-between p-4 gap-4 rounded-4 shadow-lg" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(15px)', transition: 'all 0.3s ease' }}>
+                    <div key={i} className="d-flex align-items-center justify-content-between p-4 gap-4 rounded-4 shadow-sm" style={{ background: 'var(--color-fondo)', border: '1px solid var(--color-borde)', transition: 'all 0.3s ease' }}>
                         <div className="matching-question flex-grow-1 d-flex align-items-start" style={{ minWidth: '0' }}>
                             <span className="badge bg-primary rounded-circle text-white me-3 d-flex align-items-center justify-content-center" style={{ width: '28px', height: '28px', flexShrink: 0, fontSize: '0.8rem' }}>{i + 1}</span>
-                            <div className="text-light fw-bold" style={{ fontSize: '1.05rem', lineHeight: '1.4', whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'left' }}>
+                            <div className="fw-bold" style={{ fontSize: '1.05rem', lineHeight: '1.4', whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'left', color: 'var(--color-texto-principal)' }}>
                                 {q.q}
                             </div>
                         </div>
                         <div className="matching-selector" style={{ minWidth: '180px', flexShrink: 0 }}>
                             <select 
-                                className="form-select bg-dark text-light border-secondary w-100" 
-                                style={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', padding: '10px', fontSize: '0.9rem', cursor: 'pointer' }}
+                                className="form-select bg-transparent border-secondary w-100" 
+                                style={{ borderRadius: '12px', border: '1px solid var(--color-borde)', padding: '10px', fontSize: '0.9rem', cursor: 'pointer', color: 'var(--color-texto-principal)' }}
                                 onChange={e => setSelections(s => ({ ...s, [i]: e.target.value }))}
                             >
                                 <option value="">Match...</option>
@@ -391,9 +409,9 @@ const MemoryGame = ({ game, onCorrect }) => {
 
     return (
         <div className="memory-game-container text-center animate__animated animate__fadeIn">
-            <div className="d-flex justify-content-between align-items-center mb-4 p-3 rounded" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                <div className="text-secondary small fw-bold">MOVES: <span className="text-info">{moves}</span></div>
-                <div className="text-secondary small fw-bold">PAIRS: <span className="text-success">{matchedIds.length} / {pairs.length}</span></div>
+            <div className="d-flex justify-content-between align-items-center mb-4 p-3 rounded" style={{ background: 'var(--color-fondo)', border: '1px solid var(--color-borde)' }}>
+                <div className="small fw-bold" style={{ color: 'var(--color-texto-secundario)' }}>MOVES: <span className="text-info">{moves}</span></div>
+                <div className="small fw-bold" style={{ color: 'var(--color-texto-secundario)' }}>PAIRS: <span className="text-success">{matchedIds.length} / {pairs.length}</span></div>
             </div>
             
             <div style={{
@@ -494,6 +512,16 @@ const HangmanGame = ({ game, onCorrect }) => {
 
     const isLetterGuessed = (letter) => guessedLetters.has(letter) || letter === ' ';
 
+    const mistakes = 6 - lives;
+
+    // Stickman color based on mistakes (simulating "burning" or heating up)
+    const getStickmanColor = () => {
+        if (mistakes === 0) return 'var(--color-texto-principal, #fff)';
+        if (mistakes < 3) return '#ffeb3b'; // Yellow
+        if (mistakes < 5) return '#ff9800'; // Orange
+        return '#f44336'; // Red
+    };
+
     const handleGuess = (letter) => {
         if (gameStatus !== 'playing' || guessedLetters.has(letter)) return;
 
@@ -534,13 +562,44 @@ const HangmanGame = ({ game, onCorrect }) => {
                 <span className="badge bg-danger p-2"><i className="bi bi-heart-fill me-1"></i>x {lives}</span>
             </div>
 
+            {/* Visual Hangman Drawing */}
+            <div className="d-flex justify-content-center mb-4">
+                <svg width="200" height="230" viewBox="0 0 200 230" className={gameStatus === 'playing' && mistakes > 0 ? 'animate__animated animate__shakeX' : ''} style={{ maxWidth: '100%', height: 'auto' }}>
+                    {/* Gallow */}
+                    <line x1="20" y1="220" x2="100" y2="220" stroke="var(--color-texto-principal, #fff)" strokeWidth="4" />
+                    <line x1="60" y1="220" x2="60" y2="20" stroke="var(--color-texto-principal, #fff)" strokeWidth="4" />
+                    <line x1="60" y1="20" x2="140" y2="20" stroke="var(--color-texto-principal, #fff)" strokeWidth="4" />
+                    <line x1="140" y1="20" x2="140" y2="50" stroke="var(--color-texto-principal, #fff)" strokeWidth="4" />
+
+                    {/* Stickman Parts */}
+                    {mistakes >= 1 && <circle cx="140" cy="75" r="20" stroke={getStickmanColor()} strokeWidth="4" fill="none" className="animate__animated animate__fadeIn" />} {/* Head */}
+                    {mistakes >= 2 && <line x1="140" y1="95" x2="140" y2="160" stroke={getStickmanColor()} strokeWidth="4" className="animate__animated animate__fadeIn" />} {/* Body */}
+                    {mistakes >= 3 && <line x1="140" y1="110" x2="110" y2="140" stroke={getStickmanColor()} strokeWidth="4" className="animate__animated animate__fadeIn" />} {/* Left Arm */}
+                    {mistakes >= 4 && <line x1="140" y1="110" x2="170" y2="140" stroke={getStickmanColor()} strokeWidth="4" className="animate__animated animate__fadeIn" />} {/* Right Arm */}
+                    {mistakes >= 5 && <line x1="140" y1="160" x2="110" y2="200" stroke={getStickmanColor()} strokeWidth="4" className="animate__animated animate__fadeIn" />} {/* Left Leg */}
+                    {mistakes >= 6 && <line x1="140" y1="160" x2="170" y2="200" stroke={getStickmanColor()} strokeWidth="4" className="animate__animated animate__fadeIn" />} {/* Right Leg */}
+                    
+                    {/* Extra "Burning" Glow Effect for high mistakes */}
+                    {mistakes >= 5 && (
+                         <circle cx="140" cy="110" r="60" fill="url(#fireGradient)" opacity="0.3" className="animate__animated animate__pulse animate__infinite" />
+                    )}
+                    
+                    <defs>
+                        <radialGradient id="fireGradient">
+                            <stop offset="10%" stopColor="#ff5722" />
+                            <stop offset="90%" stopColor="transparent" />
+                        </radialGradient>
+                    </defs>
+                </svg>
+            </div>
+
             <div className="alert alert-info d-inline-block shadow-sm fw-bold mb-5">
                 <i className="bi bi-lightbulb-fill text-warning me-2"></i> Pista: {currentWordData.hint}
             </div>
 
             <div className="word-display d-flex justify-content-center flex-wrap gap-2 mb-5">
                 {currentWord.split('').map((letter, i) => (
-                    <div key={i} style={{ width: '40px', height: '50px', borderBottom: letter === ' ' ? 'none' : '3px solid white', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', fontSize: '2rem', fontWeight: 'bold', color: 'white', margin: '0 5px' }}>
+                    <div key={i} style={{ width: '40px', height: '50px', borderBottom: letter === ' ' ? 'none' : '3px solid var(--color-texto-principal)', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-texto-principal)', margin: '0 5px' }}>
                         {(isLetterGuessed(letter) || gameStatus === 'lost') ? letter : ''}
                     </div>
                 ))}
@@ -670,13 +729,13 @@ const CrosswordGame = ({ game, onCorrect }) => {
                 </div>
             )}
 
-            <div className="text-center p-3 mb-4 rounded shadow-sm bg-dark border border-secondary" style={{ color: 'var(--color-texto-principal)' }}>
+            <div className="text-center p-3 mb-4 rounded shadow-sm border" style={{ color: 'var(--color-texto-principal)', background: 'var(--color-fondo)', borderColor: 'var(--color-borde)' }}>
                 <i className="bi bi-info-circle text-info me-2"></i>
                 <span className="fw-bold">{getActiveWordLabel()}</span>
             </div>
 
             <div className="d-flex justify-content-center">
-                <div className="crossword-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${game.gridSize.cols}, 40px)`, gridTemplateRows: `repeat(${game.gridSize.rows}, 40px)`, gap: '2px', background: '#222', padding: '4px', borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+                <div className="crossword-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${game.gridSize.cols}, 40px)`, gridTemplateRows: `repeat(${game.gridSize.rows}, 40px)`, gap: '2px', background: 'var(--color-borde)', padding: '4px', borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)' }}>
                     {Array.from({ length: game.gridSize.rows }).map((_, r) =>
                         Array.from({ length: game.gridSize.cols }).map((_, c) => {
                             const isCell = !!answerGrid.grid[`${r}-${c}`];
@@ -760,56 +819,42 @@ const CrosswordGame = ({ game, onCorrect }) => {
 };
 
 /* ── 10. Sentence Builder Game (Premium Arcade) ─────────────────────────── */
-const SentenceBuilderGame = ({ game, onCorrect }) => {
-    const [sentenceIdx, setSentenceIdx] = useState(0);
+const SentenceBuilderLevel = ({ sentence, onComplete, total, currentIdx }) => {
     const [availableWords, setAvailableWords] = useState([]);
     const [selectedWords, setSelectedWords] = useState([]);
     const [status, setStatus] = useState('playing');
 
-    const currentSentence = game.sentences && game.sentences[sentenceIdx];
-
     useEffect(() => {
-        if (!currentSentence) return;
-        const words = currentSentence.text.split(' ').map((w, i) => ({ id: `w-${i}`, text: w }));
-        if (currentSentence.distractors) {
-            currentSentence.distractors.forEach((d, i) => words.push({ id: `d-${i}`, text: d }));
+        if (!sentence) return;
+        const words = sentence.text.split(' ').map((w, i) => ({ id: `w-${i}`, text: w }));
+        if (sentence.distractors) {
+            sentence.distractors.forEach((d, i) => words.push({ id: `d-${i}`, text: d }));
         }
         setAvailableWords(stableShuffle(words));
         setSelectedWords([]);
         setStatus('playing');
-    }, [sentenceIdx, game]);
+    }, [sentence]);
 
     const selectWord = (word) => {
         if (status !== 'playing' && status !== 'incorrect') return;
         setAvailableWords(prev => prev.filter(w => w.id !== word.id));
-        setSelectedWords(prev => {
-            if (prev.some(w => w.id === word.id)) return prev;
-            return [...prev, word];
-        });
+        setSelectedWords(prev => [...prev, word]);
         setStatus('playing');
     };
 
     const deselectWord = (word) => {
         if (status !== 'playing' && status !== 'incorrect') return;
         setSelectedWords(prev => prev.filter(w => w.id !== word.id));
-        setAvailableWords(prev => {
-            if (prev.some(w => w.id === word.id)) return prev;
-            return [...prev, word];
-        });
+        setAvailableWords(prev => [...prev, word]);
         setStatus('playing');
     };
 
     const handleCheck = () => {
         const attempt = selectedWords.map(w => w.text).join(' ');
-        if (attempt === currentSentence.text) {
+        if (attempt === sentence.text) {
             setStatus('correct');
             setTimeout(() => {
-                if (sentenceIdx + 1 < game.sentences.length) {
-                    setSentenceIdx(i => i + 1);
-                } else {
-                    setStatus('won_all');
-                    if (onCorrect) onCorrect();
-                }
+                onComplete();
             }, 1500);
         } else {
             setStatus('incorrect');
@@ -822,27 +867,27 @@ const SentenceBuilderGame = ({ game, onCorrect }) => {
         setStatus('playing');
     };
 
-    if (!currentSentence) return null;
+    if (!sentence) return null;
 
     return (
         <div className="sentence-builder-container p-4 text-center">
-            <h5 className="mb-4 text-info fw-bold">"{currentSentence.translation}"</h5>
+            <h5 className="mb-4 text-info fw-bold animate__animated animate__fadeIn">"{sentence.translation}"</h5>
 
             <div className="build-area mb-4 p-3 rounded d-flex flex-wrap gap-2 justify-content-center align-items-center"
                 style={{
                     border: status === 'correct' ? '2px dashed #28a745' : (status === 'incorrect' ? '2px dashed #dc3545' : '2px dashed var(--color-borde)'),
                     minHeight: '80px', transition: 'all 0.3s',
-                    background: status === 'correct' ? 'rgba(40,167,69,0.1)' : (status === 'incorrect' ? 'rgba(220,53,69,0.1)' : 'rgba(255,255,255,0.05)')
+                    background: status === 'correct' ? 'rgba(40,167,69,0.1)' : (status === 'incorrect' ? 'rgba(220,53,69,0.1)' : 'var(--color-fondo)')
                 }}>
                 {selectedWords.length === 0 && <span className="text-muted" style={{ opacity: 0.5 }}>Toca palabras para formar la oración</span>}
                 {selectedWords.map(w => (<button key={w.id} onClick={() => deselectWord(w)} className="btn btn-light fw-bold shadow-sm animate__animated animate__fadeIn">{w.text}</button>))}
             </div>
 
             <div className="word-bank d-flex flex-wrap gap-2 justify-content-center mb-4" style={{ minHeight: '80px' }}>
-                {availableWords.map(w => (<button key={w.id} onClick={() => selectWord(w)} className="btn fw-bold shadow-sm" style={{ background: '#3e445b', color: 'white' }}>{w.text}</button>))}
+                {availableWords.map(w => (<button key={w.id} onClick={() => selectWord(w)} className="btn fw-bold shadow-sm" style={{ background: 'var(--acento-primario)', color: 'white' }}>{w.text}</button>))}
             </div>
 
-            {status !== 'correct' && status !== 'won_all' && (
+            {status !== 'correct' && (
                 <div className="d-flex justify-content-center gap-3">
                     <button className="btn btn-secondary rounded-pill px-4" onClick={handleClear} disabled={selectedWords.length === 0}>Limpiar</button>
                     <button className="btn btn-warning rounded-pill px-4 fw-bold" onClick={handleCheck} disabled={selectedWords.length === 0}>Comprobar</button>
@@ -850,10 +895,44 @@ const SentenceBuilderGame = ({ game, onCorrect }) => {
             )}
 
             {status === 'correct' && (<div className="text-success fw-bold animate__animated animate__bounceIn"><i className="bi bi-check-circle-fill me-2 fs-4"></i> ¡Excelente!</div>)}
-            {status === 'won_all' && (<div className="alert alert-success fw-bold animate__animated animate__tada my-3 shadow-sm border-0">🎉 ¡Completaste todas las oraciones!</div>)}
 
-            <div className="mt-4 text-end"><span className="badge bg-dark text-white p-2">Oración {sentenceIdx + 1} de {game.sentences.length}</span></div>
+            <div className="mt-4 text-end"><span className="badge bg-secondary p-2">Oración {currentIdx + 1} de {total}</span></div>
         </div>
+    );
+};
+
+const SentenceBuilderGame = ({ game, onCorrect }) => {
+    const [sentenceIdx, setSentenceIdx] = useState(0);
+    const [wonAll, setWonAll] = useState(false);
+
+    const handleLevelComplete = () => {
+        if (sentenceIdx + 1 < game.sentences.length) {
+            setSentenceIdx(i => i + 1);
+        } else {
+            setWonAll(true);
+            if (onCorrect) onCorrect();
+        }
+    };
+
+    if (wonAll) {
+        return (
+            <div className="text-center p-5">
+                <div className="alert alert-success fw-bold animate__animated animate__tada my-3 shadow-sm border-0 py-4">
+                    <h2 className="mb-3">🎉 ¡Increíble!</h2>
+                    <p className="fs-5">Has completado todas las oraciones de este desafío.</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <SentenceBuilderLevel 
+            key={sentenceIdx} 
+            sentence={game.sentences[sentenceIdx]} 
+            currentIdx={sentenceIdx}
+            total={game.sentences.length}
+            onComplete={handleLevelComplete}
+        />
     );
 };
 
@@ -895,8 +974,8 @@ const TriviaGame = ({ game, onCorrect }) => {
         return (
             <div className="text-center p-4">
                 <h2 className="text-warning mb-3"><i className="bi bi-trophy-fill me-2"></i>¡Trivia Completada!</h2>
-                <h4 className="text-white">Puntuación: {score} / {game.questions.length}</h4>
-                <div className="progress mt-4 bg-dark" style={{ height: '20px' }}>
+                <h4 style={{ color: 'var(--color-texto-principal)' }}>Puntuación: {score} / {game.questions.length}</h4>
+                <div className="progress mt-4 bg-secondary" style={{ height: '20px', background: 'var(--color-borde)' }}>
                     <div className="progress-bar bg-success progress-bar-striped progress-bar-animated" style={{ width: `${(score / game.questions.length) * 100}%` }}></div>
                 </div>
             </div>
@@ -910,21 +989,27 @@ const TriviaGame = ({ game, onCorrect }) => {
                 <span className="badge bg-warning text-dark p-2 fs-6 fw-bold">Puntos: {score}</span>
             </div>
 
-            <div className="question-box bg-dark p-4 rounded shadow-sm border border-secondary mb-4 text-center">
+            <div className="question-box p-4 rounded shadow-sm border mb-4 text-center" style={{ background: 'var(--color-fondo)', borderColor: 'var(--color-borde)' }}>
                 <h4 style={{ color: 'var(--color-texto-principal)' }}>{question.question}</h4>
             </div>
 
             <div className="options d-flex flex-column gap-3 max-w-md mx-auto" style={{ maxWidth: '600px', margin: '0 auto' }}>
                 {question.options.map((opt, idx) => {
-                    let bg = '#3e445b'; let border = '2px solid transparent'; let icon = null;
+                    let bg = 'var(--color-fondo)'; let border = '2px solid var(--color-borde)'; let icon = null; let textColor = 'var(--color-texto-principal)';
                     if (selectedOption !== null) {
-                        if (idx === question.correctIdx) { bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; icon = <i className="bi bi-check-circle-fill text-success ms-auto"></i>; }
-                        else if (selectedOption === idx) { bg = 'rgba(220,53,69,0.2)'; border = '2px solid #dc3545'; icon = <i className="bi bi-x-circle-fill text-danger ms-auto"></i>; }
-                        else { bg = 'rgba(0,0,0,0.2)'; }
+                        if (idx === question.correctIdx) { 
+                            bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; textColor = '#28a745';
+                            icon = <i className="bi bi-check-circle-fill text-success ms-auto"></i>; 
+                        }
+                        else if (selectedOption === idx) { 
+                            bg = 'rgba(220,53,69,0.2)'; border = '2px solid #dc3545'; textColor = '#dc3545';
+                            icon = <i className="bi bi-x-circle-fill text-danger ms-auto"></i>; 
+                        }
+                        else { bg = 'var(--color-fondo)'; border = '2px solid var(--color-borde)'; }
                     }
                     return (
                         <button key={idx} className={`btn d-flex align-items-center text-start p-3 fw-bold fs-5 ${selectedOption === null ? 'trivia-btn-hover' : ''}`}
-                            style={{ background: bg, border: border, color: 'white', transition: 'all 0.2s' }}
+                            style={{ background: bg, border: border, color: textColor, transition: 'all 0.2s' }}
                             onClick={() => handleSelect(idx)} disabled={selectedOption !== null}>
                             <span className="me-3 opacity-50">{String.fromCharCode(65 + idx)}.</span>{opt}{icon}
                         </button>
@@ -982,7 +1067,7 @@ const FillBlanksGame = ({ game, onCorrect }) => {
         if (parts.length < 2) return currentData.text;
 
         let inputClass = "form-control fw-bold mx-2 text-center d-inline-block";
-        let inputStyles = { width: '150px', display: 'inline-block', backgroundColor: '#3e445b', color: 'white', border: '2px solid transparent' };
+        let inputStyles = { width: '150px', display: 'inline-block', backgroundColor: 'var(--color-fondo)', color: 'var(--color-texto-principal)', border: '2px solid var(--color-borde)' };
 
         if (status === 'correct') {
             inputStyles.backgroundColor = 'rgba(40,167,69,0.2)'; inputStyles.border = '2px solid #28a745'; inputStyles.color = '#28a745';
@@ -1058,8 +1143,8 @@ const ReadingComprehension = ({ game, onCorrect }) => {
         return (
             <div className="text-center p-4">
                 <h2 className="text-warning mb-3"><i className="bi bi-trophy-fill me-2"></i>Reading Completed!</h2>
-                <h4 className="text-white">Final Score: {score} / {game.questions.length}</h4>
-                <div className="progress mt-4 bg-dark" style={{ height: '15px' }}>
+                <h4 style={{ color: 'var(--color-texto-principal)' }}>Final Score: {score} / {game.questions.length}</h4>
+                <div className="progress mt-4" style={{ height: '15px', background: 'var(--color-borde)' }}>
                     <div className="progress-bar bg-success" style={{ width: `${(score / game.questions.length) * 100}%` }}></div>
                 </div>
             </div>
@@ -1071,8 +1156,8 @@ const ReadingComprehension = ({ game, onCorrect }) => {
             <div className="row g-4">
                 {/* Left Panel: The Text */}
                 <div className="col-lg-6">
-                    <div className="reading-text-pane p-4 rounded bg-dark border border-secondary shadow-sm" 
-                         style={{ maxHeight: '500px', overflowY: 'auto', lineHeight: '1.8', color: '#e0e0e0', fontSize: '1.1rem' }}>
+                    <div className="reading-text-pane p-4 rounded border shadow-sm" 
+                         style={{ maxHeight: '500px', overflowY: 'auto', lineHeight: '1.8', color: 'var(--color-texto-principal)', fontSize: '1.1rem', background: 'var(--color-fondo)', borderColor: 'var(--color-borde)' }}>
                         <h5 className="text-warning mb-3 fw-bold"><i className="bi bi-file-text me-2"></i>Reading Passage</h5>
                         <div style={{ whiteSpace: 'pre-wrap' }}>{game.text}</div>
                     </div>
@@ -1080,28 +1165,28 @@ const ReadingComprehension = ({ game, onCorrect }) => {
 
                 {/* Right Panel: The Question */}
                 <div className="col-lg-6">
-                    <div className="question-pane p-4 rounded bg-dark border border-secondary shadow-sm h-100">
+                    <div className="question-pane p-4 rounded border shadow-sm h-100" style={{ background: 'var(--color-fondo)', borderColor: 'var(--color-borde)' }}>
                         <div className="d-flex justify-content-between mb-4">
                             <span className="badge bg-secondary p-2">Question {qIdx + 1} of {game.questions.length}</span>
                         </div>
                         
-                        <h4 className="mb-4 text-white fw-bold">{question.question}</h4>
+                        <h4 className="mb-4 fw-bold" style={{ color: 'var(--color-texto-principal)' }}>{question.question}</h4>
 
                         <div className="d-flex flex-column gap-3">
-                            {question.options.map((opt, idx) => {
-                                let bg = '#2c3144'; let border = '2px solid transparent';
-                                if (selectedOption !== null) {
-                                    if (idx === question.correctIdx) { bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; }
-                                    else if (selectedOption === idx) { bg = 'rgba(220,53,69,0.2)'; border = '2px solid #dc3545'; }
-                                }
-                                return (
-                                    <button key={idx} className="btn text-start p-3 fw-bold text-white shadow-sm"
-                                        style={{ background: bg, border: border, transition: 'all 0.2s' }}
-                                        onClick={() => handleSelect(idx)} disabled={selectedOption !== null}>
-                                        {opt}
-                                    </button>
-                                );
-                            })}
+                                {question.options.map((opt, idx) => {
+                                    let bg = 'var(--color-fondo-secundario)'; let border = '2px solid var(--color-borde)'; let textColor = 'var(--color-texto-principal)';
+                                    if (selectedOption !== null) {
+                                        if (idx === question.correctIdx) { bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; textColor = '#28a745'; }
+                                        else if (selectedOption === idx) { bg = 'rgba(220,53,69,0.2)'; border = '2px solid #dc3545'; textColor = '#dc3545'; }
+                                    }
+                                    return (
+                                        <button key={idx} className="btn text-start p-3 fw-bold shadow-sm"
+                                            style={{ background: bg, border: border, color: textColor, transition: 'all 0.2s' }}
+                                            onClick={() => handleSelect(idx)} disabled={selectedOption !== null}>
+                                            {opt}
+                                        </button>
+                                    );
+                                })}
                         </div>
 
                         {selectedOption !== null && (
@@ -1151,7 +1236,7 @@ const ClozeTest = ({ game, onCorrect }) => {
     const renderText = () => {
         const parts = game.text.split(/\{\{\d+\}\}/);
         return (
-            <div className="cloze-text lh-lg fs-5 text-start p-4 bg-dark border border-secondary rounded shadow-sm" style={{ color: '#e0e0e0' }}>
+            <div className="cloze-text lh-lg fs-5 text-start p-4 border rounded shadow-sm" style={{ color: 'var(--color-texto-principal)', background: 'var(--color-fondo)', borderColor: 'var(--color-borde)' }}>
                 {parts.map((part, i) => (
                     <React.Fragment key={i}>
                         {part}
@@ -1174,7 +1259,7 @@ const ClozeTest = ({ game, onCorrect }) => {
         <div className="cloze-test-container">
             {renderText()}
 
-            <div className="word-bank mt-4 p-3 bg-black rounded border border-secondary shadow-inner">
+            <div className="word-bank mt-4 p-3 rounded border shadow-inner" style={{ background: 'var(--color-fondo-secundario)', borderColor: 'var(--color-borde)' }}>
                 <p className="text-secondary small mb-3 fw-bold"><i className="bi bi-box-fill me-2"></i>WORD BANK (Select a gap, then pick a word)</p>
                 <div className="d-flex flex-wrap justify-content-center gap-2">
                     {wordBank.map((word, idx) => (
@@ -1200,6 +1285,254 @@ const ClozeTest = ({ game, onCorrect }) => {
                 </button>
             </div>
             <Feedback fb={fb} />
+        </div>
+    );
+};
+
+/* ── 13. Word Snake Game (Premium Arcade) ────────────────────────────────── */
+const SnakeGame = ({ game, onCorrect }) => {
+    const GRID_SIZE = 15;
+    const INITIAL_SPEED = 250;
+    
+    const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
+    const [dir, setDir] = useState({ x: 0, y: -1 });
+    const [wordIdx, setWordIdx] = useState(0);
+    const [letterIdx, setLetterIdx] = useState(0); // Progress within current word
+    const [lettersOnBoard, setLettersOnBoard] = useState([]);
+    const [status, setStatus] = useState('waiting'); // waiting, playing, lost, won_word, won_all
+    const [score, setScore] = useState(0);
+    const [lives, setLives] = useState(3);
+
+
+    // Initialize/Spawn letters
+    useEffect(() => {
+        if (status === 'playing' && lettersOnBoard.length === 0) {
+            spawnLetters();
+        }
+    }, [status, lettersOnBoard, letterIdx]);
+
+    const spawnLetters = () => {
+        const nextLetter = currentWord[letterIdx];
+        const newLetters = [];
+        
+        // Spawn the correct letter
+        newLetters.push({ 
+            char: nextLetter, 
+            x: Math.floor(Math.random() * GRID_SIZE), 
+            y: Math.floor(Math.random() * GRID_SIZE),
+            isCorrect: true 
+        });
+
+        // Spawn fewer distractors to make it easier
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        for (let i = 0; i < 1; i++) {
+            newLetters.push({
+                char: alphabet[Math.floor(Math.random() * alphabet.length)],
+                x: Math.floor(Math.random() * GRID_SIZE),
+                y: Math.floor(Math.random() * GRID_SIZE),
+                isCorrect: false
+            });
+        }
+        setLettersOnBoard(newLetters);
+    };
+
+    // Game Loop
+    useEffect(() => {
+        if (status !== 'playing') return;
+
+        const moveSnake = () => {
+            const head = snake[0];
+            let newX = head.x + dir.x;
+            let newY = head.y + dir.y;
+
+            // Wrap around logic (Teleport to the other side)
+            if (newX < 0) newX = GRID_SIZE - 1;
+            else if (newX >= GRID_SIZE) newX = 0;
+            if (newY < 0) newY = GRID_SIZE - 1;
+            else if (newY >= GRID_SIZE) newY = 0;
+
+            const newHead = { x: newX, y: newY };
+
+            // Check self collision
+            if (snake.some(s => s.x === newHead.x && s.y === newHead.y)) {
+                handleDeath();
+                return;
+            }
+
+            const newSnake = [newHead, ...snake];
+
+            // Check letter collision
+            const caughtIdx = lettersOnBoard.findIndex(l => l.x === newHead.x && l.y === newHead.y);
+            if (caughtIdx !== -1) {
+                const caught = lettersOnBoard[caughtIdx];
+                if (caught.isCorrect) {
+                    // Yummy!
+                    setScore(s => s + 10);
+                    if (letterIdx + 1 === currentWord.length) {
+                        // Word finished!
+                        if (wordIdx + 1 === game.words.length) {
+                            setStatus('won_all');
+                            if (onCorrect) onCorrect();
+                        } else {
+                            setStatus('won_word');
+                            setTimeout(() => {
+                                setWordIdx(i => i + 1);
+                                setLetterIdx(0);
+                                setLettersOnBoard([]);
+                                setStatus('playing');
+                            }, 1500);
+                        }
+                    } else {
+                        setLetterIdx(i => i + 1);
+                        setLettersOnBoard([]); // Trigger respawn
+                    }
+                } else {
+                    // Ouch! Wrong letter
+                    handleDeath();
+                    return;
+                }
+            } else {
+                newSnake.pop(); // Standard move
+            }
+
+            setSnake(newSnake);
+        };
+
+        const interval = setInterval(moveSnake, Math.max(80, INITIAL_SPEED - (score * 2)));
+        return () => clearInterval(interval);
+    }, [snake, dir, status, lettersOnBoard]);
+
+    const handleDeath = () => {
+        const nextLives = lives - 1;
+        setLives(nextLives);
+        if (nextLives <= 0) {
+            setStatus('lost');
+        } else {
+            setSnake([{ x: 10, y: 10 }]);
+            setDir({ x: 0, y: -1 });
+            setLettersOnBoard([]);
+            setStatus('playing');
+        }
+    };
+
+    // Controls
+    useEffect(() => {
+        const handleKeys = (e) => {
+            // Prevent scrolling for game keys regardless of status to keep focus
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+            if (status !== 'playing') return;
+            switch(e.key) {
+                case 'ArrowUp':    if (dir.y === 0) setDir({ x: 0, y: -1 }); break;
+                case 'ArrowDown':  if (dir.y === 0) setDir({ x: 0, y: 1 });  break;
+                case 'ArrowLeft':  if (dir.x === 0) setDir({ x: -1, y: 0 }); break;
+                case 'ArrowRight': if (dir.x === 0) setDir({ x: 1, y: 0 });  break;
+            }
+        };
+        window.addEventListener('keydown', handleKeys);
+        return () => window.removeEventListener('keydown', handleKeys);
+    }, [dir, status]);
+
+    const [shuffledWords, setShuffledWords] = useState([]);
+    
+    const currentWord = (shuffledWords && shuffledWords[wordIdx]) ? (shuffledWords[wordIdx].word || '').toUpperCase() : '';
+
+    const start = () => {
+        const wordsToUse = game.words ? stableShuffle(game.words) : [];
+        setShuffledWords(wordsToUse);
+        setSnake([{ x: 10, y: 10 }]);
+        setDir({ x: 0, y: -1 });
+        setLives(3);
+        setScore(0);
+        setWordIdx(0);
+        setLetterIdx(0);
+        setLettersOnBoard([]);
+        setStatus('playing');
+    };
+
+    return (
+        <div className="snake-game-container p-3 text-center">
+            <div className="d-flex justify-content-between mb-3 px-2">
+                <div className="fw-bold text-info">Puntos: {score}</div>
+                <div className="fw-bold text-danger">Vidas: {'❤️'.repeat(lives)}</div>
+                <div className="fw-bold text-success">Word: {wordIdx + 1}/{game.words.length}</div>
+            </div>
+
+            <div className="alert alert-warning py-2 mb-3 shadow-sm border-0">
+                <i className="bi bi-bullseye me-2"></i> Atrapa las letras de: <strong className="fs-5">{currentWord}</strong>
+                <div className="small mt-1 text-muted">Siguiente letra: <span className="badge bg-primary">{currentWord[letterIdx]}</span></div>
+                {shuffledWords[wordIdx]?.hint && <div className="small mt-1 text-success fw-bold">Pista: {shuffledWords[wordIdx].hint}</div>}
+            </div>
+
+            <div className="position-relative mx-auto border shadow-lg" style={{ 
+                width: '300px', 
+                height: '300px', 
+                backgroundColor: '#0f172a',
+                display: 'grid',
+                gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
+                gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)`,
+                borderRadius: '8px',
+                overflow: 'hidden'
+            }}>
+                {/* Letters */}
+                {lettersOnBoard.map((l, i) => (
+                    <div key={i} style={{ 
+                        gridColumnStart: l.x + 1, 
+                        gridRowStart: l.y + 1,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        color: l.isCorrect ? '#4ade80' : '#f87171',
+                        fontWeight: 'bold',
+                        fontSize: '1.2rem',
+                        textShadow: '0 0 10px currentColor'
+                    }} className="animate__animated animate__pulse animate__infinite">
+                        {l.char}
+                    </div>
+                ))}
+
+                {/* Snake */}
+                {snake.map((s, i) => (
+                    <div key={i} style={{ 
+                        gridColumnStart: s.x + 1, 
+                        gridRowStart: s.y + 1,
+                        backgroundColor: i === 0 ? '#38bdf8' : '#0ea5e9',
+                        borderRadius: i === 0 ? '4px' : '2px',
+                        boxShadow: i === 0 ? '0 0 15px #38bdf8' : 'none',
+                        zIndex: 10
+                    }} />
+                ))}
+
+                {/* Overlays */}
+                {status === 'waiting' && (
+                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 100 }}>
+                        <button className="btn btn-primary rounded-pill px-4 fw-bold" onClick={start}>Empezar Juego</button>
+                    </div>
+                )}
+
+                {(status === 'lost' || status === 'won_all') && (
+                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center" style={{ backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 100 }}>
+                        <h2 className={status === 'won_all' ? 'text-success' : 'text-danger'}>{status === 'won_all' ? '¡Ganaste!' : 'Fin del Juego'}</h2>
+                        <div className="text-white mb-3">Puntos: {score}</div>
+                        <button className="btn btn-light rounded-pill px-4 fw-bold" onClick={start}>Reintentar</button>
+                    </div>
+                )}
+            </div>
+
+            {/* Mobile Controls */}
+            <div className="mt-4 d-md-none">
+                <div className="d-flex justify-content-center mb-2">
+                    <button className="btn btn-dark p-3" onClick={() => dir.y === 0 && setDir({x:0, y:-1})}><i className="bi bi-arrow-up"></i></button>
+                </div>
+                <div className="d-flex justify-content-center gap-2">
+                    <button className="btn btn-dark p-3" onClick={() => dir.x === 0 && setDir({x:-1, y:0})}><i className="bi bi-arrow-left"></i></button>
+                    <button className="btn btn-dark p-3" onClick={() => dir.y === 0 && setDir({x:0, y:1})}><i className="bi bi-arrow-down"></i></button>
+                    <button className="btn btn-dark p-3" onClick={() => dir.x === 0 && setDir({x:1, y:0})}><i className="bi bi-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div className="mt-3 small text-muted">Usa las flechas del teclado para mover la serpiente</div>
         </div>
     );
 };

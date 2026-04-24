@@ -56,6 +56,7 @@ const AdminPanel = () => {
     const [structuredPractice, setStructuredPractice] = useState({ games: [] });
     const [userSearchTerm, setUserSearchTerm] = useState('');
     const [topicSearchTerm, setTopicSearchTerm] = useState('');
+    const [arcadeLevelFilter, setArcadeLevelFilter] = useState('all');
     const theoryTextareaRef = React.useRef(null);
 
     // --- MEMBERSHIP MODAL STATE ---
@@ -373,7 +374,7 @@ const AdminPanel = () => {
         setStructuredPractice({ games: [] });
     };
 
-    const openEditTopic = async (topicId) => {
+    const openEditTopic = async (topicId, initialMode = 'free') => {
         try {
             const res = await apiClient.get(`/admin/topics/${topicId}`);
             setTopicForm(res.data);
@@ -392,7 +393,23 @@ const AdminPanel = () => {
                 setUseStructuredPractice(false);
             }
 
-            setIsPremiumPracticeMode(false);
+            setIsPremiumPracticeMode(initialMode === 'premium');
+            
+            // If starting in premium, try to parse premium_practice instead
+            if (initialMode === 'premium') {
+                try {
+                    if (res.data.premium_practice && res.data.premium_practice.startsWith('{')) {
+                        setStructuredPractice(JSON.parse(res.data.premium_practice));
+                        setUseStructuredPractice(true);
+                    } else {
+                        setStructuredPractice({ games: [] });
+                        setUseStructuredPractice(false);
+                    }
+                } catch {
+                    setUseStructuredPractice(false);
+                }
+            }
+
             setIsTopicModalOpen(true);
         } catch {
             alert('Error loading topic for editing');
@@ -1338,21 +1355,36 @@ const AdminPanel = () => {
                             </div>
 
                             <div className="p-3 border-bottom d-flex align-items-center justify-content-between" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0', backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC' }}>
-                                <div className="input-group input-group-sm" style={{ width: '300px' }}>
-                                    <span className="input-group-text bg-transparent border-end-0" style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}` }}>
-                                        <i className="bi bi-search admin-text-muted"></i>
-                                    </span>
-                                    <input
-                                        type="text"
-                                        className="form-control border-start-0 ps-0 text-dark"
-                                        placeholder="Filter arcade items..."
-                                        style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}`, background: 'transparent' }}
-                                        value={topicSearchTerm}
-                                        onChange={(e) => setTopicSearchTerm(e.target.value)}
-                                    />
+                                <div className="d-flex gap-3 align-items-center">
+                                    <div className="input-group input-group-sm" style={{ width: '250px' }}>
+                                        <span className="input-group-text bg-transparent border-end-0" style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}` }}>
+                                            <i className="bi bi-search admin-text-muted"></i>
+                                        </span>
+                                        <input
+                                            type="text"
+                                            className="form-control border-start-0 ps-0 text-dark"
+                                            placeholder="Filter arcade items..."
+                                            style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}`, background: 'transparent' }}
+                                            value={topicSearchTerm}
+                                            onChange={(e) => setTopicSearchTerm(e.target.value)}
+                                        />
+                                    </div>
+                                    <select 
+                                        className="form-select form-select-sm" 
+                                        style={{ width: '130px', background: 'transparent', border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}`, color: 'var(--admin-text-primary)' }}
+                                        value={arcadeLevelFilter}
+                                        onChange={(e) => setArcadeLevelFilter(e.target.value)}
+                                    >
+                                        <option value="all">All Levels</option>
+                                        <option value="A1">Level A1</option>
+                                        <option value="A2">Level A2</option>
+                                        <option value="B1">Level B1</option>
+                                        <option value="B2">Level B2</option>
+                                        <option value="C1">Level C1</option>
+                                    </select>
                                 </div>
                                 <div className="admin-text-muted small">
-                                    Showing <strong>{topics.length}</strong> topics available for Arcade
+                                    Showing <strong>{topics.filter(t => (arcadeLevelFilter === 'all' || t.level === arcadeLevelFilter) && t.title.toLowerCase().includes(topicSearchTerm.toLowerCase())).length}</strong> topics
                                 </div>
                             </div>
 
@@ -1375,6 +1407,7 @@ const AdminPanel = () => {
                                         </thead>
                                         <tbody>
                                             {topics.filter(t =>
+                                                (arcadeLevelFilter === 'all' || t.level === arcadeLevelFilter) &&
                                                 t.title.toLowerCase().includes(topicSearchTerm.toLowerCase())
                                             ).map(t => (
                                                 <tr key={t.id}>
@@ -1408,7 +1441,7 @@ const AdminPanel = () => {
                                                         </div>
                                                     </td>
                                                     <td className="text-end">
-                                                        <button className="btn btn-sm btn-outline-primary rounded-pill px-3" onClick={() => openEditTopic(t.id)}>
+                                                        <button className="btn btn-sm btn-outline-primary rounded-pill px-3" onClick={() => openEditTopic(t.id, 'premium')}>
                                                             <i className="bi bi-pencil-square me-1"></i> Manage Games
                                                         </button>
                                                     </td>

@@ -8,7 +8,7 @@ const { authenticateToken } = require('../middleware/auth');
 const buildProgressSummary = async (userId) => {
     const progressResult = await query(
         `
-        SELECT t.level, t.number
+        SELECT t.level, t.number, p.practice_progress
         FROM progress p
         JOIN topics t ON p.topic_id = t.id
         WHERE p.user_id = $1
@@ -22,6 +22,7 @@ const buildProgressSummary = async (userId) => {
 
     const stats = {};
     const completed_topics_by_level = {};
+    const practice_progress_by_topic = {};
 
     totalTopicsResult.rows.forEach((topic) => {
         stats[topic.level] = { total: topic.count, completed: 0 };
@@ -32,6 +33,7 @@ const buildProgressSummary = async (userId) => {
         if (stats[item.level]) {
             stats[item.level].completed += 1;
             completed_topics_by_level[item.level].push(item.number);
+            practice_progress_by_topic[`${item.level}-${item.number}`] = item.practice_progress || [];
         }
     });
 
@@ -52,6 +54,7 @@ const buildProgressSummary = async (userId) => {
         total_topics: total_all,
         stats,
         completed_topics_by_level,
+        practice_progress_by_topic,
         achievements
     };
 };
@@ -78,6 +81,51 @@ router.post('/mark-complete', async (req, res, next) => {
 
         await query(
             'INSERT INTO progress (user_id, topic_id) VALUES ($1, $2) ON CONFLICT (user_id, topic_id) DO NOTHING',
+            [req.user.id, topic.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// Update granular practice progress
+router.post('/practice', async (req, res, next) => {
+    const { level, topic_number, completed_games } = req.body;
+    if (!level || !topic_number || !Array.isArray(completed_games)) {
+        return res.status(400).json({ msg: 'Faltan datos requeridos' });
+    }
+
+    try {
+        const topicResult = await query('SELECT id FROM topics WHERE level = $1 AND number = $2', [level.toUpperCase(), parseInt(topic_number)]);
+        const topic = topicResult.rows[0];
+        if (!topic) return res.status(404).json({ msg: 'Topic not found' });
+
+        await query(
+            `INSERT INTO progress (user_id, topic_id, practice_progress) 
+             VALUES ($1, $2, $3) 
+             ON CONFLICT (user_id, topic_id) 
+             DO UPDATE SET practice_progress = EXCLUDED.practice_progress`,
+            [req.user.id, topic.id, JSON.stringify(completed_games)]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// Reset practice progress
+router.delete('/practice', async (req, res, next) => {
+    const { level, topic_number } = req.body;
+    if (!level || !topic_number) return res.status(400).json({ msg: 'Faltan datos' });
+
+    try {
+        const topicResult = await query('SELECT id FROM topics WHERE level = $1 AND number = $2', [level.toUpperCase(), parseInt(topic_number)]);
+        const topic = topicResult.rows[0];
+        if (!topic) return res.status(404).json({ msg: 'Topic not found' });
+
+        await query(
+            'UPDATE progress SET practice_progress = \'[]\'::jsonb WHERE user_id = $1 AND topic_id = $2',
             [req.user.id, topic.id]
         );
         res.json({ success: true });
