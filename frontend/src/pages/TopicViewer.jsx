@@ -10,28 +10,33 @@ import API_URL from '../api/config';
 import './LevelGrid.css'; // Let's reuse LevelGrid CSS for sidebar and colors for now
 
 // --- Masterpiece Global Audio Engine (Standardized & Self-Healing) ---
+// Note: This logic is isolated to Theory topics and does not affect Vocabulary.
 window.playAudio = (text) => {
     if (!text || typeof text !== 'string') return;
     
-    if (!window.speechSynthesis) {
-        console.error('Speech Synthesis not supported');
-        return;
+    try {
+        if (!window.speechSynthesis) return;
+
+        // Force resume and clear queue for immediate response
+        window.speechSynthesis.resume();
+        window.speechSynthesis.cancel(); 
+
+        // Give the browser a micro-moment to reset the engine state
+        setTimeout(() => {
+            const cleanText = text.split('/')[0].trim();
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9; 
+            utterance.volume = 1.0;
+            
+            utterance.onstart = () => console.log('Theory Audio Started:', cleanText);
+            utterance.onerror = (err) => console.error("Theory Audio Error:", err);
+            
+            window.speechSynthesis.speak(utterance);
+        }, 50);
+    } catch (error) {
+        console.error("Audio Engine Critical Failure:", error);
     }
-
-    // Force resume (Fixes Chrome/Safari "stuck" bug)
-    window.speechSynthesis.resume();
-    window.speechSynthesis.cancel(); 
-
-    const cleanText = text.split('/')[0].trim();
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.9; 
-    
-    utterance.onstart = () => console.log('Masterpiece Audio Started:', cleanText);
-    utterance.onend = () => console.log('Masterpiece Audio Finished.');
-    utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
-    
-    window.speechSynthesis.speak(utterance);
 };
 
 const TopicViewer = () => {
@@ -153,11 +158,11 @@ const TopicViewer = () => {
         const handleTheoryClick = (e) => {
             const audioElem = e.target.closest('[data-audio]');
             if (audioElem) {
+                e.preventDefault();
+                e.stopPropagation();
                 const text = audioElem.getAttribute('data-audio');
                 if (typeof window.playAudio === 'function') {
                     window.playAudio(text);
-                } else {
-                    console.error('window.playAudio is not defined!');
                 }
             }
         };
