@@ -123,36 +123,64 @@ const TopicViewer = () => {
         await markComplete(nivel.toUpperCase(), topic.number, topic.title, newStatus);
     };
 
-    // Global Audio Listener for Theory Buttons (Robust Window Delegation)
+    // --- Masterpiece Audio Engine ---
     useEffect(() => {
-        const handleAudioClick = (e) => {
-            const btn = e.target.closest('[data-audio]');
-            if (btn) {
-                e.preventDefault();
-                e.stopPropagation();
-                const text = btn.getAttribute('data-audio');
-                console.log('Masterpiece Audio Triggered:', text);
-                
-                try {
-                    window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.lang = 'en-US';
-                    utterance.rate = 0.85;
-                    utterance.pitch = 1.0;
+        // Pre-load voices for Chrome/Safari
+        const loadVoices = () => {
+            window.speechSynthesis.getVoices();
+        };
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices();
 
-                    // Safari/Chrome wake-up
-                    window.speechSynthesis.resume();
-                    window.speechSynthesis.speak(utterance);
-                    
-                    console.log('Speech synthesis speak() called.');
-                } catch (err) {
-                    console.error('Speech Synthesis Error:', err);
-                }
+        const playTextToSpeech = (text) => {
+            console.log('--- Audio Engine Start ---');
+            console.log('Target Text:', text);
+
+            if (!window.speechSynthesis) {
+                console.error('Speech Synthesis not supported in this browser.');
+                return;
+            }
+
+            // Reset engine
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;
+            utterance.volume = 1.0;
+
+            // Find a high-quality English voice
+            const voices = window.speechSynthesis.getVoices();
+            const englishVoice = voices.find(v => v.lang.startsWith('en-US') && v.name.includes('Google')) || voices.find(v => v.lang.startsWith('en'));
+            if (englishVoice) {
+                utterance.voice = englishVoice;
+                console.log('Using Voice:', englishVoice.name);
+            }
+
+            utterance.onstart = () => console.log('Speech started...');
+            utterance.onerror = (e) => console.error('Speech error:', e);
+            utterance.onend = () => console.log('Speech finished.');
+
+            window.speechSynthesis.speak(utterance);
+
+            // Chrome hack: if it's not speaking, resume
+            if (window.speechSynthesis.speaking && window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
             }
         };
 
-        window.addEventListener('click', handleAudioClick, true);
-        return () => window.removeEventListener('click', handleAudioClick, true);
+        const handleGlobalClick = (e) => {
+            const btn = e.target.closest('[data-audio]');
+            if (btn) {
+                const text = btn.getAttribute('data-audio');
+                playTextToSpeech(text);
+            }
+        };
+
+        window.addEventListener('click', handleGlobalClick);
+        return () => {
+            window.removeEventListener('click', handleGlobalClick);
+        };
     }, []);
 
     if (loading || !topic) return <div className="p-5 text-center">Loading topic...</div>;
