@@ -9,19 +9,28 @@ import AdBanner from '../components/AdBanner';
 import API_URL from '../api/config';
 import './LevelGrid.css'; // Let's reuse LevelGrid CSS for sidebar and colors for now
 
-// --- Masterpiece Global Audio Engine (Standardized with Vocabulary.jsx) ---
+// --- Masterpiece Global Audio Engine (Standardized & Self-Healing) ---
 window.playAudio = (text) => {
     if (!text || typeof text !== 'string') return;
-    console.log('Masterpiece Global Audio Triggered:', text);
     
-    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel(); 
+    if (!window.speechSynthesis) {
+        console.error('Speech Synthesis not supported');
+        return;
+    }
+
+    // Force resume (Fixes Chrome/Safari "stuck" bug)
+    window.speechSynthesis.resume();
+    window.speechSynthesis.cancel(); 
 
     const cleanText = text.split('/')[0].trim();
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'en-US';
     utterance.rate = 0.9; 
     
+    utterance.onstart = () => console.log('Masterpiece Audio Started:', cleanText);
+    utterance.onend = () => console.log('Masterpiece Audio Finished.');
     utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
+    
     window.speechSynthesis.speak(utterance);
 };
 
