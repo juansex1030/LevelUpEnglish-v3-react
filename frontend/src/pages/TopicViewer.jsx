@@ -9,35 +9,6 @@ import AdBanner from '../components/AdBanner';
 import API_URL from '../api/config';
 import './LevelGrid.css'; // Let's reuse LevelGrid CSS for sidebar and colors for now
 
-// --- Masterpiece Global Audio Engine (Standardized & Self-Healing) ---
-// Note: This logic is isolated to Theory topics and does not affect Vocabulary.
-window.playAudio = (text) => {
-    if (!text || typeof text !== 'string') return;
-    
-    try {
-        if (!window.speechSynthesis) return;
-
-        // Force resume and clear queue for immediate response
-        window.speechSynthesis.resume();
-        window.speechSynthesis.cancel(); 
-
-        // Give the browser a micro-moment to reset the engine state
-        setTimeout(() => {
-            const cleanText = text.split('/')[0].trim();
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = 'en-US';
-            utterance.rate = 0.9; 
-            utterance.volume = 1.0;
-            
-            utterance.onstart = () => console.log('Theory Audio Started:', cleanText);
-            utterance.onerror = (err) => console.error("Theory Audio Error:", err);
-            
-            window.speechSynthesis.speak(utterance);
-        }, 50);
-    } catch (error) {
-        console.error("Audio Engine Critical Failure:", error);
-    }
-};
 
 const TopicViewer = () => {
     const { nivel, topicId } = useParams();
@@ -153,28 +124,54 @@ const TopicViewer = () => {
         await markComplete(nivel.toUpperCase(), topic.number, topic.title, newStatus);
     };
 
-    // --- Masterpiece Global Listener ---
+    // --- Masterpiece Local Listener & Audio Engine ---
     useEffect(() => {
         const handleTheoryClick = (e) => {
             const audioElem = e.target.closest('[data-audio]');
             if (audioElem) {
                 e.preventDefault();
                 e.stopPropagation();
+                
                 const text = audioElem.getAttribute('data-audio');
-                if (typeof window.playAudio === 'function') {
-                    window.playAudio(text);
+                if (!text || typeof text !== 'string') return;
+                
+                try {
+                    if (!window.speechSynthesis) return;
+
+                    // Force resume and clear queue for immediate response
+                    window.speechSynthesis.resume();
+                    window.speechSynthesis.cancel(); 
+
+                    // Give the browser a micro-moment to reset the engine state
+                    setTimeout(() => {
+                        const cleanText = text.split('/')[0].trim();
+                        const utterance = new SpeechSynthesisUtterance(cleanText);
+                        utterance.lang = 'en-US';
+                        utterance.rate = 0.9; 
+                        utterance.volume = 1.0;
+                        
+                        utterance.onstart = () => console.log('Theory Audio Started:', cleanText);
+                        utterance.onerror = (err) => console.error("Theory Audio Error:", err);
+                        
+                        window.speechSynthesis.speak(utterance);
+                    }, 50);
+                } catch (error) {
+                    console.error("Audio Engine Critical Failure:", error);
                 }
             }
         };
 
-        console.log('--- Audio Listener Attached to TopicViewer ---');
-        window.addEventListener('click', handleTheoryClick);
+        const container = theoryRef.current;
+        if (container) {
+            container.addEventListener('click', handleTheoryClick);
+            console.log('--- Audio Listener Attached to Theory Container ---');
+        }
         
         // Warm up voices
         if (window.speechSynthesis) window.speechSynthesis.getVoices();
 
         return () => {
-            window.removeEventListener('click', handleTheoryClick);
+            if (container) container.removeEventListener('click', handleTheoryClick);
         };
     }, [activeTab, topic]);
 
