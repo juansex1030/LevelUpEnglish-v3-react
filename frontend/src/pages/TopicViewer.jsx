@@ -124,47 +124,6 @@ const TopicViewer = () => {
         await markComplete(nivel.toUpperCase(), topic.number, topic.title, newStatus);
     };
 
-    // --- Masterpiece Pure React Audio Engine ---
-    const handleTheoryClick = (e) => {
-        const audioElem = e.target.closest('[data-audio]');
-        if (!audioElem) return; // Exit immediately if it's not our button
-
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const text = audioElem.getAttribute('data-audio');
-        if (!text || typeof text !== 'string') return;
-        
-        try {
-            if (!window.speechSynthesis) return;
-
-            // Force resume and clear queue for immediate response
-            window.speechSynthesis.resume();
-            window.speechSynthesis.cancel(); 
-
-            // Give the browser a micro-moment to reset the engine state
-            setTimeout(() => {
-                const cleanText = text.split('/')[0].trim();
-                const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.lang = 'en-US';
-                utterance.rate = 0.9; 
-                utterance.volume = 1.0;
-                
-                utterance.onstart = () => console.log('Theory Audio Started:', cleanText);
-                utterance.onerror = (err) => console.error("Theory Audio Error:", err);
-                
-                window.speechSynthesis.speak(utterance);
-            }, 50);
-        } catch (error) {
-            console.error("Audio Engine Critical Failure:", error);
-        }
-    };
-
-    // Warm up voices on mount
-    useEffect(() => {
-        if (window.speechSynthesis) window.speechSynthesis.getVoices();
-    }, []);
-
     if (loading || !topic) return <div className="p-5 text-center">Loading topic...</div>;
 
     const totalCount = allTopics.length;
@@ -271,11 +230,10 @@ const TopicViewer = () => {
                             <div 
                                 className="theory-wrapper premium-content" 
                                 ref={theoryRef}
-                                onClick={handleTheoryClick}
                                 style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '1rem' }}
                                 dangerouslySetInnerHTML={{ 
                                     __html: DOMPurify.sanitize(topic.theory, { 
-                                        ALLOWED_ATTR: ['data-audio', 'class', 'style', 'id', 'scope', 'colspan', 'rowspan'],
+                                        ALLOWED_ATTR: ['class', 'style', 'id', 'scope', 'colspan', 'rowspan'],
                                         ALLOWED_TAGS: ['div', 'p', 'h4', 'h5', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'ul', 'li', 'button', 'strong', 'em', 'span', 'i', 'br']
                                     }) 
                                 }} 
