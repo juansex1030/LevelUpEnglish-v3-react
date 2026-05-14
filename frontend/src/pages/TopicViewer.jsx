@@ -123,6 +123,39 @@ const TopicViewer = () => {
         await markComplete(nivel.toUpperCase(), topic.number, topic.title, newStatus);
     };
 
+    // Global Audio Listener for Theory Buttons
+    useEffect(() => {
+        const handleAudioClick = (e) => {
+            const btn = e.target.closest('[data-audio]');
+            if (btn) {
+                const text = btn.getAttribute('data-audio');
+                console.log('Playing audio for:', text);
+                
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.9;
+                
+                // Chrome fix: Resume if stuck
+                if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                }
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        };
+
+        const container = theoryRef.current;
+        if (container) {
+            container.addEventListener('click', handleAudioClick);
+        }
+        return () => {
+            if (container) container.removeEventListener('click', handleAudioClick);
+        };
+    }, [activeTab, topic]);
+
     if (loading || !topic) return <div className="p-5 text-center">Loading topic...</div>;
 
     const totalCount = allTopics.length;
@@ -230,7 +263,12 @@ const TopicViewer = () => {
                                 className="theory-wrapper" 
                                 ref={theoryRef}
                                 style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '1rem' }}
-                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(topic.theory) }} 
+                                dangerouslySetInnerHTML={{ 
+                                    __html: DOMPurify.sanitize(topic.theory, { 
+                                        ADD_ATTR: ['data-audio'],
+                                        ALLOWED_TAGS: ['div', 'p', 'h4', 'h5', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'ul', 'li', 'button', 'strong', 'em', 'span', 'i', 'br']
+                                    }) 
+                                }} 
                             />
                         )}
                         {activeTab === 'practice' && renderPractice()}

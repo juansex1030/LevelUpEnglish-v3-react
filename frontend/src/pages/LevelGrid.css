@@ -893,3 +893,114 @@ body.light-mode .premium-progress-track {
 .animate-fade-in {
     animation: fade-in 0.6s ease forwards;
 }
+
+/* ===================================
+   MASTERPIECE THEORY STYLES
+   =================================== */
+
+.theory-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 1.5rem 0;
+    border: 1px solid var(--color-borde);
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+}
+
+[data-bs-theme="dark"] .theory-table {
+    background: rgba(0,0,0,0.2);
+}
+
+.theory-table th {
+    background: #f8fafc;
+    padding: 1rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-texto-secundario);
+    border-bottom: 1px solid var(--color-borde);
+}
+
+[data-bs-theme="dark"] .theory-table th {
+    background: rgba(255,255,255,0.05);
+}
+
+.theory-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--color-borde);
+    font-size: 1rem;
+    vertical-align: middle;
+}
+
+.theory-table tr:last-child td {
+    border-bottom: none;
+}
+
+.text-highlight {
+    color: var(--acento-primario);
+    font-weight: 700;
+}
+
+.text-highlight-alt {
+    color: #F59E0B;
+    font-weight: 700;
+}
+
+/* Alphabet Grid specific adjustments */
+.alphabet-grid .theory-table td {
+    width: 16.66%;
+    padding: 0.75rem;
+}
+
+/* Premium Lists */
+.premium-list {
+    list-style: none;
+    padding: 0;
+}
+
+.premium-list li {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-bottom: 0.75rem !important;
+}
+
+.premium-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--acento-primario);
+    font-weight: bold;
+}
+
+/* Advanced Card */
+.card-advanced {
+    border-left-color: #8B5CF6 !important;
+    background: #F5F3FF;
+}
+
+[data-bs-theme="dark"] .card-advanced {
+    background: rgba(139, 92, 246, 0.1);
+}
+
+.card-advanced h5 {
+    color: #5B21B6 !important;
+}
+
+[data-bs-theme="dark"] .card-advanced h5 {
+    color: #DDD6FE !important;
+}
+
+/* Audio Button styling */
+[data-audio] {
+    transition: all 0.2s ease;
+}
+
+[data-audio]:hover {
+    transform: scale(1.1);
+    background-color: var(--acento-primario) !important;
+    color: white !important;
+    border-color: var(--acento-primario) !important;
+}
