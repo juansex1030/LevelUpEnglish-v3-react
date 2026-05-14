@@ -9,6 +9,22 @@ import AdBanner from '../components/AdBanner';
 import API_URL from '../api/config';
 import './LevelGrid.css'; // Let's reuse LevelGrid CSS for sidebar and colors for now
 
+// --- Masterpiece Global Audio Engine (Standardized with Vocabulary.jsx) ---
+window.playAudio = (text) => {
+    if (!text || typeof text !== 'string') return;
+    console.log('Masterpiece Global Audio Triggered:', text);
+    
+    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel(); 
+
+    const cleanText = text.split('/')[0].trim();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9; 
+    
+    utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
+    window.speechSynthesis.speak(utterance);
+};
+
 const TopicViewer = () => {
     const { nivel, topicId } = useParams();
     const { user } = useAuth();
@@ -123,31 +139,17 @@ const TopicViewer = () => {
         await markComplete(nivel.toUpperCase(), topic.number, topic.title, newStatus);
     };
 
-    // --- Masterpiece Audio Engine (Standardized & Global) ---
+    // --- Masterpiece Global Listener ---
     useEffect(() => {
-        const playAudio = (text) => {
-            if (!text || typeof text !== 'string') return;
-            console.log('Masterpiece Audio Playing:', text);
-            
-            if (window.speechSynthesis.speaking) window.speechSynthesis.cancel(); 
-
-            const cleanText = text.split('/')[0].trim();
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = 'en-US';
-            utterance.rate = 0.9; 
-            
-            utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
-            window.speechSynthesis.speak(utterance);
-        };
-
-        // Make it global like in Vocabulary
-        window.playAudio = playAudio;
-
         const handleTheoryClick = (e) => {
             const audioElem = e.target.closest('[data-audio]');
             if (audioElem) {
                 const text = audioElem.getAttribute('data-audio');
-                window.playAudio(text);
+                if (typeof window.playAudio === 'function') {
+                    window.playAudio(text);
+                } else {
+                    console.error('window.playAudio is not defined!');
+                }
             }
         };
 
@@ -155,7 +157,7 @@ const TopicViewer = () => {
         window.addEventListener('click', handleTheoryClick);
         
         // Warm up voices
-        window.speechSynthesis.getVoices();
+        if (window.speechSynthesis) window.speechSynthesis.getVoices();
 
         return () => {
             window.removeEventListener('click', handleTheoryClick);
