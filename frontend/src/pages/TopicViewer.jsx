@@ -123,38 +123,37 @@ const TopicViewer = () => {
         await markComplete(nivel.toUpperCase(), topic.number, topic.title, newStatus);
     };
 
-    // Global Audio Listener for Theory Buttons
+    // Global Audio Listener for Theory Buttons (Robust Window Delegation)
     useEffect(() => {
         const handleAudioClick = (e) => {
             const btn = e.target.closest('[data-audio]');
             if (btn) {
+                e.preventDefault();
+                e.stopPropagation();
                 const text = btn.getAttribute('data-audio');
-                console.log('Playing audio for:', text);
+                console.log('Masterpiece Audio Triggered:', text);
                 
-                // Cancel any ongoing speech
-                window.speechSynthesis.cancel();
+                try {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.85;
+                    utterance.pitch = 1.0;
 
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US';
-                utterance.rate = 0.9;
-                
-                // Chrome fix: Resume if stuck
-                if (window.speechSynthesis.paused) {
+                    // Safari/Chrome wake-up
                     window.speechSynthesis.resume();
+                    window.speechSynthesis.speak(utterance);
+                    
+                    console.log('Speech synthesis speak() called.');
+                } catch (err) {
+                    console.error('Speech Synthesis Error:', err);
                 }
-                
-                window.speechSynthesis.speak(utterance);
             }
         };
 
-        const container = theoryRef.current;
-        if (container) {
-            container.addEventListener('click', handleAudioClick);
-        }
-        return () => {
-            if (container) container.removeEventListener('click', handleAudioClick);
-        };
-    }, [activeTab, topic]);
+        window.addEventListener('click', handleAudioClick, true);
+        return () => window.removeEventListener('click', handleAudioClick, true);
+    }, []);
 
     if (loading || !topic) return <div className="p-5 text-center">Loading topic...</div>;
 
