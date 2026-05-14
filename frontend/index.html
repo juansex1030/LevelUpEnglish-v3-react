@@ -33,36 +33,31 @@
     </script>
     <div id="root"></div>
     <script>
-        // MASTERPIECE GLOBAL AUDIO ENGINE
+        // MASTERPIECE GLOBAL AUDIO ENGINE (Replicating Vocabulary.jsx logic)
         (function() {
-            function play(text) {
-                if (!window.speechSynthesis) return;
-                window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(text);
-                u.lang = 'en-US';
-                u.rate = 0.9;
-                const voices = window.speechSynthesis.getVoices();
-                const v = voices.find(v => v.lang.startsWith('en-US') && v.name.includes('Google')) || voices.find(v => v.lang.startsWith('en'));
-                if (v) u.voice = v;
-                window.speechSynthesis.speak(u);
-                if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-            }
+            window.playAudio = function(text) {
+                if (!text || typeof text !== 'string') return;
+                
+                // Evita que la API se quede "atascada" si hubo errores previos
+                window.speechSynthesis.cancel(); 
+                
+                const cleanText = text.split('/')[0].trim();
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.9; 
+                
+                utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
+                window.speechSynthesis.speak(utterance);
+            };
 
-            // Capture clicks globally
-            window.addEventListener('mousedown', function(e) {
+            // Detect clicks on [data-audio] and bridge to playAudio
+            window.addEventListener('click', function(e) {
                 const btn = e.target.closest('[data-audio]');
                 if (btn) {
                     const text = btn.getAttribute('data-audio');
-                    console.log('Global Audio Trigger:', text);
-                    play(text);
+                    window.playAudio(text);
                 }
-            }, true);
-
-            // Preload voices
-            window.speechSynthesis.getVoices();
-            if (window.speechSynthesis.onvoiceschanged !== undefined) {
-                window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-            }
+            });
         })();
     </script>
     <script type="module" src="/src/main.jsx"></script>
