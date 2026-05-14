@@ -49,7 +49,7 @@ const AdminPanel = () => {
     const [editingTopicId, setEditingTopicId] = useState(null);
     const [topicForm, setTopicForm] = useState({
         level: 'A1', number: '', title: '', description: '', icon: 'bi-book-half', theory: '', practice: '',
-        premium_practice: '', arcade_enabled: true
+        premium_practice: '', practice_zone_enabled: true
     });
     const [isPremiumPracticeMode, setIsPremiumPracticeMode] = useState(false);
     const [useStructuredPractice, setUseStructuredPractice] = useState(false);
@@ -79,7 +79,7 @@ const AdminPanel = () => {
         const loadData = async () => {
             if (activeTab === 'dashboard') await loadDashboard();
             else if (activeTab === 'topics') await loadTopics();
-            else if (activeTab === 'arcade') await loadAllTopicsForArcade();
+            else if (activeTab === 'practice-zone') await loadAllTopicsForPracticeZone();
             else if (activeTab === 'activity') await loadLogs();
             else if (activeTab === 'inbox') await loadMessages();
         };
@@ -120,11 +120,11 @@ const AdminPanel = () => {
         }
     };
 
-    const loadAllTopicsForArcade = async () => {
+    const loadAllTopicsForPracticeZone = async () => {
         try {
             setLoadingTopics(true);
             // We'll use a special query param or just multiple calls, 
-            // but the easy way is to fetch all levels since Arcade shows all.
+            // but the easy way is to fetch all levels since Practice Zone shows all.
             const levels = ['A1', 'A2', 'B1', 'B2', 'C1'];
             const results = await Promise.all(levels.map(l => apiClient.get(`/admin/topics?level=${l}`)));
             const all = results.flatMap(r => r.data.topics);
@@ -222,14 +222,14 @@ const AdminPanel = () => {
         }
     };
 
-    const handleToggleArcadeField = async (topicId, currentVal) => {
+    const handleTogglePracticeZoneField = async (topicId, currentVal) => {
         try {
             const newVal = !currentVal;
-            await apiClient.put(`/admin/topics/${topicId}`, { arcade_enabled: newVal });
-            setTopics(prev => prev.map(t => t.id === topicId ? { ...t, arcade_enabled: newVal } : t));
+            await apiClient.put(`/admin/topics/${topicId}`, { practice_zone_enabled: newVal });
+            setTopics(prev => prev.map(t => t.id === topicId ? { ...t, practice_zone_enabled: newVal } : t));
         } catch (err) {
-            console.error('Error toggling arcade field:', err);
-            alert('Error al actualizar el estado del Arcade.');
+            console.error('Error toggling practice zone field:', err);
+            alert('Error al actualizar el estado de la Practice Zone.');
         }
     };
 
@@ -365,7 +365,7 @@ const AdminPanel = () => {
             theory: '',
             practice: '',
             premium_practice: '',
-            arcade_enabled: true
+            practice_zone_enabled: true
         });
         setIsTopicModalOpen(true);
         setUseStructuredPractice(false);
@@ -420,7 +420,7 @@ const AdminPanel = () => {
             }
             setIsTopicModalOpen(false);
             if (activeTab === 'topics') loadTopics();
-            else if (activeTab === 'arcade') loadAllTopicsForArcade();
+            else if (activeTab === 'practice-zone') loadAllTopicsForPracticeZone();
         } catch (error) {
             alert(error.response?.data?.error || 'Error guardando tema');
         }
@@ -746,11 +746,11 @@ const AdminPanel = () => {
                     </li>
                     <li className="nav-item">
                         <button
-                            className={`nav-link text-start w-100 rounded-3 admin-nav-btn ${activeTab === 'arcade' ? 'active' : ''}`}
+                            className={`nav-link text-start w-100 rounded-3 admin-nav-btn ${activeTab === 'practice-zone' ? 'active' : ''}`}
                             style={{ transition: 'all 0.2s' }}
-                            onClick={() => setActiveTab('arcade')}
+                            onClick={() => setActiveTab('practice-zone')}
                         >
-                            <i className="bi bi-controller me-3"></i> Premium Arcade
+                            <i className="bi bi-controller me-3"></i> Practice Zone
                         </button>
                     </li>
                     <li className="nav-item border-top pt-2 mt-2" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0' }}>
@@ -778,7 +778,7 @@ const AdminPanel = () => {
                     <div className="d-flex justify-content-between align-items-end mb-5 pb-3">
                         <div>
                             <h2 className="admin-heading text-capitalize mb-1">
-                                {activeTab === 'dashboard' ? 'Overview & Users' : activeTab === 'topics' ? 'Topic Management' : activeTab === 'arcade' ? 'Premium Arcade' : 'System Activity'}
+                                {activeTab === 'dashboard' ? 'Overview & Users' : activeTab === 'topics' ? 'Topic Management' : activeTab === 'practice-zone' ? 'Practice Zone' : 'System Activity'}
                             </h2>
                             <p className="admin-text-muted small mb-0">Manage your platform resources and activity.</p>
                         </div>
@@ -1322,13 +1322,13 @@ const AdminPanel = () => {
                         </div>
                     )}
 
-                    {/* ========== TAB: ARCADE ========== */}
-                    {activeTab === 'arcade' && (
+                    {/* ========== TAB: PRACTICE ZONE ========== */}
+                    {activeTab === 'practice-zone' && (
                         <div className="admin-card p-0 overflow-hidden">
                             <div className="border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0' }}>
                                 <div>
-                                    <h4 className="admin-heading fs-5 mb-0">Arcade Content Management</h4>
-                                    <p className="admin-text-muted small mb-0">Control visibility and premium content for the Arcade.</p>
+                                    <h4 className="admin-heading fs-5 mb-0">Practice Zone Management</h4>
+                                    <p className="admin-text-muted small mb-0">Control visibility and premium content for the Practice Zone.</p>
                                 </div>
                                 <div className="d-flex gap-2">
                                     <button className="btn admin-btn-primary btn-sm rounded-3 d-flex align-items-center" onClick={() => setActiveTab('topics')}>
@@ -1345,14 +1345,14 @@ const AdminPanel = () => {
                                     <input
                                         type="text"
                                         className="form-control border-start-0 ps-0 text-dark"
-                                        placeholder="Filter arcade items..."
+                                        placeholder="Filter practice items..."
                                         style={{ border: `1px solid ${isDarkMode ? '#334155' : '#E2E8F0'}`, background: 'transparent' }}
                                         value={topicSearchTerm}
                                         onChange={(e) => setTopicSearchTerm(e.target.value)}
                                     />
                                 </div>
                                 <div className="admin-text-muted small">
-                                    Showing <strong>{topics.length}</strong> topics available for Arcade
+                                    Showing <strong>{topics.length}</strong> topics available for Practice Zone
                                 </div>
                             </div>
 
@@ -1369,7 +1369,7 @@ const AdminPanel = () => {
                                                 <th>Topic Title</th>
                                                 <th>Free Practice</th>
                                                 <th>Premium Games</th>
-                                                <th className="text-center">Arcade Status</th>
+                                                <th className="text-center">Practice Status</th>
                                                 <th className="text-end">Actions</th>
                                             </tr>
                                         </thead>
@@ -1399,11 +1399,11 @@ const AdminPanel = () => {
                                                             <input
                                                                 className="form-check-input cur-pointer"
                                                                 type="checkbox"
-                                                                checked={t.arcade_enabled !== false}
-                                                                onChange={() => handleToggleArcadeField(t.id, t.arcade_enabled !== false)}
+                                                                checked={t.practice_zone_enabled !== false}
+                                                                onChange={() => handleTogglePracticeZoneField(t.id, t.practice_zone_enabled !== false)}
                                                             />
-                                                            <label className={`form-check-label small ms-1 ${t.arcade_enabled !== false ? 'text-success fw-bold' : 'text-danger'}`}>
-                                                                {t.arcade_enabled !== false ? 'Active' : 'Hidden'}
+                                                            <label className={`form-check-label small ms-1 ${t.practice_zone_enabled !== false ? 'text-success fw-bold' : 'text-danger'}`}>
+                                                                {t.practice_zone_enabled !== false ? 'Active' : 'Hidden'}
                                                             </label>
                                                         </div>
                                                     </td>
@@ -1416,7 +1416,7 @@ const AdminPanel = () => {
                                             ))}
                                             {topics.length === 0 && (
                                                 <tr>
-                                                    <td colSpan="6" className="text-center py-5 text-muted">No topics found for the arcade.</td>
+                                                    <td colSpan="6" className="text-center py-5 text-muted">No topics found for the practice zone.</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -1567,7 +1567,7 @@ const AdminPanel = () => {
                                                                 <i className="bi bi-unlock me-2"></i>Free Practice
                                                             </button>
                                                             <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold ${isPremiumPracticeMode ? 'btn-warning text-dark' : 'btn-outline-warning'}`} onClick={() => togglePracticeMode(true)}>
-                                                                <i className="bi bi-star-fill me-2"></i>Premium Arcade
+                                                                <i className="bi bi-star-fill me-2"></i>Practice Zone
                                                             </button>
                                                         </div>
                                                         <div className="form-check form-switch">
@@ -1578,7 +1578,7 @@ const AdminPanel = () => {
                                                     <div className="mb-3">
                                                         <p className="admin-text-muted x-small mb-0">
                                                             {isPremiumPracticeMode
-                                                                ? "Configuring minigames for the Premium Arcade section."
+                                                                ? "Configuring minigames for the Practice Zone section."
                                                                 : "Configuring the standard practice available for all students."}
                                                         </p>
                                                     </div>

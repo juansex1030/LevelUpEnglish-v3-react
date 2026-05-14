@@ -222,7 +222,7 @@ router.delete('/users/:id/progress', async (req, res, next) => {
 router.get('/topics', async (req, res, next) => {
     try {
         const level = req.query.level;
-        const topics = (await query('SELECT id, number, title, description, level, icon, arcade_enabled FROM topics WHERE level = $1 ORDER BY number', [level])).rows;
+        const topics = (await query('SELECT id, number, title, description, level, icon, practice_zone_enabled FROM topics WHERE level = $1 ORDER BY number', [level])).rows;
         res.json({ topics });
     } catch (err) {
         next(err);
@@ -239,11 +239,11 @@ router.get('/topics/:id', async (req, res, next) => {
 });
 
 router.post('/topics', async (req, res, next) => {
-    const { number, level, title, description, icon, theory, practice, premium_practice, arcade_enabled } = req.body;
+    const { number, level, title, description, icon, theory, practice, premium_practice, practice_zone_enabled } = req.body;
     try {
         const result = await query(
-            'INSERT INTO topics (number, level, title, description, icon, theory, practice, premium_practice, arcade_enabled) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
-            [number, level.toUpperCase(), title, description, icon, theory, practice, premium_practice, arcade_enabled !== undefined ? arcade_enabled : true]
+            'INSERT INTO topics (number, level, title, description, icon, theory, practice, premium_practice, practice_zone_enabled) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
+            [number, level.toUpperCase(), title, description, icon, theory, practice, premium_practice, practice_zone_enabled !== undefined ? practice_zone_enabled : true]
         );
         const newId = result.rows[0].id;
         await logAdminAction(req, 'CREATE_TOPIC', 'topic', newId, { title, level });
@@ -254,7 +254,7 @@ router.post('/topics', async (req, res, next) => {
 });
 
 router.put('/topics/:id', async (req, res, next) => {
-    const { title, description, icon, theory, practice, premium_practice, arcade_enabled } = req.body;
+    const { title, description, icon, theory, practice, premium_practice, practice_zone_enabled } = req.body;
     try {
         await query(
             `UPDATE topics SET 
@@ -264,9 +264,9 @@ router.put('/topics/:id', async (req, res, next) => {
                 theory = COALESCE($4, theory), 
                 practice = COALESCE($5, practice), 
                 premium_practice = COALESCE($6, premium_practice), 
-                arcade_enabled = COALESCE($7, arcade_enabled) 
+                practice_zone_enabled = COALESCE($7, practice_zone_enabled) 
              WHERE id = $8`,
-            [title, description, icon, theory, practice, premium_practice, arcade_enabled, req.params.id]
+            [title, description, icon, theory, practice, premium_practice, practice_zone_enabled, req.params.id]
         );
         await logAdminAction(req, 'UPDATE_TOPIC', 'topic', req.params.id, { title: title || 'partial_update' });
         res.json({ success: true });

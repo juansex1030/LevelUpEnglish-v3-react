@@ -1,13 +1,13 @@
-# TÉRMINOS Y CONDICIONES DE USO - LEVELUPENGLISH PREMIUM
+# TÉRMINOS Y CONDICIONES DE USO - LEVELUPENGLISH PRACTICE ZONE
 
-Última actualización: 20 de abril de 2026
+Última actualización: 14 de mayo de 2026
 
-Bienvenido a **LevelUpEnglish**. Al adquirir nuestra suscripción "Arcade Premium", usted acepta los presentes Términos y Condiciones, los cuales se rigen bajo las leyes de la República de Colombia, especialmente por la Ley 1480 de 2011 (Estatuto del Consumidor) y la Ley 1581 de 2012 (Protección de Datos Personales).
+Bienvenido a **LevelUpEnglish**. Al adquirir nuestra suscripción "Practice Zone Premium", usted acepta los presentes Términos y Condiciones, los cuales se rigen bajo las leyes de la República de Colombia, especialmente por la Ley 1480 de 2011 (Estatuto del Consumidor) y la Ley 1581 de 2012 (Protección de Datos Personales).
 
 ---
 
 ## 1. OBJETO DEL SERVICIO
-LevelUpEnglish ofrece una membresía denominada **"Arcade Premium"**, la cual otorga acceso ilimitado a motores de juego avanzados (Hangman, Memory Game, Crosswords, Sentence Builder, etc.) y contenido exclusivo de práctica para los niveles de inglés disponibles en la plataforma.
+LevelUpEnglish ofrece una membresía denominada **"Practice Zone Premium"**, la cual otorga acceso ilimitado a motores de juego avanzados (Hangman, Memory Game, Crosswords, Sentence Builder, etc.) y contenido exclusivo de práctica para los niveles de inglés disponibles en la plataforma.
 
 ## 2. PRECIO Y DURACIÓN
 *   **Costo:** Nueve mil novecientos noventa pesos colombianos ($9.990 COP).
@@ -21,11 +21,11 @@ Los pagos se procesan a través de **ePayco**, una pasarela certificada que gara
 De acuerdo con la legislación colombiana, el usuario tiene derecho a retractarse de la compra dentro de los **cinco (5) días hábiles** siguientes a la transacción.
 
 **Limitaciones al Retracto:**
-Tratándose de servicios de contenido digital cuya ejecución haya comenzado con el consentimiento del consumidor, el derecho de retracto podrá verse limitado una vez el usuario haya accedido y utilizado las herramientas premium del Arcade. 
+Tratándose de servicios de contenido digital cuya ejecución haya comenzado con el consentimiento del consumidor, el derecho de retracto podrá verse limitado una vez el usuario haya accedido y utilizado las herramientas premium del Practice Zone. 
 *Para solicitar un retracto, el usuario debe escribir a: lvupenglishco@gmail.com.*
 
 ## 5. REPORTE DE FALLAS Y GARANTÍA
-En caso de interrupciones técnicas que impidan el uso del Arcade Premium, LevelUpEnglish se compromete a restablecer el servicio en el menor tiempo posible. Si la falla persiste por más de 48 horas continuas, el usuario podrá solicitar una extensión proporcional de su membresía.
+En caso de interrupciones técnicas que impidan el uso del Practice Zone Premium, LevelUpEnglish se compromete a restablecer el servicio en el menor tiempo posible. Si la falla persiste por más de 48 horas continuas, el usuario podrá solicitar una extensión proporcional de su membresía.
 
 ## 6. POLÍTICA DE PRIVACIDAD (HABEAS DATA)
 En cumplimiento de la Ley 1581 de 2012, informamos que:

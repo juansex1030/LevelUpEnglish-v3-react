@@ -3,11 +3,11 @@ import apiClient from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import PracticeEngine from '../components/PracticeEngine';
-import './ArcadePremium.css';
+import './PracticeZone.css';
 
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1'];
 
-const ArcadePremium = () => {
+const PracticeZone = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -20,29 +20,12 @@ const ArcadePremium = () => {
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [gameLoading, setGameLoading] = useState(false);
 
-    // =====================================================================
-    // GUARDIA DE DESARROLLO (DEVELOPMENT GATE)
-    // =====================================================================
+    // Guardia de desarrollo removida para lanzamiento en producción
+    /*
     if (!import.meta.env.DEV) {
-        return (
-            <div className="container min-vh-100 d-flex flex-column justify-content-center align-items-center text-center animate__animated animate__fadeIn">
-                <div style={{ position: 'relative' }}>
-                    <i className="bi bi-cone-striped" style={{ fontSize: '6rem', color: '#FFD700', filter: 'drop-shadow(0px 10px 15px rgba(0,0,0,0.5))' }}></i>
-                    <i className="bi bi-gear-fill position-absolute text-secondary" style={{ fontSize: '2rem', bottom: '10px', right: '-10px', animation: 'spin 4s linear infinite' }}></i>
-                </div>
-                <h1 className="display-3 fw-bold mt-4 mb-3" style={{ color: 'var(--color-texto-principal)', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>Coming Soon</h1>
-                <p className="lead fs-4" style={{ color: 'var(--color-texto-secundario)', maxWidth: '650px' }}>
-                    We are actively crafting a highly interactive and dynamic Premium Arcade. 
-                    Get ready to turbocharge your English skills with new randomized games and challenges. Stay tuned!
-                </p>
-                <div className="mt-5">
-                    <button className="btn btn-outline-warning rounded-pill px-5 py-3 fw-bold shadow-sm" onClick={() => navigate('/')}>
-                        <i className="bi bi-arrow-left me-2"></i> Go Back Home
-                    </button>
-                </div>
-            </div>
-        );
+        ...
     }
+    */
 
     useEffect(() => {
         const fetchTopics = async () => {
@@ -60,7 +43,7 @@ const ArcadePremium = () => {
 
     const handleCheckout = async () => {
         if (!user) {
-            navigate('/login', { state: { returnTo: '/arcade' } });
+            navigate('/login', { state: { returnTo: '/practice-zone' } });
             return;
         }
 
@@ -113,7 +96,7 @@ const ArcadePremium = () => {
                 const completeTopic = { ...topic, premium_practice: res.data.premium_practice };
                 setActiveGameTopic(completeTopic);
             } catch (err) {
-                console.error("Error loading arcade game:", err);
+                console.error("Error loading practice game:", err);
                 alert("Hubo un error al cargar el juego. Intente de nuevo.");
                 setSearchParams({}); // Clear on error
             } finally {
@@ -150,9 +133,9 @@ const ArcadePremium = () => {
         }
         
         return (
-            <div className="arcade-play-area container py-5">
+            <div className="practice-play-area container py-5">
                 <button className="btn btn-outline-secondary mb-4" onClick={() => setSearchParams({})}>
-                    <i className="bi bi-arrow-left"></i> Volver al Mapa Arcade
+                    <i className="bi bi-arrow-left"></i> Volver al Mapa de Práctica
                 </button>
                 <div className="text-center mb-4">
                     <h2 className="fw-bold" style={{ color: 'var(--color-primario)' }}>{activeGameTopic.title}</h2>
@@ -172,12 +155,12 @@ const ArcadePremium = () => {
     }
 
     return (
-        <div className="arcade-container py-5">
+        <div className="practice-container py-5">
             <div className="container">
-                <div className="arcade-header text-center mb-5">
-                    <h1 className="fw-black arcade-title">
+                <div className="practice-header text-center mb-5">
+                    <h1 className="fw-black practice-title">
                         <i className="bi bi-controller me-3 text-warning"></i> 
-                        ARCADE PREMIUM
+                        PRACTICE ZONE
                     </h1>
                     <p className="text-muted fs-5">Minijuegos mágicos para perfeccionar tu gramática</p>
                     
@@ -197,20 +180,29 @@ const ArcadePremium = () => {
                     )}
                 </div>
 
-                {user && !user.is_premium && (
+                {(!user || !user.is_premium) && (
                     <div className="upsell-banner shadow-lg mb-5 text-center p-5 rounded-4">
                         <i className="bi bi-lock-fill display-3 text-white mb-3 shadow-icon"></i>
                         <h2 className="text-white fw-bold mb-3">Zona Bloqueada</h2>
                         <p className="text-white-50 fs-5 mb-4">
                             ¡Lleva tu inglés al siguiente nivel! Con **LevelUp Premium** desbloqueas acceso ilimitado a juegos exclusivos, desafíos avanzados y contenido seleccionado para acelerar tu aprendizaje.
                         </p>
-                        <button className="btn btn-secondary btn-lg fw-bold px-5 rounded-pill shadow" disabled>
-                            <i className="bi bi-clock-history me-2"></i> Próximamente
+                        <button 
+                            className="btn btn-warning btn-lg fw-bold px-5 rounded-pill shadow-sm animate__animated animate__pulse animate__infinite" 
+                            onClick={handleCheckout}
+                            disabled={checkoutLoading}
+                        >
+                            {checkoutLoading ? (
+                                <span className="spinner-border spinner-border-sm me-2"></span>
+                            ) : (
+                                <i className="bi bi-lightning-fill me-2"></i>
+                            )}
+                            Desbloquear Practice Zone Premium
                         </button>
                     </div>
                 )}
 
-                <ul className="nav nav-pills justify-content-center mb-5 arcade-nav">
+                <ul className="nav nav-pills justify-content-center mb-5 practice-nav">
                     {LEVELS.map(lvl => (
                         <li className="nav-item mx-2" key={lvl}>
                             <button 
@@ -230,7 +222,7 @@ const ArcadePremium = () => {
                             return (
                                 <div className="col-md-6 col-lg-4" key={topic.id}>
                                     <div 
-                                        className={`arcade-card card h-100 ${isLocked ? 'locked' : 'unlocked'}`}
+                                        className={`practice-card card h-100 ${isLocked ? 'locked' : 'unlocked'}`}
                                         onClick={() => handlePlayArea(topic)}
                                     >
                                         <div className="card-body text-center p-4">
@@ -264,4 +256,4 @@ const ArcadePremium = () => {
     );
 };
 
-export default ArcadePremium;
+export default PracticeZone;

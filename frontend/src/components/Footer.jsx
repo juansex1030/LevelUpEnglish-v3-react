@@ -31,7 +31,7 @@ const Footer = () => {
                             <li><Link to="/niveles/b1">B1 Level</Link></li>
                             <li><Link to="/niveles/b2">B2 Level</Link></li>
                             <li><Link to="/niveles/c1">C1 Level</Link></li>
-                            <li><Link to="/arcade">Arcade Premium</Link></li>
+                            <li><Link to="/practice-zone">Practice Zone</Link></li>
                         </ul>
                     </div>
 

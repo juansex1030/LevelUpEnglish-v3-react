@@ -21,7 +21,7 @@ Dependiendo de su interacción con la plataforma, recolectamos:
 Sus datos se utilizan exclusivamente para:
 1.  Crear y gestionar su cuenta de usuario.
 2.  Hacer seguimiento a su progreso académico y mostrar estadísticas personales.
-3.  Habilitar el acceso al "Arcade Premium" tras la verificación del pago.
+3.  Habilitar el acceso al "Practice Zone Premium" tras la verificación del pago.
 4.  Brindar soporte técnico y responder a sus PQRS.
 5.  Enviar actualizaciones sobre el curso o notificaciones de vencimiento de membresía.
 

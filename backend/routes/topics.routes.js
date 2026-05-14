@@ -6,7 +6,7 @@ const { authenticateToken } = require('../middleware/auth');
 router.get('/', async (req, res, next) => {
     try {
         // Exclude premium_practice from public list to prevent data scraping
-        const result = await query('SELECT id, number, level, title, description, icon FROM topics WHERE arcade_enabled = TRUE ORDER BY level, number');
+        const result = await query('SELECT id, number, level, title, description, icon FROM topics WHERE practice_zone_enabled = TRUE ORDER BY level, number');
         res.json({ topics: result.rows });
     } catch (err) {
         next(err);

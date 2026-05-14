@@ -797,4 +797,4 @@ topics.forEach(topic => {
 });
 
 fs.writeFileSync(topicsPath, JSON.stringify(topics, null, 2));
-console.log('B1 Arcade COMPLETE (Topics 1-10) with CLOZE TEST and MAX VARIETY.');
+console.log('B1 Practice Zone COMPLETE (Topics 1-10) with CLOZE TEST and MAX VARIETY.');

@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS public.topics (
     theory TEXT,
     practice TEXT,
     premium_practice JSONB DEFAULT NULL,
-    arcade_enabled BOOLEAN DEFAULT TRUE,
+    practice_zone_enabled BOOLEAN DEFAULT TRUE,
     UNIQUE(level, number)
 );
 

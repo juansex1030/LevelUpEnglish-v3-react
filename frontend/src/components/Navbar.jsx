@@ -86,8 +86,8 @@ const Navbar = () => {
                             </Link>
                         </li>
                         <li>
-                            <Link className={`nav-link ${location.pathname === '/arcade' ? 'active' : ''} text-warning fw-bold`} to="/arcade" onClick={closeMenu} style={{ letterSpacing: '0.5px' }}>
-                                <span className="nav-emoji">👾</span> Arcade
+                            <Link className={`nav-link ${location.pathname === '/practice-zone' ? 'active' : ''} text-warning fw-bold`} to="/practice-zone" onClick={closeMenu} style={{ letterSpacing: '0.5px' }}>
+                                <span className="nav-emoji">🎯</span> Practice Zone
                             </Link>
                         </li>
                         <li>

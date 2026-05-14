@@ -4,19 +4,88 @@ import React, { useState, useEffect } from 'react';
    PracticeEngine.jsx
    Renders game data stored as JSON in the database.
    Supported game types:
-     - multiple_choice
-     - fill_in
-     - unscramble
-     - matching
-     - spell_tool
-     - number_words
-     - memory_game
-     - hangman_game
-     - crossword_game
-     - sentence_builder
-     - trivia_game
-     - fill_blanks_game
+     - multiple_choice, fill_in, unscramble, matching, etc.
+     - New: word_search
 ===================================================================== */
+
+/** Web Audio API Helper for Premium SFX - Now with more variety! */
+const playSFX = (type) => {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+        const playTone = (freq, type = 'sine', duration = 0.3, volume = 0.2, ramp = true) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(volume, now);
+            if (ramp) gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+            osc.start(now);
+            osc.stop(now + duration);
+        };
+
+        switch(type) {
+            case 'success': // Default bright chime
+                playTone(523.25, 'sine', 0.4); // C5
+                setTimeout(() => playTone(659.25, 'sine', 0.4), 100); // E5
+                break;
+            case 'success_pop': // Short & cute
+                playTone(800 + Math.random() * 200, 'sine', 0.1, 0.15);
+                break;
+            case 'success_chime': // Higher sparkling chime
+                [880, 1174, 1318].forEach((f, i) => {
+                    setTimeout(() => playTone(f, 'sine', 0.3, 0.1), i * 80);
+                });
+                break;
+            case 'success_magic': // Magical glissando
+                const oscM = ctx.createOscillator();
+                const gainM = ctx.createGain();
+                oscM.connect(gainM); gainM.connect(ctx.destination);
+                oscM.frequency.setValueAtTime(400, now);
+                oscM.frequency.exponentialRampToValueAtTime(1200, now + 0.5);
+                gainM.gain.setValueAtTime(0.1, now);
+                gainM.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                oscM.start(now); oscM.stop(now + 0.5);
+                break;
+            case 'error': // Classic error
+                playTone(150, 'sawtooth', 0.4, 0.2);
+                break;
+            case 'error_buzz': // Buzzer
+                playTone(100, 'square', 0.3, 0.1);
+                break;
+            case 'click':
+                playTone(800 + Math.random() * 100, 'sine', 0.05, 0.1);
+                break;
+            case 'win':
+                [523, 659, 783, 1046, 1318].forEach((f, i) => {
+                    setTimeout(() => playTone(f, 'sine', 0.6, 0.15), i * 150);
+                });
+                break;
+            default:
+                playTone(440, 'sine', 0.2);
+        }
+    } catch (e) { console.warn("Audio Context blocked"); }
+};
+
+/** Trigger Confetti Celebration */
+const triggerConfetti = () => {
+    if (window.confetti) {
+        window.confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#ffca28', '#28a745', '#0072ff', '#ffffff']
+        });
+    } else {
+        // Fallback: try to load from CDN if not present
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js';
+        script.onload = () => window.confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        document.head.appendChild(script);
+    }
+};
 
 /** Stable Fisher-Yates shuffle — avoids V8 sort instability with Math.random()-0.5 */
 const stableShuffle = (arr) => {
@@ -28,7 +97,7 @@ const stableShuffle = (arr) => {
     return a;
 };
 
-const PracticeEngine = ({ data, onScoreUpdate }) => {
+function PracticeEngine({ data, onScoreUpdate }) {
     const [completedQuestions, setCompletedQuestions] = React.useState(new Set());
 
     useEffect(() => {
@@ -45,6 +114,12 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
 
         const newSet = new Set(completedQuestions).add(key);
         setCompletedQuestions(newSet);
+        playSFX('success');
+
+        if (newSet.size === totalQuestions) {
+            playSFX('win');
+            triggerConfetti();
+        }
 
         if (onScoreUpdate) {
             const scorePercent = Math.round((newSet.size / totalQuestions) * 100);
@@ -55,40 +130,39 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
     return (
         <div className="practice-engine">
             {data.games.map((game, i) => (
-                <div key={i} className="mb-5 p-4 bg-dark text-white rounded shadow-sm border border-secondary" style={{ position: 'relative' }}>
-                    <div className="d-flex align-items-center mb-3 border-bottom border-secondary pb-3">
-                        <div className="game-icon bg-gradient me-3 p-3 rounded-circle shadow-sm" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
+                <div key={i} className="mb-5 p-4 bg-dark text-white rounded-4 shadow-lg border border-secondary transition-all" 
+                     style={{ position: 'relative', background: 'rgba(20, 22, 34, 0.95)', backdropFilter: 'blur(10px)' }}>
+                    <div className="d-flex align-items-center mb-4 border-bottom border-secondary pb-3">
+                        <div className="game-icon bg-gradient me-3 p-3 rounded-circle shadow-sm" style={{ background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)' }}>
                             <span className="fs-3">🎮</span>
                         </div>
                         <div>
                             <h4 className="fw-bold mb-1 text-white">{game.title}</h4>
-                            <p className="text-white-50 mb-0">{game.instruction}</p>
+                            <p className="text-white-50 mb-0 small">{game.instruction}</p>
                         </div>
 
                         {completedQuestions.has(`${i}`) && (
-                            <div className="ms-auto animate__animated animate__zoomIn">
-                                <span className="badge bg-success rounded-pill p-2 px-3 shadow-sm">
-                                    <i className="bi bi-check-circle-fill me-2"></i>Completado
+                            <div className="ms-auto animate__animated animate__bounceIn">
+                                <span className="badge bg-success rounded-pill p-2 px-3 shadow-sm border border-white-50">
+                                    <i className="bi bi-patch-check-fill me-2"></i>Completado
                                 </span>
                             </div>
                         )}
                     </div>
 
-                    <div className="game-board position-relative" style={{ minHeight: '300px', filter: completedQuestions.has(`${i}`) ? 'brightness(0.7) grayscale(0.5)' : 'none', transition: 'all 0.5s', pointerEvents: completedQuestions.has(`${i}`) ? 'none' : 'auto' }}>
+                    <div className="game-board position-relative" style={{ minHeight: '300px', transition: 'all 0.5s' }}>
                         {game.type === 'multiple_choice'  && <MultipleChoice game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'fill_in'          && <FillIn game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'unscramble'       && <Unscramble game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'matching'         && <Matching game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'spell_tool'       && <SpellTool game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'number_words'     && <NumberWords game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'memory_game'      && <MemoryGame game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'hangman_game'     && <HangmanGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'crossword_game'   && <CrosswordGame game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'sentence_builder' && <SentenceBuilderGame game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'trivia_game'      && <TriviaGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'fill_blanks_game' && <FillBlanksGame game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'reading_comprehension' && <ReadingComprehension game={game} onCorrect={() => handleCorrect(i)} />}
                         {game.type === 'cloze_test'       && <ClozeTest game={game} onCorrect={() => handleCorrect(i)} />}
+                        {game.type === 'word_search'      && <WordSearchGame game={game} onCorrect={() => handleCorrect(i)} />}
+
                     </div>
                 </div>
             ))}
@@ -97,7 +171,7 @@ const PracticeEngine = ({ data, onScoreUpdate }) => {
 };
 
 /* ── shared feedback banner ─────────────────────────────────────────── */
-const Feedback = ({ fb }) => {
+function Feedback({ fb }) {
     if (!fb) return null;
     const ok = fb.type === 'success';
     return (
@@ -109,44 +183,69 @@ const Feedback = ({ fb }) => {
 };
 
 /* ── 1. Multiple Choice ─────────────────────────────────────────────── */
-const MultipleChoice = ({ game, onCorrect }) => {
+function MultipleChoice({ game, onCorrect }) {
     const [idx, setIdx] = useState(0);
     const [fb, setFb] = useState(null);
-    const q = game.questions[idx];
+    const q = game.questions ? game.questions[idx] : null;
+    if (!q) return <div className="p-4 text-center text-white-50">Cargando pregunta...</div>;
 
-    const shuffledOptions = React.useMemo(() => {
-        if (!q || !q.options) return [];
-        return stableShuffle(q.options);
+    const finalOptions = React.useMemo(() => {
+        if (!q) return [];
+        const raw = q.options || q.o || [];
+        if (q.a && !raw.includes(q.a)) {
+            return [q.a, ...raw];
+        }
+        return raw;
     }, [q]);
 
+    const shuffledOptions = React.useMemo(() => {
+        if (finalOptions.length === 0) return [];
+        return stableShuffle(finalOptions);
+    }, [finalOptions]);
+
+    const [attempts, setAttempts] = useState(0);
+
     const choose = (opt) => {
+        if (fb?.type === 'success') return;
         if (opt === q.a) {
+            playSFX('success_pop');
             setFb({ type: 'success', text: '✅ Correct!' });
+            setAttempts(0);
             if (idx === game.questions.length - 1) {
                 setTimeout(() => onCorrect(), 1400);
             } else {
                 setTimeout(() => { setFb(null); setIdx(i => i + 1); }, 1400);
             }
         } else {
-            setFb({ type: 'error', text: '❌ Try again!' });
+            playSFX('error_buzz');
+            const newAttempts = attempts + 1;
+            setAttempts(newAttempts);
+            setFb({ 
+                type: 'error', 
+                text: newAttempts >= 2 ? `❌ Incorrect. Hint: The answer starts with "${q.a[0]}"` : '❌ Try again!' 
+            });
         }
     };
 
     return (
-        <>
-            <div className="text-center fs-5 fw-semibold mb-4 py-2 px-3 rounded" style={{ background: 'rgba(255,255,255,.05)' }}>{q.q}</div>
-            <div className="d-flex flex-wrap justify-content-center gap-2">
+        <div className="multiple-choice animate__animated animate__fadeIn">
+            <div className="text-center fs-5 fw-bold mb-4 py-3 px-3 rounded-4 shadow-sm" 
+                 style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,0.1)' }}>{q.q}</div>
+            <div className="d-flex flex-wrap justify-content-center gap-3">
                 {shuffledOptions.map((opt, i) => (
-                    <button key={i} className="btn btn-outline-primary px-4 py-2" onClick={() => choose(opt)}>{opt}</button>
+                    <button key={i} 
+                            className="btn btn-outline-primary px-4 py-3 fw-bold rounded-pill shadow-sm transition-all hover-glow" 
+                            style={{ minWidth: '150px' }}
+                            onClick={() => choose(opt)}>{opt}</button>
                 ))}
             </div>
             <Feedback fb={fb} />
-        </>
+        </div>
     );
 };
 
 /* ── 2. Fill In ─────────────────────────────────────────────────────── */
-const FillIn = ({ game, onCorrect }) => {
+function FillIn({ game, onCorrect }) {
     const [idx, setIdx] = useState(0);
     const [val, setVal] = useState('');
     const [fb, setFb] = useState(null);
@@ -154,6 +253,7 @@ const FillIn = ({ game, onCorrect }) => {
 
     const check = () => {
         if (val.trim().toLowerCase() === q.a.toLowerCase()) {
+            playSFX('success_chime');
             setFb({ type: 'success', text: '✅ Excellent!' });
             if (idx === game.questions.length - 1) {
                 setTimeout(() => onCorrect(), 1400);
@@ -161,31 +261,38 @@ const FillIn = ({ game, onCorrect }) => {
                 setTimeout(() => { setFb(null); setVal(''); setIdx(i => i + 1); }, 1400);
             }
         } else {
+            playSFX('error');
             setFb({ type: 'error', text: `❌ Almost! The answer is: "${q.a}"` });
         }
     };
 
     return (
-        <>
-            <div className="fs-5 fw-semibold mb-4 p-3 rounded text-center" style={{ background: 'rgba(255,255,255,.05)' }}>{q.q}</div>
-            <div className="d-flex gap-2 mb-2">
-                <input className="form-control" value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} />
-                <button className="btn btn-primary" onClick={check}>Check</button>
+        <div className="fill-in animate__animated animate__fadeIn">
+            <div className="fs-5 fw-bold mb-4 p-4 rounded-4 text-center shadow-sm" 
+                 style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,0.1)' }}>{q.q}</div>
+            <div className="d-flex gap-3 mb-2 max-w-md mx-auto" style={{ maxWidth: '500px' }}>
+                <input className="form-control form-control-lg bg-dark text-white border-secondary rounded-3" 
+                       placeholder="Type your answer..."
+                       value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} />
+                <button className="btn btn-primary px-4 rounded-3 fw-bold" onClick={check}>Check</button>
             </div>
             <Feedback fb={fb} />
-        </>
+        </div>
     );
 };
 
 /* ── 3. Unscramble ──────────────────────────────────────────────────── */
-const Unscramble = ({ game, onCorrect }) => {
+function Unscramble({ game, onCorrect }) {
+    console.log("[PracticeEngine] Rendering Unscramble", game);
     const [idx, setIdx] = useState(0);
     const [val, setVal] = useState('');
     const [fb, setFb] = useState(null);
-    const q = game.questions[idx];
+    const q = game.questions ? game.questions[idx] : null;
+    if (!q) return null;
 
     const check = () => {
         if (val.trim().toLowerCase() === q.a.toLowerCase()) {
+            playSFX('success_pop');
             setFb({ type: 'success', text: '✅ Perfect!' });
             if (idx === game.questions.length - 1) {
                 setTimeout(() => onCorrect(), 1400);
@@ -193,6 +300,7 @@ const Unscramble = ({ game, onCorrect }) => {
                 setTimeout(() => { setFb(null); setVal(''); setIdx(i => i + 1); }, 1400);
             }
         } else {
+            playSFX('error_buzz');
             setFb({ type: 'error', text: '❌ Not quite. Remember the correct word order.' });
         }
     };
@@ -210,7 +318,7 @@ const Unscramble = ({ game, onCorrect }) => {
 };
 
 /* ── 4. Matching ─────────────────────────────────────────────────────── */
-const Matching = ({ game, onCorrect }) => {
+function Matching({ game, onCorrect }) {
     const [selections, setSelections] = useState({});
     const [fb, setFb] = useState(null);
     
@@ -221,9 +329,11 @@ const Matching = ({ game, onCorrect }) => {
     const check = () => {
         const allRight = limitedQuestions.every((q, i) => selections[i] === q.a);
         if (allRight) {
+            playSFX('success_magic');
             setFb({ type: 'success', text: '✅ ¡Excelente! Todas las conexiones son correctas.' });
             setTimeout(() => { if (onCorrect) onCorrect(); }, 1400);
         } else {
+            playSFX('error');
             setFb({ type: 'error', text: '❌ Algunas conexiones no son correctas. ¡Sigue intentando!' });
         }
     };
@@ -267,7 +377,7 @@ const Matching = ({ game, onCorrect }) => {
 };
 
 /* ── 5. Spell Tool ──────────────────────────────────────────────────── */
-const SpellTool = ({ game, onCorrect }) => {
+function SpellTool({ game, onCorrect }) {
     const [name, setName] = useState('');
     const [result, setResult] = useState('');
 
@@ -289,201 +399,8 @@ const SpellTool = ({ game, onCorrect }) => {
     );
 };
 
-/* ── 6. Number Words ─────────────────────────────────────────────────── */
-const numberToWords = (num) => {
-    const units = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
-    const tens  = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
-    if (num === 0) return 'zero';
-    function c(n) {
-        if (n < 20) return units[n];
-        if (n < 100) return tens[Math.floor(n/10)] + (n%10 > 0 ? '-' + units[n%10] : '');
-        if (n < 1000) return units[Math.floor(n/100)] + ' hundred' + (n%100 > 0 ? ' and ' + c(n%100) : '');
-        return c(Math.floor(n/1000)) + ' thousand' + (n%1000 > 0 ? ', ' + c(n%1000) : '');
-    }
-    return c(num);
-};
-
-const NumberWords = ({ game, onCorrect }) => {
-    const min = 1, max = 10000, choices = 3;
-    const [num] = useState(() => Math.floor(Math.random() * (max - min + 1)) + min);
-    const correct = numberToWords(num);
-    const [opts] = useState(() => {
-        const s = new Set([correct]);
-        while (s.size < choices) s.add(numberToWords(Math.floor(Math.random() * (max - min + 1)) + min));
-        return stableShuffle([...s]);
-    });
-    const [fb, setFb] = useState(null);
-
-    const choose = (opt) => {
-        if (opt === correct) {
-            setFb({ type: 'success', text: '✅ Correct!' });
-            setTimeout(() => { if (onCorrect) onCorrect(); }, 1400);
-        } else {
-            setFb({ type: 'error', text: `❌ Incorrect. It was: "${correct}"` });
-        }
-    };
-
-    return (
-        <div className="text-center">
-            <h1 className="display-4 fw-bold text-info mb-4">{num.toLocaleString('en-US')}</h1>
-            <div className="d-flex flex-wrap justify-content-center gap-2">
-                {opts.map((o, i) => <button key={i} className="btn btn-outline-primary" onClick={() => choose(o)}>{o}</button>)}
-            </div>
-            <Feedback fb={fb} />
-        </div>
-    );
-};
-
-/* ── 7. Memory Game (Premium Arcade) ─────────────────────────────────── */
-const MemoryGame = ({ game, onCorrect }) => {
-    // Limit to exactly 6 pairs for a clean grid
-    const [pairs] = useState(() => (game.pairs || []).slice(0, 6));
-
-    const [cards] = useState(() => {
-        const deck = [];
-        pairs.forEach((pair, i) => {
-            deck.push({ id: `emoji-${i}`, matchId: i, type: 'emoji', content: pair.emoji });
-            deck.push({ id: `word-${i}`, matchId: i, type: 'word', content: pair.word });
-        });
-        return stableShuffle(deck);
-    });
-
-    const [flippedIdxs, setFlippedIdxs] = useState([]);
-    const [matchedIds, setMatchedIds] = useState([]);
-    const [moves, setMoves] = useState(0);
-
-    const handleFlip = (index) => {
-        if (flippedIdxs.length === 2) return;
-        if (flippedIdxs.includes(index) || matchedIds.includes(cards[index].matchId)) return;
-
-        const newFlipped = [...flippedIdxs, index];
-        setFlippedIdxs(newFlipped);
-
-        if (newFlipped.length === 2) {
-            setMoves(m => m + 1);
-            const first = cards[newFlipped[0]];
-            const second = cards[newFlipped[1]];
-            if (first.matchId === second.matchId) {
-                setMatchedIds(prev => {
-                    const newMatches = [...prev, first.matchId];
-                    if (newMatches.length === pairs.length) {
-                        setTimeout(() => onCorrect && onCorrect(), 1200);
-                    }
-                    return newMatches;
-                });
-                setTimeout(() => setFlippedIdxs([]), 600);
-            } else {
-                setTimeout(() => setFlippedIdxs([]), 1200);
-            }
-        }
-    };
-
-    // Responsive font scaling for long text
-    const getFontSize = (text) => {
-        if (!text) return '1.1rem';
-        const len = text.length;
-        if (len > 30) return '0.7rem';
-        if (len > 20) return '0.8rem';
-        if (len > 12) return '0.9rem';
-        if (len >= 8) return '1rem'; // "Language" is 8 chars, fits better at 1rem
-        return '1.1rem';
-    };
-
-    return (
-        <div className="memory-game-container text-center animate__animated animate__fadeIn">
-            <div className="d-flex justify-content-between align-items-center mb-4 p-3 rounded" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                <div className="text-secondary small fw-bold">MOVES: <span className="text-info">{moves}</span></div>
-                <div className="text-secondary small fw-bold">PAIRS: <span className="text-success">{matchedIds.length} / {pairs.length}</span></div>
-            </div>
-            
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))',
-                gap: '15px',
-                maxWidth: '700px',
-                margin: '0 auto'
-            }}>
-                {cards.map((card, i) => {
-                    const isFlipped = flippedIdxs.includes(i) || matchedIds.includes(card.matchId);
-                    return (
-                        <div key={card.id} onClick={() => handleFlip(i)}
-                            style={{ 
-                                height: '145px', 
-                                cursor: 'pointer', 
-                                perspective: '1000px',
-                                position: 'relative'
-                            }}>
-                            <div style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)', 
-                                transformStyle: 'preserve-3d', 
-                                transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', 
-                                position: 'relative' 
-                            }}>
-                                {/* Front (Hidden) */}
-                                <div style={{ 
-                                    position: 'absolute', 
-                                    width: '100%', 
-                                    height: '100%', 
-                                    backfaceVisibility: 'hidden', 
-                                    background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)', 
-                                    borderRadius: '16px', 
-                                    border: '2px solid rgba(255,255,255,0.1)', 
-                                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)', 
-                                    display: 'flex', 
-                                    justifyContent: 'center', 
-                                    alignItems: 'center', 
-                                    fontSize: '2.5rem' 
-                                }}>
-                                    <span style={{ opacity: 0.5 }}>?</span>
-                                </div>
-                                
-                                {/* Back (Revealed) - Glassmorphism style */}
-                                <div style={{ 
-                                    position: 'absolute', 
-                                    width: '100%', 
-                                    height: '100%', 
-                                    backfaceVisibility: 'hidden', 
-                                    background: 'rgba(255, 255, 255, 0.95)', 
-                                    borderRadius: '16px', 
-                                    border: '3px solid #1e3c72', 
-                                    display: 'flex', 
-                                    justifyContent: 'center', 
-                                    alignItems: 'center', 
-                                    transform: 'rotateY(180deg)', 
-                                    fontSize: (card.type === 'emoji' && card.content && card.content.length <= 2) ? '2.8rem' : getFontSize(card.content), 
-                                    fontWeight: '700', 
-                                    color: '#0f2027', 
-                                    textAlign: 'center', 
-                                    padding: '10px',
-                                    boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                                    overflow: 'hidden'
-                                }}>
-                                    {card.type === 'emoji' && typeof card.content === 'string' && card.content.startsWith('/assets/') ? (
-                                        <img src={card.content} alt="icon" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
-                                    ) : (
-                                        card.content
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-            
-            {matchedIds.length === pairs.length && (
-                <div className="alert alert-success mt-4 fw-bold animate__animated animate__bounceIn shadow-lg border-0" style={{ background: 'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)', color: 'white' }}>
-                    <i className="bi bi-trophy-fill me-2"></i>
-                    ¡Impresionante! Has encontrado todas las parejas.
-                </div>
-            )}
-        </div>
-    );
-};
-
-/* ── 8. Hangman Game (Premium Arcade) ─────────────────────────────────── */
-const HangmanGame = ({ game, onCorrect }) => {
+/* ── 8. Hangman Game (Practice Zone) ─────────────────────────────────── */
+function HangmanGame({ game, onCorrect }) {
     const [wordIdx, setWordIdx] = useState(0);
     const [guessedLetters, setGuessedLetters] = useState(new Set());
     const [lives, setLives] = useState(6);
@@ -577,8 +494,8 @@ const HangmanGame = ({ game, onCorrect }) => {
     );
 };
 
-/* ── 9. Crossword Game (Premium Arcade) ────────────────────────────────── */
-const CrosswordGame = ({ game, onCorrect }) => {
+/* ── 9. Crossword Game (Practice Zone) ────────────────────────────────── */
+function CrosswordGame({ game, onCorrect }) {
     const [userGrid, setUserGrid] = useState({});
     const [selectedCell, setSelectedCell] = useState(null);
     const [selectedDir, setSelectedDir] = useState('across');
@@ -759,8 +676,8 @@ const CrosswordGame = ({ game, onCorrect }) => {
     );
 };
 
-/* ── 10. Sentence Builder Game (Premium Arcade) ─────────────────────────── */
-const SentenceBuilderGame = ({ game, onCorrect }) => {
+/* ── 10. Sentence Builder Game (Practice Zone) ─────────────────────────── */
+function SentenceBuilderGame({ game, onCorrect }) {
     const [sentenceIdx, setSentenceIdx] = useState(0);
     const [availableWords, setAvailableWords] = useState([]);
     const [selectedWords, setSelectedWords] = useState([]);
@@ -780,7 +697,7 @@ const SentenceBuilderGame = ({ game, onCorrect }) => {
     }, [sentenceIdx, game]);
 
     const selectWord = (word) => {
-        if (status !== 'playing' && status !== 'incorrect') return;
+        if (status === 'correct') return;
         setAvailableWords(prev => prev.filter(w => w.id !== word.id));
         setSelectedWords(prev => {
             if (prev.some(w => w.id === word.id)) return prev;
@@ -790,7 +707,7 @@ const SentenceBuilderGame = ({ game, onCorrect }) => {
     };
 
     const deselectWord = (word) => {
-        if (status !== 'playing' && status !== 'incorrect') return;
+        if (status === 'correct') return;
         setSelectedWords(prev => prev.filter(w => w.id !== word.id));
         setAvailableWords(prev => {
             if (prev.some(w => w.id === word.id)) return prev;
@@ -802,6 +719,7 @@ const SentenceBuilderGame = ({ game, onCorrect }) => {
     const handleCheck = () => {
         const attempt = selectedWords.map(w => w.text).join(' ');
         if (attempt === currentSentence.text) {
+            playSFX('success_chime');
             setStatus('correct');
             setTimeout(() => {
                 if (sentenceIdx + 1 < game.sentences.length) {
@@ -812,6 +730,7 @@ const SentenceBuilderGame = ({ game, onCorrect }) => {
                 }
             }, 1500);
         } else {
+            playSFX('error');
             setStatus('incorrect');
         }
     };
@@ -857,23 +776,45 @@ const SentenceBuilderGame = ({ game, onCorrect }) => {
     );
 };
 
-/* ── 11. Trivia Game (Premium Arcade) ────────────────────────────────── */
-const TriviaGame = ({ game, onCorrect }) => {
+/* ── 11. Trivia Game (Practice Zone) ────────────────────────────────── */
+function TriviaGame({ game, onCorrect }) {
     const [qIdx, setQIdx] = useState(0);
     const [selectedOption, setSelectedOption] = useState(null);
     const [status, setStatus] = useState('playing');
     const [score, setScore] = useState(0);
 
     const question = game.questions && game.questions[qIdx];
+    
+    // Resilience Logic
+    const qText = question ? (question.question || question.q) : '';
+    const rawOptions = question ? (question.options || question.o || []) : [];
+    const answerText = question ? (question.answer || question.a) : '';
+
+    const finalOptions = React.useMemo(() => {
+        if (!question) return [];
+        // If it's the new dense format {q, a, o}, sometimes 'a' is not in 'o'
+        if (question.o && !question.options && answerText && !question.o.includes(answerText)) {
+            return [answerText, ...question.o];
+        }
+        return rawOptions;
+    }, [question, rawOptions, answerText]);
+
+    const finalCorrectIdx = React.useMemo(() => {
+        if (!question) return 0;
+        if (question.correctIdx !== undefined) return question.correctIdx;
+        return finalOptions.indexOf(answerText);
+    }, [question, finalOptions, answerText]);
 
     const handleSelect = (idx) => {
         if (status !== 'playing') return;
         setSelectedOption(idx);
 
-        if (idx === question.correctIdx) {
+        if (idx === finalCorrectIdx) {
+            playSFX('success_pop');
             setStatus('correct');
             setScore(s => s + 1);
         } else {
+            playSFX('error_buzz');
             setStatus('incorrect');
         }
 
@@ -893,12 +834,15 @@ const TriviaGame = ({ game, onCorrect }) => {
 
     if (status === 'won_all') {
         return (
-            <div className="text-center p-4">
+            <div className="text-center p-4 animate__animated animate__zoomIn">
                 <h2 className="text-warning mb-3"><i className="bi bi-trophy-fill me-2"></i>¡Trivia Completada!</h2>
-                <h4 className="text-white">Puntuación: {score} / {game.questions.length}</h4>
-                <div className="progress mt-4 bg-dark" style={{ height: '20px' }}>
+                <h4 className="text-white mb-4">Puntuación: {score} / {game.questions.length}</h4>
+                <div className="progress mb-4 bg-dark" style={{ height: '20px', borderRadius: '10px' }}>
                     <div className="progress-bar bg-success progress-bar-striped progress-bar-animated" style={{ width: `${(score / game.questions.length) * 100}%` }}></div>
                 </div>
+                <button className="btn btn-warning rounded-pill px-5 fw-bold shadow-lg transform-hover" onClick={() => { setQIdx(0); setScore(0); setStatus('playing'); setSelectedOption(null); }}>
+                    <i className="bi bi-arrow-counterclockwise me-2"></i>Mejorar Puntuación
+                </button>
             </div>
         );
     }
@@ -911,14 +855,14 @@ const TriviaGame = ({ game, onCorrect }) => {
             </div>
 
             <div className="question-box bg-dark p-4 rounded shadow-sm border border-secondary mb-4 text-center">
-                <h4 style={{ color: 'var(--color-texto-principal)' }}>{question.question}</h4>
+                <h4 style={{ color: 'var(--color-texto-principal)' }}>{qText}</h4>
             </div>
 
             <div className="options d-flex flex-column gap-3 max-w-md mx-auto" style={{ maxWidth: '600px', margin: '0 auto' }}>
-                {question.options.map((opt, idx) => {
+                {finalOptions.map((opt, idx) => {
                     let bg = '#3e445b'; let border = '2px solid transparent'; let icon = null;
                     if (selectedOption !== null) {
-                        if (idx === question.correctIdx) { bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; icon = <i className="bi bi-check-circle-fill text-success ms-auto"></i>; }
+                        if (idx === finalCorrectIdx) { bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; icon = <i className="bi bi-check-circle-fill text-success ms-auto"></i>; }
                         else if (selectedOption === idx) { bg = 'rgba(220,53,69,0.2)'; border = '2px solid #dc3545'; icon = <i className="bi bi-x-circle-fill text-danger ms-auto"></i>; }
                         else { bg = 'rgba(0,0,0,0.2)'; }
                     }
@@ -935,8 +879,8 @@ const TriviaGame = ({ game, onCorrect }) => {
     );
 };
 
-/* ── 12. Fill in the Blanks Game (Premium Arcade) ────────────────────────── */
-const FillBlanksGame = ({ game, onCorrect }) => {
+/* ── 12. Fill in the Blanks Game (Practice Zone) ────────────────────────── */
+function FillBlanksGame({ game, onCorrect }) {
     const [sentenceIdx, setSentenceIdx] = useState(0);
     const [userInputs, setUserInputs] = useState('');
     const [status, setStatus] = useState('playing');
@@ -952,6 +896,7 @@ const FillBlanksGame = ({ game, onCorrect }) => {
 
         setTimeout(() => {
             if (isMatch) {
+                playSFX('success');
                 setStatus('correct');
                 setTimeout(() => {
                     if (sentenceIdx + 1 < game.sentences.length) {
@@ -962,6 +907,7 @@ const FillBlanksGame = ({ game, onCorrect }) => {
                     }
                 }, 1500);
             } else {
+                playSFX('error');
                 setStatus('incorrect');
             }
         }, 500);
@@ -971,8 +917,11 @@ const FillBlanksGame = ({ game, onCorrect }) => {
 
     if (status === 'won_all') {
         return (
-            <div className="text-center p-4">
+            <div className="text-center p-4 animate__animated animate__zoomIn">
                 <h2 className="text-success mb-3"><i className="bi bi-star-fill me-2 text-warning"></i>¡Todo Correcto!</h2>
+                <button className="btn btn-outline-light rounded-pill px-4 mt-2" onClick={() => { setSentenceIdx(0); setStatus('playing'); }}>
+                    <i className="bi bi-arrow-counterclockwise me-2"></i>Volver a jugar
+                </button>
             </div>
         );
     }
@@ -1022,23 +971,44 @@ const FillBlanksGame = ({ game, onCorrect }) => {
     );
 };
 
-/* ── 13. Reading Comprehension Game (Premium Arcade) ─────────────────────── */
-const ReadingComprehension = ({ game, onCorrect }) => {
+/* ── 13. Reading Comprehension Game (Practice Zone) ─────────────────────── */
+function ReadingComprehension({ game, onCorrect }) {
     const [qIdx, setQIdx] = useState(0);
     const [selectedOption, setSelectedOption] = useState(null);
     const [status, setStatus] = useState('playing');
     const [score, setScore] = useState(0);
 
     const question = game.questions && game.questions[qIdx];
+    
+    // Resilience: Support both structures
+    const qText = question ? (question.question || question.q) : '';
+    const rawOptions = question ? (question.options || question.o || []) : [];
+    const answerText = question ? question.a : '';
+    
+    const finalOptions = React.useMemo(() => {
+        if (!question) return [];
+        if (question.o && !question.options && !question.o.includes(answerText)) {
+            return [answerText, ...question.o];
+        }
+        return rawOptions;
+    }, [question, rawOptions, answerText]);
+
+    const finalCorrectIdx = React.useMemo(() => {
+        if (!question) return 0;
+        if (question.correctIdx !== undefined) return question.correctIdx;
+        return finalOptions.indexOf(answerText);
+    }, [question, finalOptions, answerText]);
 
     const handleSelect = (idx) => {
         if (status !== 'playing') return;
         setSelectedOption(idx);
 
-        if (idx === question.correctIdx) {
+        if (idx === finalCorrectIdx) {
+            playSFX('success_chime');
             setStatus('correct');
             setScore(s => s + 1);
         } else {
+            playSFX('error_buzz');
             setStatus('incorrect');
         }
 
@@ -1056,12 +1026,15 @@ const ReadingComprehension = ({ game, onCorrect }) => {
 
     if (status === 'won_all') {
         return (
-            <div className="text-center p-4">
+            <div className="text-center p-4 animate__animated animate__zoomIn">
                 <h2 className="text-warning mb-3"><i className="bi bi-trophy-fill me-2"></i>Reading Completed!</h2>
-                <h4 className="text-white">Final Score: {score} / {game.questions.length}</h4>
-                <div className="progress mt-4 bg-dark" style={{ height: '15px' }}>
-                    <div className="progress-bar bg-success" style={{ width: `${(score / game.questions.length) * 100}%` }}></div>
+                <h4 className="text-white mb-4">Final Score: {score} / {game.questions.length}</h4>
+                <div className="progress mb-4 bg-dark" style={{ height: '15px', borderRadius: '10px' }}>
+                    <div className="progress-bar bg-success progress-bar-striped progress-bar-animated" style={{ width: `${(score / game.questions.length) * 100}%` }}></div>
                 </div>
+                <button className="btn btn-primary rounded-pill px-5 fw-bold shadow" onClick={() => { setQIdx(0); setScore(0); setStatus('playing'); setSelectedOption(null); }}>
+                    <i className="bi bi-arrow-counterclockwise me-2"></i>Intentar de nuevo
+                </button>
             </div>
         );
     }
@@ -1091,7 +1064,7 @@ const ReadingComprehension = ({ game, onCorrect }) => {
                             {question.options.map((opt, idx) => {
                                 let bg = '#2c3144'; let border = '2px solid transparent';
                                 if (selectedOption !== null) {
-                                    if (idx === question.correctIdx) { bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; }
+                                    if (idx === finalCorrectIdx) { bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; }
                                     else if (selectedOption === idx) { bg = 'rgba(220,53,69,0.2)'; border = '2px solid #dc3545'; }
                                 }
                                 return (
@@ -1105,9 +1078,9 @@ const ReadingComprehension = ({ game, onCorrect }) => {
                         </div>
 
                         {selectedOption !== null && (
-                            <div className={`mt-4 p-2 rounded text-center fw-bold animate__animated animate__fadeIn ${selectedOption === question.correctIdx ? 'text-success' : 'text-danger'}`}
+                            <div className={`mt-4 p-2 rounded text-center fw-bold animate__animated animate__fadeIn ${selectedOption === finalCorrectIdx ? 'text-success' : 'text-danger'}`}
                                  style={{ background: 'rgba(255,255,255,0.05)' }}>
-                                {selectedOption === question.correctIdx ? '✅ Correct Answer!' : `❌ Incorrect. The right answer was: ${question.options[question.correctIdx]}`}
+                                {selectedOption === finalCorrectIdx ? '✅ Correct Answer!' : `❌ Incorrect. The right answer was: ${finalOptions[finalCorrectIdx]}`}
                             </div>
                         )}
                     </div>
@@ -1117,45 +1090,134 @@ const ReadingComprehension = ({ game, onCorrect }) => {
     );
 };
 
-/* ── 14. Cloze Test Game (Premium Arcade) ────────────────────────────────── */
-const ClozeTest = ({ game, onCorrect }) => {
+/* ── 14. Cloze Test Game (Practice Zone) ────────────────────────────────── */
+function ClozeTest({ game, onCorrect }) {
     const [userAnswers, setUserAnswers] = useState({});
     const [selectedGap, setSelectedGap] = useState(0);
     const [fb, setFb] = useState(null);
     const [isFinished, setIsFinished] = useState(false);
+    const [clozeIdx, setClozeIdx] = useState(0); 
+    const [attempts, setAttempts] = useState(0);
 
     const wordBank = React.useMemo(() => {
-        const words = [...(game.answers || []), ...(game.distractors || [])];
-        return stableShuffle(words);
+        if (game.text) {
+            const words = [...(game.answers || []), ...(game.distractors || [])];
+            return stableShuffle(words);
+        }
+        if (game.questions) {
+            const answers = game.questions.map(q => q.a);
+            return stableShuffle(answers);
+        }
+        return [];
     }, [game]);
 
     const handleWordSelect = (word) => {
         if (isFinished) return;
-        setUserAnswers(prev => ({ ...prev, [selectedGap]: word }));
-        // Auto-advance to next empty gap if possible
-        const nextGap = Array.from({ length: game.answers.length }).findIndex((_, i) => !userAnswers[i] && i !== selectedGap);
-        if (nextGap !== -1) setSelectedGap(nextGap);
+        if (!game.text) {
+             setUserAnswers({ ...userAnswers, [clozeIdx]: word });
+        } else {
+             setUserAnswers(prev => ({ ...prev, [selectedGap]: word }));
+             const nextGap = Array.from({ length: game.answers.length }).findIndex((_, i) => !userAnswers[i] && i !== selectedGap);
+             if (nextGap !== -1) setSelectedGap(nextGap);
+        }
     };
 
-    const checkAll = () => {
-        const correct = game.answers && game.answers.every((ans, i) => userAnswers[i] === ans);
-        if (correct) {
-            setFb({ type: 'success', text: '✅ Perfect! The text is complete and correct.' });
-            setIsFinished(true);
-            setTimeout(() => onCorrect && onCorrect(), 2000);
+    const check = () => {
+        if (!game.text) {
+            const q = game.questions[clozeIdx];
+            const isCorrect = userAnswers[clozeIdx] === q.a;
+            if (isCorrect) {
+                playSFX('success_pop');
+                setFb({ type: 'success', text: '✅ Correct!' });
+                setAttempts(0);
+                setTimeout(() => {
+                    if (clozeIdx + 1 < game.questions.length) {
+                        setClozeIdx(clozeIdx + 1);
+                        setFb(null);
+                    } else {
+                        onCorrect();
+                    }
+                }, 1200);
+            } else {
+                playSFX('error_buzz');
+                const newAttempts = attempts + 1;
+                setAttempts(newAttempts);
+                setFb({ 
+                    type: 'error', 
+                    text: newAttempts >= 2 ? `❌ Wrong. Hint: The answer is "${q.a}"` : '❌ Some words are in the wrong place. Try again!' 
+                });
+            }
         } else {
-            setFb({ type: 'error', text: '❌ Some words are in the wrong place. Try again!' });
+            const correct = game.answers && game.answers.every((ans, i) => userAnswers[i] === ans);
+            if (correct) {
+                playSFX('success');
+                setFb({ type: 'success', text: '✅ Perfect! The text is complete and correct.' });
+                setIsFinished(true);
+                setTimeout(() => onCorrect && onCorrect(), 2000);
+            } else {
+                playSFX('error');
+                setFb({ type: 'error', text: '❌ Some words are in the wrong place. Try again!' });
+            }
         }
     };
 
     const renderText = () => {
-        const parts = game.text.split(/\{\{\d+\}\}/);
+        if (!game.text && game.questions) {
+            const q = game.questions[clozeIdx];
+            if (!q) return <div>No questions found for Cloze Test fallback.</div>;
+            const parts = q.q ? q.q.split(/\[___\]/) : ["", ""];
+            return (
+                <div className="cloze-sequence-mode text-center p-4">
+                    <div className="mb-4 text-muted small">Oración {clozeIdx + 1} de {game.questions.length}</div>
+                    <div className="fs-3 fw-bold lh-lg mb-5" style={{ color: '#e0e0e0' }}>
+                        <span>{parts[0]}</span>
+                        <span className="badge bg-warning text-dark mx-2 px-3 py-2 border border-white" style={{ minWidth: '120px', display: 'inline-block' }}>
+                            {userAnswers[clozeIdx] || '_______'}
+                        </span>
+                        <span>{parts[1]}</span>
+                    </div>
+                    
+                    <div className="d-flex flex-column align-items-center gap-3 mt-5">
+                        <div className="d-flex gap-2 mx-auto" style={{ maxWidth: '500px', width: '100%' }}>
+                            <input 
+                                className="form-control form-control-lg bg-dark text-white border-warning text-center"
+                                placeholder="Type here or click a word..."
+                                value={userAnswers[clozeIdx] || ''}
+                                onChange={(e) => setUserAnswers(prev => ({ ...prev, [clozeIdx]: e.target.value }))}
+                                onKeyDown={(e) => e.key === 'Enter' && check()}
+                                autoFocus
+                            />
+                            <button className="btn btn-warning fw-bold px-4" onClick={check}>
+                                {clozeIdx + 1 < game.questions.length ? 'Next' : 'Finish'}
+                            </button>
+                        </div>
+
+                        <div className="word-bank mt-4 p-3 bg-black bg-opacity-20 rounded border border-secondary w-100">
+                            <p className="text-secondary small mb-2 text-center">WORD BANK</p>
+                            <div className="d-flex flex-wrap justify-content-center gap-2">
+                                {wordBank.map((word, idx) => (
+                                    <button 
+                                        key={idx} 
+                                        className={`btn btn-sm btn-outline-info rounded-pill ${Object.values(userAnswers).includes(word) ? 'opacity-50' : ''}`}
+                                        onClick={() => handleWordSelect(word)}
+                                    >
+                                        {word}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const parts = (game.text || "").split(/\{\{\d+\}\}/);
         return (
             <div className="cloze-text lh-lg fs-5 text-start p-4 bg-dark border border-secondary rounded shadow-sm" style={{ color: '#e0e0e0' }}>
                 {parts.map((part, i) => (
                     <React.Fragment key={i}>
                         {part}
-                        {i < game.answers.length && (
+                        {i < (game.answers?.length || 0) && (
                             <button 
                                 className={`btn btn-sm mx-1 px-3 fw-bold animate__animated ${selectedGap === i ? 'btn-outline-warning border-2' : (userAnswers[i] ? 'btn-primary' : 'btn-outline-secondary')}`}
                                 style={{ minWidth: '80px', textTransform: 'none' }}
@@ -1174,34 +1236,226 @@ const ClozeTest = ({ game, onCorrect }) => {
         <div className="cloze-test-container">
             {renderText()}
 
-            <div className="word-bank mt-4 p-3 bg-black rounded border border-secondary shadow-inner">
-                <p className="text-secondary small mb-3 fw-bold"><i className="bi bi-box-fill me-2"></i>WORD BANK (Select a gap, then pick a word)</p>
-                <div className="d-flex flex-wrap justify-content-center gap-2">
-                    {wordBank.map((word, idx) => (
-                        <button 
-                            key={idx} 
-                            className={`btn btn-outline-info fw-bold py-2 px-3 rounded-pill transition-all ${Object.values(userAnswers).includes(word) ? 'opacity-50 grayscale' : 'hover-glow'}`}
-                            onClick={() => handleWordSelect(word)}
-                            disabled={isFinished}
-                        >
-                            {word}
-                        </button>
-                    ))}
+            {game.text && (
+                <div className="word-bank mt-4 p-3 bg-black rounded border border-secondary shadow-inner">
+                    <p className="text-secondary small mb-3 fw-bold"><i className="bi bi-box-fill me-2"></i>WORD BANK (Select a gap, then pick a word)</p>
+                    <div className="d-flex flex-wrap justify-content-center gap-2">
+                        {wordBank.map((word, idx) => (
+                            <button 
+                                key={idx} 
+                                className={`btn btn-outline-info fw-bold py-2 px-3 rounded-pill transition-all ${Object.values(userAnswers).includes(word) ? 'opacity-50 grayscale' : 'hover-glow'}`}
+                                onClick={() => handleWordSelect(word)}
+                                disabled={isFinished}
+                            >
+                                {word}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="text-center mt-4">
-                <button 
-                    className="btn btn-warning btn-lg px-5 rounded-pill fw-bold shadow" 
-                    onClick={checkAll}
-                    disabled={isFinished || Object.keys(userAnswers).length < game.answers.length}
-                >
-                    <i className="bi bi-file-check me-2"></i> Verify Paragraph
-                </button>
+                {!isFinished ? (
+                    game.text && (
+                        <button 
+                            className="btn btn-warning btn-lg px-5 rounded-pill fw-bold shadow" 
+                            onClick={check}
+                            disabled={Object.keys(userAnswers).length < (game.answers?.length || 0)}
+                        >
+                            <i className="bi bi-file-check me-2"></i> Verify Paragraph
+                        </button>
+                    )
+                ) : (
+                    <button className="btn btn-outline-success btn-lg px-5 rounded-pill fw-bold" onClick={() => { setIsFinished(false); setUserAnswers({}); setFb(null); }}>
+                        <i className="bi bi-arrow-counterclockwise me-2"></i> Reset Paragraph
+                    </button>
+                )}
             </div>
             <Feedback fb={fb} />
         </div>
     );
 };
 
+
+/* ── 15. Word Search Game (Practice Zone) ───────────────────────────────── */
+function WordSearchGame({ game, onCorrect }) {
+    const [foundWords, setFoundWords] = useState([]);
+    if (!game) return null;
+    const [foundCells, setFoundCells] = useState([]);
+    const [selectedCells, setSelectedCells] = useState([]);
+    const [isDragging, setIsDragging] = useState(false);
+    const [currentGrid, setCurrentGrid] = useState([]);
+
+    const wordsToFind = React.useMemo(() => game.words || [], [game.words]);
+
+    // Internal Grid Generator
+    const generateGrid = React.useCallback(() => {
+        const size = 12;
+        const newGrid = Array(size).fill().map(() => Array(size).fill(""));
+        
+        const placeWord = (word) => {
+            const directions = [[0, 1], [1, 0], [1, 1], [0, -1], [-1, 0], [-1, -1], [1, -1], [-1, 1]];
+            let placed = false;
+            let attempts = 0;
+            while (!placed && attempts < 50) {
+                const dir = directions[Math.floor(Math.random() * directions.length)];
+                const r = Math.floor(Math.random() * size);
+                const c = Math.floor(Math.random() * size);
+                let canPlace = true;
+                for (let i = 0; i < word.length; i++) {
+                    const nr = r + i * dir[0], nc = c + i * dir[1];
+                    if (nr < 0 || nr >= size || nc < 0 || nc >= size || (newGrid[nr][nc] !== "" && newGrid[nr][nc] !== word[i])) {
+                        canPlace = false; break;
+                    }
+                }
+                if (canPlace) {
+                    for (let i = 0; i < word.length; i++) newGrid[r + i * dir[0]][c + i * dir[1]] = word[i];
+                    placed = true;
+                }
+                attempts++;
+            }
+        };
+
+        wordsToFind.forEach(w => placeWord(w.toUpperCase()));
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                if (newGrid[r][c] === "") newGrid[r][c] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+            }
+        }
+        return newGrid;
+    }, [wordsToFind]);
+
+    // Initialize or Reset
+    const resetGame = () => {
+        setFoundWords([]);
+        setFoundCells([]);
+        setSelectedCells([]);
+        setCurrentGrid(generateGrid());
+        playSFX('click');
+    };
+
+    useEffect(() => {
+        setCurrentGrid(generateGrid());
+    }, [generateGrid]);
+
+    const handleCellMouseDown = (r, c) => {
+        setIsDragging(true);
+        setSelectedCells([{ r, c }]);
+        playSFX('click');
+    };
+
+    const handleCellMouseEnter = (r, c) => {
+        if (!isDragging) return;
+        
+        const start = selectedCells[0];
+        if (!start) return;
+
+        const dr = r - start.r;
+        const dc = c - start.c;
+        const absDr = Math.abs(dr);
+        const absDc = Math.abs(dc);
+
+        // Check if current position forms a straight line (H, V, or 45-deg Diagonal)
+        const isHorizontal = dr === 0;
+        const isVertical = dc === 0;
+        const isDiagonal = absDr === absDc;
+
+        if (isHorizontal || isVertical || isDiagonal) {
+            const steps = Math.max(absDr, absDc);
+            const stepR = dr === 0 ? 0 : dr / absDr;
+            const stepC = dc === 0 ? 0 : dc / absDc;
+
+            const newSelection = [];
+            for (let i = 0; i <= steps; i++) {
+                newSelection.push({ 
+                    r: start.r + Math.round(i * stepR), 
+                    c: start.c + Math.round(i * stepC) 
+                });
+            }
+            setSelectedCells(newSelection);
+        }
+    };
+
+    const handleMouseUp = () => {
+        if (!isDragging) return;
+        setIsDragging(false);
+        const selectedWord = selectedCells.map(cell => currentGrid[cell.r][cell.c]).join('');
+        const reversedWord = selectedWord.split('').reverse().join('');
+
+        let match = null;
+        const targetWords = wordsToFind.map(w => w.toUpperCase());
+        if (targetWords.includes(selectedWord) && !foundWords.includes(selectedWord)) match = selectedWord;
+        else if (targetWords.includes(reversedWord) && !foundWords.includes(reversedWord)) match = reversedWord;
+
+        if (match) {
+            setFoundWords(prev => {
+                const next = [...prev, match];
+                if (next.length === wordsToFind.length) setTimeout(() => onCorrect && onCorrect(), 1000);
+                return next;
+            });
+            setFoundCells(prev => [...prev, ...selectedCells]);
+            playSFX('success_magic');
+        } else if (selectedCells.length > 1) {
+            playSFX('error_buzz');
+        }
+        setSelectedCells([]);
+    };
+
+    useEffect(() => {
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => window.removeEventListener('mouseup', handleMouseUp);
+    }, [selectedCells, foundWords, isDragging, currentGrid]);
+
+    if (currentGrid.length === 0) return null;
+
+    return (
+        <div className="word-search-container text-center p-3 animate__animated animate__fadeIn" style={{ userSelect: 'none' }}>
+            <div className="row g-4">
+                <div className="col-lg-8">
+                    <div className="grid-wrapper d-inline-block p-3 bg-dark rounded-4 shadow-lg border border-secondary" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(5px)' }}>
+                        {currentGrid.map((row, r) => (
+                            <div key={r} className="d-flex">
+                                {row.map((char, c) => (
+                                    <div key={c}
+                                        onMouseDown={() => handleCellMouseDown(r, c)}
+                                        onMouseEnter={() => handleCellMouseEnter(r, c)}
+                                        className={`d-flex justify-content-center align-items-center fw-bold rounded-1 transition-all ${foundCells.some(fc => fc.r === r && fc.c === c) ? 'animate__animated animate__pulse' : ''}`}
+                                        style={{ 
+                                            width: 'clamp(25px, 4vw, 38px)', height: 'clamp(25px, 4vw, 38px)', cursor: 'pointer', margin: '1px',
+                                            background: selectedCells.some(sc => sc.r === r && sc.c === c) ? '#ffca28' : (foundCells.some(fc => fc.r === r && fc.c === c) ? 'rgba(40, 167, 69, 0.4)' : 'rgba(255,255,255,0.03)'),
+                                            color: selectedCells.some(sc => sc.r === r && sc.c === c) ? '#000' : '#fff',
+                                            fontSize: '1rem', border: foundCells.some(fc => fc.r === r && fc.c === c) ? '1px solid #28a745' : '1px solid transparent'
+                                        }}
+                                    >
+                                        {char}
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="col-lg-4">
+                    <div className="word-list p-4 bg-dark rounded-4 border border-secondary shadow-sm h-100" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                        <h6 className="text-warning mb-4 fw-bold d-flex align-items-center"><i className="bi bi-search me-2"></i> Palabras:</h6>
+                        <div className="d-flex flex-column gap-2 overflow-auto" style={{ maxHeight: '350px' }}>
+                            {wordsToFind.map(word => (
+                                <div key={word} className={`p-2 rounded-3 transition-all d-flex justify-content-between align-items-center ${foundWords.includes(word.toUpperCase()) ? 'text-success border-success bg-success bg-opacity-10' : 'text-white-50 border-secondary'}`} style={{ border: '1px solid', fontSize: '0.85rem' }}>
+                                    <span className={foundWords.includes(word.toUpperCase()) ? 'text-decoration-line-through' : ''}>{word}</span>
+                                    {foundWords.includes(word.toUpperCase()) && <i className="bi bi-check-all fs-5"></i>}
+                                </div>
+                            ))}
+                        </div>
+                        <button className="btn btn-outline-warning btn-sm w-100 mt-4 rounded-pill fw-bold" onClick={resetGame}>
+                            <i className="bi bi-shuffle me-2"></i> Mezclar y Reiniciar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+
 export default PracticeEngine;
+

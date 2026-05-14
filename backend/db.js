@@ -101,7 +101,7 @@ const initDatabase = async () => {
         { table: 'users', column: 'google_id', type: 'VARCHAR(255) UNIQUE' },
         { table: 'users', column: 'otp_attempts', type: 'INTEGER DEFAULT 0' },
         { table: 'users', column: 'last_login_at', type: 'TIMESTAMP' },
-        { table: 'topics', column: 'arcade_enabled', type: 'BOOLEAN DEFAULT TRUE' },
+        { table: 'topics', column: 'practice_zone_enabled', type: 'BOOLEAN DEFAULT TRUE' },
         { table: 'topics', column: 'premium_practice', type: 'JSONB DEFAULT NULL' }
     ];
 

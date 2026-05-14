@@ -17,7 +17,7 @@ import TopicViewer from './pages/TopicViewer'
 import Diccionario from './pages/Diccionario'
 import ProgressDashboard from './pages/ProgressDashboard'
 import Vocabulary from './pages/Vocabulary'
-import ArcadePremium from './pages/ArcadePremium'
+import PracticeZone from './pages/PracticeZone'
 import Support from './pages/Support'
 import Profile from './pages/Profile'
 
@@ -39,7 +39,7 @@ function App() {
               <Route path="/diccionario" element={<Diccionario />} />
               <Route path="/vocabulario" element={<Vocabulary />} />
               <Route path="/progress" element={<ProgressDashboard />} />
-              <Route path="/arcade" element={<ArcadePremium />} />
+              <Route path="/practice-zone" element={<PracticeZone />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/support" element={<Support />} />
             </Routes>

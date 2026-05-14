@@ -34,14 +34,14 @@ router.post('/checkout-session', authenticateToken, async (req, res, next) => {
             last_name: 'LevelUp',
             email: req.user.email,
             invoice: `INV-${Date.now()}`,
-            description: 'LevelUp English Arcade Premium (30 días)',
+            description: 'LevelUp English Practice Zone Premium (30 días)',
             currency: 'COP',
             amount: '9990',
             tax_base: '0',
             tax: '0',
             country: 'CO',
             external_reference: String(req.user.id),
-            url_response: `${req.headers.origin}/arcade?success=true`,
+            url_response: `${req.headers.origin}/practice-zone?success=true`,
             url_confirmation: `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/v1/epayco/webhook`,
             method_confirmation: 'POST'
         }, {

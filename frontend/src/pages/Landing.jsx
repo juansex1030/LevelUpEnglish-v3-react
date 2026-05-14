@@ -95,7 +95,7 @@ const Landing = () => {
                             <div className="feature-card">
                                 <i className="bi bi-joystick feature-icon"></i>
                                 <h3 className="feature-title">
-                                    Arcade Premium <span className="badge bg-warning text-dark ms-2" style={{fontSize: '0.5em', verticalAlign: 'middle', background: '#FFD700'}}>EN DESARROLLO</span>
+                                    Practice Zone <span className="badge bg-warning text-dark ms-2" style={{fontSize: '0.5em', verticalAlign: 'middle', background: '#FFD700'}}>EN DESARROLLO</span>
                                 </h3>
                                 <p className="feature-description">
                                     A massive collection of randomized games and special engines coming soon in Beta.
