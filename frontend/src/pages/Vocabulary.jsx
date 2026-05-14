@@ -44,23 +44,33 @@ const Vocabulary = () => {
     const playAudio = (text) => {
         if (!text || typeof text !== 'string') return;
         
-        // Prevenir spam de clicks: ignoramos la petición si actualmente ya está pronuciando algo
-        if (window.speechSynthesis.speaking) return;
+        try {
+            if (!window.speechSynthesis) return;
 
-        const cleanText = text.split('/')[0].trim();
-        
-        // Evita que la API se quede "atascada" si hubo errores previos
-        window.speechSynthesis.cancel(); 
-        
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.lang = 'en-US';
-        utterance.rate = 0.9; // Un poco más lento para mejor claridad
-        
-        // Manejador de errores por si falla
-        utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
-        
-        window.speechSynthesis.speak(utterance);
+            // Force the API to wake up and clear any stuck queues
+            window.speechSynthesis.resume();
+            window.speechSynthesis.cancel(); 
+
+            // Add a micro-delay so the browser has time to clear the internal state
+            setTimeout(() => {
+                const cleanText = text.split('/')[0].trim();
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.9; 
+                
+                utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
+                
+                window.speechSynthesis.speak(utterance);
+            }, 50);
+        } catch (error) {
+            console.error("Audio Engine Critical Failure:", error);
+        }
     };
+
+    // Warm up voices on mount to ensure they are loaded
+    React.useEffect(() => {
+        if (window.speechSynthesis) window.speechSynthesis.getVoices();
+    }, []);
 
     return (
         <div className="container py-4">
