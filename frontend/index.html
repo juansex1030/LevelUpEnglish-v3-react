@@ -32,6 +32,39 @@
         })();
     </script>
     <div id="root"></div>
+    <script>
+        // MASTERPIECE GLOBAL AUDIO ENGINE
+        (function() {
+            function play(text) {
+                if (!window.speechSynthesis) return;
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'en-US';
+                u.rate = 0.9;
+                const voices = window.speechSynthesis.getVoices();
+                const v = voices.find(v => v.lang.startsWith('en-US') && v.name.includes('Google')) || voices.find(v => v.lang.startsWith('en'));
+                if (v) u.voice = v;
+                window.speechSynthesis.speak(u);
+                if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+            }
+
+            // Capture clicks globally
+            window.addEventListener('mousedown', function(e) {
+                const btn = e.target.closest('[data-audio]');
+                if (btn) {
+                    const text = btn.getAttribute('data-audio');
+                    console.log('Global Audio Trigger:', text);
+                    play(text);
+                }
+            }, true);
+
+            // Preload voices
+            window.speechSynthesis.getVoices();
+            if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+            }
+        })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   </body>

@@ -123,66 +123,6 @@ const TopicViewer = () => {
         await markComplete(nivel.toUpperCase(), topic.number, topic.title, newStatus);
     };
 
-    // --- Masterpiece Audio Engine ---
-    useEffect(() => {
-        // Pre-load voices for Chrome/Safari
-        const loadVoices = () => {
-            window.speechSynthesis.getVoices();
-        };
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-        loadVoices();
-
-        const playTextToSpeech = (text) => {
-            console.log('--- Audio Engine Start ---');
-            console.log('Target Text:', text);
-
-            if (!window.speechSynthesis) {
-                console.error('Speech Synthesis not supported in this browser.');
-                return;
-            }
-
-            // Reset engine
-            window.speechSynthesis.cancel();
-
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US';
-            utterance.rate = 0.9;
-            utterance.volume = 1.0;
-
-            // Find a high-quality English voice
-            const voices = window.speechSynthesis.getVoices();
-            const englishVoice = voices.find(v => v.lang.startsWith('en-US') && v.name.includes('Google')) || voices.find(v => v.lang.startsWith('en'));
-            if (englishVoice) {
-                utterance.voice = englishVoice;
-                console.log('Using Voice:', englishVoice.name);
-            }
-
-            utterance.onstart = () => console.log('Speech started...');
-            utterance.onerror = (e) => console.error('Speech error:', e);
-            utterance.onend = () => console.log('Speech finished.');
-
-            window.speechSynthesis.speak(utterance);
-
-            // Chrome hack: if it's not speaking, resume
-            if (window.speechSynthesis.speaking && window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
-            }
-        };
-
-        const handleGlobalClick = (e) => {
-            const btn = e.target.closest('[data-audio]');
-            if (btn) {
-                const text = btn.getAttribute('data-audio');
-                playTextToSpeech(text);
-            }
-        };
-
-        window.addEventListener('click', handleGlobalClick);
-        return () => {
-            window.removeEventListener('click', handleGlobalClick);
-        };
-    }, []);
-
     if (loading || !topic) return <div className="p-5 text-center">Loading topic...</div>;
 
     const totalCount = allTopics.length;
