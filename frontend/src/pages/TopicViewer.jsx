@@ -263,7 +263,7 @@ const TopicViewer = () => {
                                 style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '1rem' }}
                                 dangerouslySetInnerHTML={{ 
                                     __html: DOMPurify.sanitize(topic.theory, { 
-                                        ADD_ATTR: ['data-audio'],
+                                        ALLOWED_ATTR: ['data-audio', 'class', 'style', 'id', 'scope', 'colspan', 'rowspan'],
                                         ALLOWED_TAGS: ['div', 'p', 'h4', 'h5', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'ul', 'li', 'button', 'strong', 'em', 'span', 'i', 'br']
                                     }) 
                                 }} 
