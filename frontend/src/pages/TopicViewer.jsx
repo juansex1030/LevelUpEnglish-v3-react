@@ -124,56 +124,54 @@ const TopicViewer = () => {
         await markComplete(nivel.toUpperCase(), topic.number, topic.title, newStatus);
     };
 
-    // --- Masterpiece Local Listener & Audio Engine ---
+    // --- Masterpiece Bulletproof Listener & Audio Engine ---
     useEffect(() => {
         const handleTheoryClick = (e) => {
             const audioElem = e.target.closest('[data-audio]');
-            if (audioElem) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const text = audioElem.getAttribute('data-audio');
-                if (!text || typeof text !== 'string') return;
-                
-                try {
-                    if (!window.speechSynthesis) return;
+            if (!audioElem) return; // Exit immediately if it's not our button
 
-                    // Force resume and clear queue for immediate response
-                    window.speechSynthesis.resume();
-                    window.speechSynthesis.cancel(); 
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const text = audioElem.getAttribute('data-audio');
+            if (!text || typeof text !== 'string') return;
+            
+            try {
+                if (!window.speechSynthesis) return;
 
-                    // Give the browser a micro-moment to reset the engine state
-                    setTimeout(() => {
-                        const cleanText = text.split('/')[0].trim();
-                        const utterance = new SpeechSynthesisUtterance(cleanText);
-                        utterance.lang = 'en-US';
-                        utterance.rate = 0.9; 
-                        utterance.volume = 1.0;
-                        
-                        utterance.onstart = () => console.log('Theory Audio Started:', cleanText);
-                        utterance.onerror = (err) => console.error("Theory Audio Error:", err);
-                        
-                        window.speechSynthesis.speak(utterance);
-                    }, 50);
-                } catch (error) {
-                    console.error("Audio Engine Critical Failure:", error);
-                }
+                // Force resume and clear queue for immediate response
+                window.speechSynthesis.resume();
+                window.speechSynthesis.cancel(); 
+
+                // Give the browser a micro-moment to reset the engine state
+                setTimeout(() => {
+                    const cleanText = text.split('/')[0].trim();
+                    const utterance = new SpeechSynthesisUtterance(cleanText);
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.9; 
+                    utterance.volume = 1.0;
+                    
+                    utterance.onstart = () => console.log('Theory Audio Started:', cleanText);
+                    utterance.onerror = (err) => console.error("Theory Audio Error:", err);
+                    
+                    window.speechSynthesis.speak(utterance);
+                }, 50);
+            } catch (error) {
+                console.error("Audio Engine Critical Failure:", error);
             }
         };
 
-        const container = theoryRef.current;
-        if (container) {
-            container.addEventListener('click', handleTheoryClick);
-            console.log('--- Audio Listener Attached to Theory Container ---');
-        }
+        // Attach to the document body to guarantee it works regardless of React rendering timing
+        document.body.addEventListener('click', handleTheoryClick);
+        console.log('--- Audio Listener Attached to Document Body ---');
         
         // Warm up voices
         if (window.speechSynthesis) window.speechSynthesis.getVoices();
 
         return () => {
-            if (container) container.removeEventListener('click', handleTheoryClick);
+            document.body.removeEventListener('click', handleTheoryClick);
         };
-    }, [activeTab, topic]);
+    }, []); // Empty dependency array ensures this runs exactly once
 
     if (loading || !topic) return <div className="p-5 text-center">Loading topic...</div>;
 
