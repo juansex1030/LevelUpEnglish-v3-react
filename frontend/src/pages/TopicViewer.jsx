@@ -123,6 +123,37 @@ const TopicViewer = () => {
         await markComplete(nivel.toUpperCase(), topic.number, topic.title, newStatus);
     };
 
+    // --- Logic from Vocabulary.jsx (Proven to work) ---
+    const playAudio = (text) => {
+        if (!text || typeof text !== 'string') return;
+        if (window.speechSynthesis.speaking) window.speechSynthesis.cancel(); 
+
+        const cleanText = text.split('/')[0].trim();
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9; 
+        utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
+        window.speechSynthesis.speak(utterance);
+    };
+
+    useEffect(() => {
+        const handleTheoryClick = (e) => {
+            const audioElem = e.target.closest('[data-audio]');
+            if (audioElem) {
+                const text = audioElem.getAttribute('data-audio');
+                playAudio(text);
+            }
+        };
+
+        const container = theoryRef.current;
+        if (container && activeTab === 'theory') {
+            container.addEventListener('click', handleTheoryClick);
+        }
+        return () => {
+            if (container) container.removeEventListener('click', handleTheoryClick);
+        };
+    }, [activeTab, topic]);
+
     if (loading || !topic) return <div className="p-5 text-center">Loading topic...</div>;
 
     const totalCount = allTopics.length;
