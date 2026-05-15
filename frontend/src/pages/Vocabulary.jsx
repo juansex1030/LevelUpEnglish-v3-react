@@ -34,8 +34,8 @@ const Vocabulary = () => {
 
     const currentCategory = vocabularyData[activeTab];
 
-    const filteredWords = currentCategory.words.filter(wordPair => 
-        wordPair.en.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const filteredWords = currentCategory.words.filter(wordPair =>
+        wordPair.en.toLowerCase().includes(searchTerm.toLowerCase()) ||
         wordPair.es.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (wordPair.past && wordPair.past.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (wordPair.part && wordPair.part.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -43,34 +43,24 @@ const Vocabulary = () => {
 
     const playAudio = (text) => {
         if (!text || typeof text !== 'string') return;
-        
-        try {
-            if (!window.speechSynthesis) return;
 
-            // Force the API to wake up and clear any stuck queues
-            window.speechSynthesis.resume();
-            window.speechSynthesis.cancel(); 
+        // Prevenir spam de clicks: ignoramos la petición si actualmente ya está pronuciando algo
+        if (window.speechSynthesis.speaking) return;
 
-            // Add a micro-delay so the browser has time to clear the internal state
-            setTimeout(() => {
-                const cleanText = text.split('/')[0].trim();
-                const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.lang = 'en-US';
-                utterance.rate = 0.9; 
-                
-                utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
-                
-                window.speechSynthesis.speak(utterance);
-            }, 50);
-        } catch (error) {
-            console.error("Audio Engine Critical Failure:", error);
-        }
+        const cleanText = text.split('/')[0].trim();
+
+        // Evita que la API se quede "atascada" si hubo errores previos
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9; // Un poco más lento para mejor claridad
+
+        // Manejador de errores por si falla
+        utterance.onerror = (e) => console.error("Speech Synthesis Error:", e);
+
+        window.speechSynthesis.speak(utterance);
     };
-
-    // Warm up voices on mount to ensure they are loaded
-    React.useEffect(() => {
-        if (window.speechSynthesis) window.speechSynthesis.getVoices();
-    }, []);
 
     return (
         <div className="container py-4">
@@ -176,7 +166,7 @@ const Vocabulary = () => {
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
-            
+
             <div className="level-header" style={{ '--glow-color': currentCategory.color }}>
                 <span className="level-badge" style={{ backgroundColor: currentCategory.color, color: '#fff' }}>
                     <i className={`bi ${currentCategory.icon} me-2`}></i> Vocabulario
@@ -187,18 +177,18 @@ const Vocabulary = () => {
 
             <div className="mt-5">
                 {renderTabs()}
-                
+
                 <div className="text-center mb-5 mt-3" style={{ animation: 'fadeIn 0.5s ease' }}>
                     <h3 className="fw-bold" style={{ color: currentCategory.color }}>{currentCategory.title}</h3>
                     <p className="text-muted mb-4">{currentCategory.description}</p>
-                    
+
                     <div className="input-group mx-auto" style={{ maxWidth: '500px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', borderRadius: '2rem', overflow: 'hidden' }}>
                         <span className="input-group-text border-end-0" style={{ backgroundColor: 'var(--color-fondo-secundario)', color: currentCategory.color, borderColor: 'var(--color-borde)' }}>
                             <i className="bi bi-search"></i>
                         </span>
-                        <input 
-                            type="text" 
-                            className="form-control border-start-0 border-end-0 py-2" 
+                        <input
+                            type="text"
+                            className="form-control border-start-0 border-end-0 py-2"
                             placeholder={`Buscar en ${currentCategory.title.toLowerCase()}...`}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -217,56 +207,57 @@ const Vocabulary = () => {
                         filteredWords.map((wordPair, idx) => {
                             const isVerb = wordPair.past && wordPair.part;
                             return (
-                            <div key={idx} className="vocab-card">
-                                {isVerb ? (
-                                    <>
-                                        <div className="verb-grid">
-                                            <div className="verb-column">
-                                                <span className="verb-label">Infinitivo</span>
-                                                <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
-                                                    <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }} 
-                                                       onClick={() => playAudio(wordPair.en)} 
-                                                       title="Escuchar infinitivo"></i>
-                                                    {wordPair.en}
-                                                </span>
-                                                <span className="vocab-es-small">{wordPair.es}</span>
+                                <div key={idx} className="vocab-card">
+                                    {isVerb ? (
+                                        <>
+                                            <div className="verb-grid">
+                                                <div className="verb-column">
+                                                    <span className="verb-label">Infinitivo</span>
+                                                    <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
+                                                        <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }}
+                                                            onClick={() => playAudio(wordPair.en)}
+                                                            title="Escuchar infinitivo"></i>
+                                                        {wordPair.en}
+                                                    </span>
+                                                    <span className="vocab-es-small">{wordPair.es}</span>
+                                                </div>
+                                                <div className="verb-column" style={{ borderLeft: '1px solid var(--color-borde)', borderRight: '1px solid var(--color-borde)' }}>
+                                                    <span className="verb-label">Pasado</span>
+                                                    <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
+                                                        <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }}
+                                                            onClick={() => playAudio(wordPair.past)}
+                                                            title="Escuchar pasado"></i>
+                                                        {wordPair.past}
+                                                    </span>
+                                                    <span className="vocab-es-small">{wordPair.esPast || '-'}</span>
+                                                </div>
+                                                <div className="verb-column">
+                                                    <span className="verb-label">Participio</span>
+                                                    <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
+                                                        <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }}
+                                                            onClick={() => playAudio(wordPair.part)}
+                                                            title="Escuchar participio"></i>
+                                                        {wordPair.part}
+                                                    </span>
+                                                    <span className="vocab-es-small">{wordPair.esPart || '-'}</span>
+                                                </div>
                                             </div>
-                                            <div className="verb-column" style={{ borderLeft: '1px solid var(--color-borde)', borderRight: '1px solid var(--color-borde)' }}>
-                                                <span className="verb-label">Pasado</span>
-                                                <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
-                                                    <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }} 
-                                                       onClick={() => playAudio(wordPair.past)} 
-                                                       title="Escuchar pasado"></i>
-                                                    {wordPair.past}
-                                                </span>
-                                                <span className="vocab-es-small">{wordPair.esPast || '-'}</span>
-                                            </div>
-                                            <div className="verb-column">
-                                                <span className="verb-label">Participio</span>
-                                                <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
-                                                    <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }} 
-                                                       onClick={() => playAudio(wordPair.part)} 
-                                                       title="Escuchar participio"></i>
-                                                    {wordPair.part}
-                                                </span>
-                                                <span className="vocab-es-small">{wordPair.esPart || '-'}</span>
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="vocab-en">
-                                            <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }} 
-                                               onClick={() => playAudio(wordPair.en)}
-                                               title="Escuchar pronunciación"></i>
-                                            {wordPair.en}
-                                        </span>
-                                        <div className="vocab-divider"></div>
-                                        <span className="vocab-es">{wordPair.es}</span>
-                                    </>
-                                )}
-                            </div>
-                        )})
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="vocab-en">
+                                                <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }}
+                                                    onClick={() => playAudio(wordPair.en)}
+                                                    title="Escuchar pronunciación"></i>
+                                                {wordPair.en}
+                                            </span>
+                                            <div className="vocab-divider"></div>
+                                            <span className="vocab-es">{wordPair.es}</span>
+                                        </>
+                                    )}
+                                </div>
+                            )
+                        })
                     ) : (
                         <div className="text-center py-5" style={{ gridColumn: '1 / -1' }}>
                             <i className="bi bi-search text-muted opacity-50 mb-3 d-block" style={{ fontSize: '3rem' }}></i>

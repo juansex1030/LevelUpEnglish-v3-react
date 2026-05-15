@@ -6,9 +6,9 @@ import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import PracticeEngine from '../components/PracticeEngine';
 import AdBanner from '../components/AdBanner';
+import AlphabetInteractive from '../components/AlphabetInteractive';
 import API_URL from '../api/config';
 import './LevelGrid.css'; // Let's reuse LevelGrid CSS for sidebar and colors for now
-
 
 const TopicViewer = () => {
     const { nivel, topicId } = useParams();
@@ -226,7 +226,10 @@ const TopicViewer = () => {
                     </ul>
 
                     <div className="tab-content custom-tab-content" ref={containerRef} style={{ background: 'var(--color-fondo-secundario)', padding: '2rem', borderRadius: '1rem', border: '1px solid var(--color-borde)' }}>
-                        {activeTab === 'theory' && (
+                        {activeTab === 'theory' && topic.number === 3 && (
+                            <AlphabetInteractive />
+                        )}
+                        {activeTab === 'theory' && topic.number !== 3 && (
                             <div 
                                 className="theory-wrapper premium-content" 
                                 ref={theoryRef}
