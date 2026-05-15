@@ -226,10 +226,9 @@ const TopicViewer = () => {
                     </ul>
 
                     <div className="tab-content custom-tab-content" ref={containerRef} style={{ background: 'var(--color-fondo-secundario)', padding: '2rem', borderRadius: '1rem', border: '1px solid var(--color-borde)' }}>
-                        {activeTab === 'theory' && topic.number === 3 && (
+                        {activeTab === 'theory' && parseInt(topicId) === 3 ? (
                             <AlphabetInteractive />
-                        )}
-                        {activeTab === 'theory' && topic.number !== 3 && (
+                        ) : activeTab === 'theory' ? (
                             <div 
                                 className="theory-wrapper premium-content" 
                                 ref={theoryRef}
