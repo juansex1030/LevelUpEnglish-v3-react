@@ -227,13 +227,13 @@ const TopicViewer = () => {
                     </ul>
 
                     <div className="tab-content custom-tab-content" ref={containerRef} style={{ background: 'var(--color-fondo-secundario)', padding: '2rem', borderRadius: '1rem', border: '1px solid var(--color-borde)' }}>
-                        {activeTab === 'theory' && parseInt(topicId) === 3 && (
+                        {activeTab === 'theory' && nivel?.toLowerCase() === 'a1' && parseInt(topicId) === 3 && (
                             <AlphabetInteractive />
                         )}
-                        {activeTab === 'theory' && parseInt(topicId) === 4 && (
+                        {activeTab === 'theory' && nivel?.toLowerCase() === 'a1' && parseInt(topicId) === 4 && (
                             <NumbersInteractive />
                         )}
-                        {activeTab === 'theory' && parseInt(topicId) !== 3 && parseInt(topicId) !== 4 && (
+                        {activeTab === 'theory' && (nivel?.toLowerCase() !== 'a1' || (parseInt(topicId) !== 3 && parseInt(topicId) !== 4)) && (
                             <div 
                                 className="theory-wrapper premium-content" 
                                 ref={theoryRef}
