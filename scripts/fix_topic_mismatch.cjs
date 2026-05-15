@@ -19,44 +19,36 @@ const masterpieceUpdates = {
                         <tr>
                             <th>Pronoun</th>
                             <th>Meaning</th>
-                            <th>IPA</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td><strong>I</strong></td>
                             <td>Yo (Always capitalized)</td>
-                            <td>/aɪ/</td>
                         </tr>
                         <tr>
                             <td><strong>You</strong></td>
                             <td>Tú / Usted / Ustedes (Singular & Plural)</td>
-                            <td>/juː/</td>
                         </tr>
                         <tr>
                             <td><strong>He</strong></td>
                             <td>Él (Male persons)</td>
-                            <td>/hiː/</td>
                         </tr>
                         <tr>
                             <td><strong>She</strong></td>
                             <td>Ella (Female persons)</td>
-                            <td>/ʃiː/</td>
                         </tr>
                         <tr>
                             <td><strong>It</strong></td>
                             <td>Ello (Things, animals, concepts, weather)</td>
-                            <td>/ɪt/</td>
                         </tr>
                         <tr>
                             <td><strong>We</strong></td>
                             <td>Nosotros</td>
-                            <td>/wiː/</td>
                         </tr>
                         <tr>
                             <td><strong>They</strong></td>
                             <td>Ellos / Ellas (Plural for people AND things)</td>
-                            <td>/ðeɪ/</td>
                         </tr>
                     </tbody>
                 </table>
@@ -228,8 +220,8 @@ const masterpieceUpdates = {
                 <h5>🚀 Pronunciation Trick</h5>
                 <p>It's crucial to pronounce "This" and "These" differently to avoid confusion:</p>
                 <ul class="premium-list">
-                    <li><strong>This:</strong> Short sound, like a quick 'i'. /ðɪs/</li>
-                    <li><strong>These:</strong> Long sound, like a smiling 'ii'. /ðiːz/</li>
+                    <li><strong>This:</strong> Short sound, like a quick 'i'.</li>
+                    <li><strong>These:</strong> Long sound, like a smiling 'ii'.</li>
                 </ul>
             </div>
         </div>
@@ -265,7 +257,7 @@ const masterpieceUpdates = {
 
             <div class="visual-card card-advanced">
                 <h5>🚀 Professional Nuance: Their vs There vs They're</h5>
-                <p>These three words sound exactly the same (/ðeər/) but have entirely different meanings:</p>
+                <p>These three words sound exactly the same but have entirely different meanings:</p>
                 <ul class="premium-list">
                     <li><strong>Their:</strong> Possessive (Their house).</li>
                     <li><strong>There:</strong> Location (Over there).</li>
@@ -335,4 +327,4 @@ topics.forEach(topic => {
 });
 
 fs.writeFileSync(topicsPath, JSON.stringify(topics, null, 2));
-console.log('Fixed Topic mismatches for Topics 5-10.');
+console.log('Fixed Topic mismatches for Topics 5-10, without IPA.');

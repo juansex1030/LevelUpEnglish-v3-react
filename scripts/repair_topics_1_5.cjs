@@ -19,24 +19,20 @@ const masterpieceUpdates = {
                     <thead>
                         <tr>
                             <th>Greeting</th>
-                            <th>IPA</th>
                             <th>Usage Context</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td><strong>Good morning</strong></td>
-                            <td>/ɡʊd ˈmɔːrnɪŋ/</td>
                             <td>From sunrise until 12:00 PM.</td>
                         </tr>
                         <tr>
                             <td><strong>Good afternoon</strong></td>
-                            <td>/ɡʊd ˌæftərˈnuːn/</td>
                             <td>From 12:00 PM until 6:00 PM.</td>
                         </tr>
                         <tr>
                             <td><strong>How do you do?</strong></td>
-                            <td>/haʊ duː juː duː/</td>
                             <td>Very formal. Only used the <strong>first time</strong> you meet someone.</td>
                         </tr>
                     </tbody>
