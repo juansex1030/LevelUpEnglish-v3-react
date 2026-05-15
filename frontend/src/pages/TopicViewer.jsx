@@ -7,6 +7,7 @@ import { useProgress } from '../context/ProgressContext';
 import PracticeEngine from '../components/PracticeEngine';
 import AdBanner from '../components/AdBanner';
 import AlphabetInteractive from '../components/AlphabetInteractive';
+import NumbersInteractive from '../components/NumbersInteractive';
 import API_URL from '../api/config';
 import './LevelGrid.css'; // Let's reuse LevelGrid CSS for sidebar and colors for now
 
@@ -229,7 +230,10 @@ const TopicViewer = () => {
                         {activeTab === 'theory' && parseInt(topicId) === 3 && (
                             <AlphabetInteractive />
                         )}
-                        {activeTab === 'theory' && parseInt(topicId) !== 3 && (
+                        {activeTab === 'theory' && parseInt(topicId) === 4 && (
+                            <NumbersInteractive />
+                        )}
+                        {activeTab === 'theory' && parseInt(topicId) !== 3 && parseInt(topicId) !== 4 && (
                             <div 
                                 className="theory-wrapper premium-content" 
                                 ref={theoryRef}
