@@ -143,7 +143,7 @@ const PracticeZone = () => {
                 </div>
                 
                 {premiumData && (premiumData.games || premiumData.pairs) ? (
-                    <PracticeEngine data={premiumData} onScoreUpdate={() => console.log('Premium Game Finished!')} />
+                    <PracticeEngine data={premiumData} onScoreUpdate={() => {}} />
                 ) : (
                     <div className="alert alert-info text-center shadow-sm">
                         <strong>¡Juegos en construcción!</strong>

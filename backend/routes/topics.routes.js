@@ -53,7 +53,11 @@ router.get('/:level/:number', async (req, res, next) => {
     const level = req.params.level.toUpperCase();
     const number = parseInt(req.params.number);
     try {
-        const result = await query('SELECT * FROM topics WHERE level = $1 AND number = $2', [level, number]);
+        // Exclude premium_practice from public route
+        const result = await query(
+            'SELECT id, number, level, title, description, icon, theory, practice FROM topics WHERE level = $1 AND number = $2',
+            [level, number]
+        );
         const topic = result.rows[0];
         if (!topic) return res.status(404).json({ error: 'Topic not found' });
         res.json({ topic });

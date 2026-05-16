@@ -8,6 +8,16 @@ const { query } = require('../db');
 const { authenticateToken, generateToken } = require('../middleware/auth');
 
 const googleClient = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
+const { rateLimit } = require('express-rate-limit');
+
+// Strict rate limiting for authentication to prevent brute-force
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 login/register attempts per window
+    message: { msg: 'Demasiados intentos de acceso. Intente de nuevo en 15 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 
 const isUniqueViolation = (error) => error && error.code === '23505';
@@ -38,7 +48,7 @@ const setAuthCookie = (req, res, user, token) => {
 
 // --- AUTH API ---
 
-router.post('/register', async (req, res, next) => {
+router.post('/register', authLimiter, async (req, res, next) => {
     const { username, email, password } = req.body;
     if (!username || !email || !password) return res.status(400).json({ msg: 'Todos los campos son obligatorios' });
     if (password.length < 6) return res.status(400).json({ msg: 'La contraseña debe tener al menos 6 caracteres' });
@@ -76,9 +86,9 @@ router.post('/register', async (req, res, next) => {
     }
 });
 
-router.post('/login', async (req, res, next) => {
+router.post('/login', authLimiter, async (req, res, next) => {
     const { email, password } = req.body;
-    console.log(`[Auth] Login attempt for: ${email}`);
+    console.log(`[Auth] Login attempt`);
     try {
         const result = await query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];

@@ -283,7 +283,6 @@ function FillIn({ game, onCorrect }) {
 
 /* ── 3. Unscramble ──────────────────────────────────────────────────── */
 function Unscramble({ game, onCorrect }) {
-    console.log("[PracticeEngine] Rendering Unscramble", game);
     const [idx, setIdx] = useState(0);
     const [val, setVal] = useState('');
     const [fb, setFb] = useState(null);

@@ -2,12 +2,12 @@ const jwt = require('jsonwebtoken');
 
 const SECRET_KEY = process.env.SECRET_KEY;
 if (!SECRET_KEY) {
-    if (process.env.NODE_ENV === 'production') {
-        throw new Error('FATAL: SECRET_KEY is missing in production environment');
+    console.error('❌ FATAL: SECRET_KEY is missing in environment variables.');
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL === '1') {
+        throw new Error('Insecure startup prevented: SECRET_KEY required.');
     }
-    console.warn('[Auth] WARNING: SECRET_KEY is missing. Using development fallback.');
 }
-const ACTUAL_SECRET = SECRET_KEY || 'levelup-dev-secret-key';
+const ACTUAL_SECRET = SECRET_KEY || 'levelup-dev-fallback-only-for-local';
 
 const authenticateToken = (req, res, next) => {
     // Priority-based token selection for maximum stability

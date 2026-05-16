@@ -81,10 +81,10 @@ const TopicViewer = () => {
                 if (!res.data.script) return;
                 const scriptEl = document.createElement('script');
                 const scriptContent = res.data.script.replace(/const\s/g, 'var ').replace(/let\s/g, 'var ');
-                scriptEl.innerHTML = `try { ${scriptContent} } catch(e) { console.log('Practice JS note:', e.message); }`;
+                scriptEl.innerHTML = `try { ${scriptContent} } catch(e) { }`;
                 document.body.appendChild(scriptEl);
                 setTimeout(() => scriptEl.remove(), 500);
-            }).catch(err => console.error('Error fetching practice JS:', err));
+            }).catch(err => {});
 
     }, [topic, activeTab, nivel]);
 

@@ -155,18 +155,20 @@ const ensureInitialized = async () => {
 
 // Centralized Error Handler
 app.use((err, req, res, next) => {
-    const errorLog = {
-        method: req.method,
-        url: req.url,
-        message: err.message,
-        stack: err.stack,
-        timestamp: new Date().toISOString()
-    };
-    console.error(`[Error] ${req.method} ${req.url}:`, JSON.stringify(errorLog, null, 2));
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    
+    if (!isProd) {
+        console.error(`[Error] ${req.method} ${req.url}:`, err);
+    }
     
     const status = err.status || 500;
-    const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message;
-    res.status(status).json({ msg: message, error: process.env.NODE_ENV === 'development' ? err.message : undefined });
+    const message = isProd ? 'Internal server error' : err.message;
+    
+    res.status(status).json({ 
+        msg: message, 
+        error: isProd ? undefined : err.message,
+        stack: isProd ? undefined : err.stack
+    });
 });
 
 // 404 Handler
@@ -175,22 +177,13 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, async () => {
-    console.log(`🚀 Server up and running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🚀 Level Up English API up and running on port ${PORT}`);
     
-    // Initialize DB and Admin on startup
     try {
         await ensureInitialized();
-        console.log('[Startup] Database and Admin initialized.');
     } catch (err) {
-        console.error('[Startup] Critical initialization error:', err.message);
+        console.error('[Startup] Initialization error:', err.message);
     }
-    // Keep the process alive even if idle (failsafe for some environments)
-    setInterval(() => {
-        if (process.env.NODE_ENV === 'development') {
-            // Optional: console.debug('[KeepAlive] Event loop heartbeat');
-        }
-    }, 600000); // 10 minutes heartbeat
 });
 
 // Lifecycle Debugging
