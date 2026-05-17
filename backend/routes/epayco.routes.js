@@ -27,26 +27,30 @@ router.post('/checkout-session', authenticateToken, async (req, res, next) => {
         const token = loginRes.data.token;
 
         // 2. Create Session
-        const sessionRes = await axios.post('https://apify.epayco.co/payment/v1/session/create', {
-            doc_type: 'CC',
-            doc_number: '123456789', // Placeholder as required by some endpoints
-            name: req.user.username || 'User',
-            last_name: 'LevelUp',
-            email: req.user.email,
-            invoice: `INV-${Date.now()}`,
-            description: 'LevelUp English Practice Zone Premium (30 días)',
-            currency: 'COP',
-            amount: '9990',
-            tax_base: '0',
-            tax: '0',
-            country: 'CO',
-            external_reference: String(req.user.id),
-            url_response: `${req.headers.origin}/practice-zone?success=true`,
-            url_confirmation: `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/v1/epayco/webhook`,
-            method_confirmation: 'POST'
-        }, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+            const defaultBackendUrl = process.env.NODE_ENV === 'production' 
+                ? 'https://level-up-english-v3-react-backend.vercel.app' 
+                : 'http://localhost:3000';
+            
+            const sessionRes = await axios.post('https://apify.epayco.co/payment/v1/session/create', {
+                doc_type: 'CC',
+                doc_number: '123456789', // Placeholder as required by some endpoints
+                name: req.user.username || 'User',
+                last_name: 'LevelUp',
+                email: req.user.email,
+                invoice: `INV-${Date.now()}`,
+                description: 'LevelUp English Practice Zone Premium (30 días)',
+                currency: 'COP',
+                amount: '9990',
+                tax_base: '0',
+                tax: '0',
+                country: 'CO',
+                external_reference: String(req.user.id),
+                url_response: `${req.headers.origin}/practice-zone?success=true`,
+                url_confirmation: `${process.env.BACKEND_URL || defaultBackendUrl}/api/v1/epayco/webhook`,
+                method_confirmation: 'POST'
+            }, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
 
         if (sessionRes.data.status) {
             res.json({ session_id: sessionRes.data.data.session_id });
