@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       manifest: {
-        name: 'LevelUp English',
-        short_name: 'LevelUp',
+        name: 'Lvupenglish',
+        short_name: 'Lvupenglish',
         description: 'Advanced English Coaching and Interactive Practice',
         theme_color: '#0d6efd',
         background_color: '#121212',
