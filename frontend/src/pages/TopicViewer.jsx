@@ -23,6 +23,7 @@ const TopicViewer = () => {
     const [loading, setLoading] = useState(true);
     const [theoryProgress, setTheoryProgress] = useState(0);
     const [practiceProgress, setPracticeProgress] = useState(0);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const containerRef = useRef(null);
     const theoryRef = useRef(null);
 
@@ -150,9 +151,12 @@ const TopicViewer = () => {
     return (
         <div className="topic-page-container">
             {/* LEFT SIDEBAR (Level Topics) */}
-            <aside className="topics-sidebar">
-                <div className="sidebar-header">
-                    <h3>{nivel.toUpperCase()} Topics</h3>
+            <aside className={`topics-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+                <div className="sidebar-header" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={{ cursor: 'pointer' }}>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h3 className="mb-0">{nivel.toUpperCase()} Topics</h3>
+                        <i className="bi bi-chevron-down d-md-none"></i>
+                    </div>
                     {user && (
                         <>
                             <div className="sidebar-progress-bar">
@@ -171,6 +175,7 @@ const TopicViewer = () => {
                                 key={t.number} 
                                 to={`/niveles/${nivel}/topic/${t.number}`} 
                                 className={`topic-item ${t.number === parseInt(topicId) ? 'active' : ''}`}
+                                onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 <span className="topic-num">{t.number}</span>
                                 <span className="topic-name">{t.title}</span>

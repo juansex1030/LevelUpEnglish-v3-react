@@ -92,7 +92,89 @@ const sendPasswordResetEmail = async (userEmail, otp) => {
     return transporter.sendMail(mailOptions);
 };
 
+/**
+ * Sends a premium expiration email to users.
+ */
+const sendExpirationEmail = async (userEmail, username) => {
+    const frontendUrl = process.env.FRONTEND_URL?.split(',')[0] || 'http://localhost:5173';
+    
+    // Payment method variables from env or standard placeholders
+    const nequiPhone = process.env.PAYMENT_NEQUI_PHONE || '3113877547';
+    const llave = process.env.PAYMENT_LLAVE || '@3113877547';
+    const paypalEmail = process.env.PAYMENT_PAYPAL_EMAIL || '@juanse1030';
+
+    const mailOptions = {
+        from: `"Level Up English" <${process.env.EMAIL_USER}>`,
+        to: userEmail,
+        subject: 'Your Free Trial Has Expired / Tu Prueba Gratis Ha Expirado ⚡',
+        html: `
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #e11d48, #be123c); padding: 40px 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 800;">Your Free Trial Has Expired</h1>
+                    <p style="color: #ffe4e6; margin: 10px 0 0 0; font-size: 16px;">Keep your premium learning streak alive!</p>
+                </div>
+
+                <!-- Body -->
+                <div style="padding: 40px 30px; background-color: white; color: #1e293b;">
+                    <h2 style="color: #0f172a; margin-top: 0;">Hi ${username}, your trial has ended 👋</h2>
+                    <p style="font-size: 16px; line-height: 1.6; color: #475569;">
+                        Your 7-day free trial of LevelUp Premium has come to an end. 
+                        We hope you loved practicing with our grammar mini-games in the <strong>Practice Zone</strong>!
+                    </p>
+
+                    <h3 style="color: #0f172a; margin-top: 30px;">How to keep practicing? / ¿Cómo seguir practicando?</h3>
+                    <p style="font-size: 16px; line-height: 1.6; color: #475569;">
+                        To keep access to all exclusive interactive games, we have created highly affordable manual subscription packages:
+                    </p>
+
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                        <ul style="margin: 0; padding-left: 20px; font-size: 16px; line-height: 1.8; color: #1e293b;">
+                            <li>🇨🇴 <strong>Colombia:</strong> Only <strong>$10.000 COP</strong> per month!</li>
+                            <li>🌎 <strong>International:</strong> Only <strong>$5 USD</strong> per month!</li>
+                        </ul>
+                    </div>
+
+                    <h3 style="color: #0f172a;">Manual Payment Methods / Métodos de Pago Manuales:</h3>
+                    <p style="font-size: 15px; line-height: 1.6; color: #475569;">
+                        We support simple, cost-effective transfers. You can send your payment directly to:
+                    </p>
+
+                    <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                        <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.8; color: #166534;">
+                            <li>📲 <strong>Nequi (Colombia):</strong> Celular: <strong>${nequiPhone}</strong></li>
+                            <li>🏦 <strong>Llave B-BRE (Colombia):</strong> Transfiya: <strong>${llave}</strong></li>
+                            <li>💳 <strong>PayPal (International):</strong> Cuenta/Correo: <strong>${paypalEmail}</strong></li>
+                        </ul>
+                    </div>
+
+                    <p style="font-size: 15px; line-height: 1.6; color: #475569;">
+                        After sending your payment, go to the <strong>Practice Zone</strong> in the app and click on <strong>"Report Payment"</strong>, or reply directly to this email with your transfer receipt! Our team will activate your Premium status manually in a few minutes.
+                    </p>
+
+                    <!-- CTA -->
+                    <div style="text-align: center; margin-top: 45px;">
+                        <a href="${frontendUrl}/practice-zone" 
+                           style="background-color: #e11d48; color: white; padding: 16px 32px; text-decoration: none; border-radius: 50px; font-weight: 700; font-size: 16px; display: inline-block;">
+                            Go to Practice Zone / Ir a la Practice Zone
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div style="padding: 30px; background-color: #f1f5f9; text-align: center; font-size: 13px; color: #64748b;">
+                    <p style="margin: 0;">LevelUpEnglish — Make English your superpower.</p>
+                    <p style="margin: 5px 0 0 0;">&copy; ${new Date().getFullYear()} LevelUpEnglish. All rights reserved.</p>
+                </div>
+            </div>
+        `
+    };
+
+    return transporter.sendMail(mailOptions);
+};
+
 module.exports = {
     sendWelcomeEmail,
-    sendPasswordResetEmail
+    sendPasswordResetEmail,
+    sendExpirationEmail
 };

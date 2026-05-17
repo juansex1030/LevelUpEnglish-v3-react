@@ -102,7 +102,8 @@ const initDatabase = async () => {
         { table: 'users', column: 'otp_attempts', type: 'INTEGER DEFAULT 0' },
         { table: 'users', column: 'last_login_at', type: 'TIMESTAMP' },
         { table: 'topics', column: 'practice_zone_enabled', type: 'BOOLEAN DEFAULT TRUE' },
-        { table: 'topics', column: 'premium_practice', type: 'JSONB DEFAULT NULL' }
+        { table: 'topics', column: 'premium_practice', type: 'JSONB DEFAULT NULL' },
+        { table: 'users', column: 'trial_started_at', type: 'TIMESTAMP DEFAULT NULL' }
     ];
 
     const allowedTables = ['users', 'topics'];

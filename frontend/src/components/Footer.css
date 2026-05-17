@@ -66,3 +66,17 @@
 [data-bs-theme='dark'] .footer-modern {
     background: #0a0a0a;
 }
+
+@media (max-width: 576px) {
+    .footer-links-inline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1rem;
+    }
+    .footer-links-inline li {
+        margin-bottom: 0 !important;
+    }
+    .footer-title {
+        margin-bottom: 0.75rem !important;
+    }
+}

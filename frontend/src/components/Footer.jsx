@@ -25,7 +25,7 @@ const Footer = () => {
                     
                     <div className="col-sm-6 col-md-3 col-lg-2">
                         <h6 className="footer-title">Platform</h6>
-                        <ul className="footer-links list-unstyled">
+                        <ul className="footer-links footer-links-inline list-unstyled">
                             <li><Link to="/niveles/a1">A1 Level</Link></li>
                             <li><Link to="/niveles/a2">A2 Level</Link></li>
                             <li><Link to="/niveles/b1">B1 Level</Link></li>
@@ -34,10 +34,10 @@ const Footer = () => {
                             <li><Link to="/practice-zone">Practice Zone</Link></li>
                         </ul>
                     </div>
-
+                    
                     <div className="col-sm-6 col-md-3 col-lg-2">
                         <h6 className="footer-title">Resources</h6>
-                        <ul className="footer-links list-unstyled">
+                        <ul className="footer-links footer-links-inline list-unstyled">
                             <li><Link to="/diccionario">Dictionary</Link></li>
                             <li><Link to="/vocabulario">Vocabulary</Link></li>
                             <li><Link to="/progress">My Progress</Link></li>

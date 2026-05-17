@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../db');
 const { authenticateToken } = require('../middleware/auth');
+const { checkPremiumStatus } = require('../utils/premiumCheck');
 
 router.get('/', async (req, res, next) => {
     try {
@@ -32,9 +33,8 @@ router.get('/:level', async (req, res, next) => {
 router.get('/:level/:number/premium', authenticateToken, async (req, res, next) => {
     const { level, number } = req.params;
     try {
-        // --- NEW SECURITY POLICY: Live DB check for premium status ---
-        // We do NOT trust the token alone for sensitive premium data
-        const userStatus = (await query('SELECT is_premium, is_admin FROM users WHERE id = $1', [req.user.id])).rows[0];
+        // --- NEW SECURITY POLICY: Live DB check with lazy premium expiration check ---
+        const userStatus = await checkPremiumStatus(req.user.id);
         
         if (!userStatus || (!userStatus.is_premium && !userStatus.is_admin)) {
             return res.status(403).json({ error: 'Premium subscription required' });

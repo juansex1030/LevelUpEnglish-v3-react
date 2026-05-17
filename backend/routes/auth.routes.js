@@ -6,6 +6,7 @@ const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/mailer');
 const { OAuth2Client } = require('google-auth-library');
 const { query } = require('../db');
 const { authenticateToken, generateToken } = require('../middleware/auth');
+const { checkPremiumStatus } = require('../utils/premiumCheck');
 
 const googleClient = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 const { rateLimit } = require('express-rate-limit');
@@ -245,8 +246,42 @@ router.post('/google', async (req, res, next) => {
 router.get('/me', authenticateToken, async (req, res, next) => {
     try {
         await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [req.user.id]);
-        const userResult = await query('SELECT id, username, email, is_admin, is_premium, premium_until, avatar, created_at, last_login_at FROM users WHERE id = $1', [req.user.id]);
-        res.json({ user: userResult.rows[0] || null });
+        const user = await checkPremiumStatus(req.user.id);
+        res.json({ user: user || null });
+    } catch (error) {
+        next(error);
+    }
+});
+
+router.post('/start-trial', authenticateToken, async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const user = (await query('SELECT id, is_premium, premium_until, trial_started_at FROM users WHERE id = $1', [userId])).rows[0];
+        
+        if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
+        if (user.trial_started_at) {
+            return res.status(400).json({ msg: 'Ya has utilizado tu prueba gratuita de 7 días.' });
+        }
+
+        await query(
+            `UPDATE users 
+             SET is_premium = true, 
+                 premium_until = CURRENT_TIMESTAMP + INTERVAL '7 days', 
+                 trial_started_at = CURRENT_TIMESTAMP 
+             WHERE id = $1`,
+            [userId]
+        );
+
+        // Fetch updated complete user object
+        const updatedUser = await checkPremiumStatus(userId);
+        const token = generateToken(updatedUser);
+        setAuthCookie(req, res, updatedUser, token);
+
+        res.json({
+            msg: '¡Tu prueba gratuita de 7 días ha sido activada con éxito!',
+            user: updatedUser,
+            token
+        });
     } catch (error) {
         next(error);
     }
