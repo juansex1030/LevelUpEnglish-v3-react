@@ -54,13 +54,18 @@ const corsOptions = {
         // 3. Allow origins specified in FRONTEND_URL env var
         
         const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+        const isVercel = /\.vercel\.app$/.test(origin);
         
-        const allowedOrigins = [];
+        const allowedOrigins = [
+            'https://www.levelupenglishco.com',
+            'https://levelupenglishco.com'
+        ];
+        
         if (process.env.FRONTEND_URL) {
             process.env.FRONTEND_URL.split(',').forEach(url => allowedOrigins.push(url.trim()));
         }
 
-        if (!origin || isLocal || allowedOrigins.includes(origin)) {
+        if (!origin || isLocal || isVercel || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
             console.warn(`[CORS] Request blocked from origin: ${origin}. If this is legitimate, add it to FRONTEND_URL in .env`);
@@ -176,15 +181,22 @@ app.use((req, res) => {
     res.status(404).json({ msg: 'Ruta no encontrada' });
 });
 
-app.listen(PORT, async () => {
-    console.log(`🚀 Level Up English API up and running on port ${PORT}`);
-    
-    try {
-        await ensureInitialized();
-    } catch (err) {
-        console.error('[Startup] Initialization error:', err.message);
-    }
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    app.listen(PORT, async () => {
+        console.log(`🚀 Level Up English API up and running on port ${PORT}`);
+        
+        try {
+            await ensureInitialized();
+        } catch (err) {
+            console.error('[Startup] Initialization error:', err.message);
+        }
+    });
+} else {
+    // For Vercel Serverless
+    ensureInitialized().catch(err => console.error('[Startup] Initialization error:', err.message));
+}
+
+module.exports = app;
 
 // Lifecycle Debugging
 process.on('exit', (code) => {
