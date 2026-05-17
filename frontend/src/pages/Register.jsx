@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
+import { useAuth } from '../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 const Register = () => {
+    const { login } = useAuth();
     const navigate = useNavigate();
     
     const [formData, setFormData] = useState({
@@ -42,6 +45,31 @@ const Register = () => {
         }
     };
 
+    const handleGoogleSuccess = async (credentialResponse) => {
+        setLoading(true);
+        setError('');
+        try {
+            const res = await apiClient.post('/auth/google', {
+                token: credentialResponse.credential
+            });
+            if (res.data.token) {
+                localStorage.setItem('token', res.data.token);
+            }
+            login(res.data.user);
+            sessionStorage.setItem('show_welcome', 'true');
+            navigate('/learn');
+        } catch (err) {
+            console.error("Google register failed:", err);
+            setError(err.response?.data?.msg || 'Error al registrarse con Google.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleError = () => {
+        setError('Error al conectar con Google. Revisa tu conexión.');
+    };
+
     return (
         <div className="container mt-5 mb-5">
             <div className="row justify-content-center">
@@ -76,6 +104,17 @@ const Register = () => {
                                 </div>
                             </form>
                             <hr className="my-4" />
+                            <div className="d-flex justify-content-center mb-3">
+                                <GoogleLogin
+                                    onSuccess={handleGoogleSuccess}
+                                    onError={handleGoogleError}
+                                    useOneTap
+                                    theme="outline"
+                                    size="large"
+                                    text="signup_with"
+                                    shape="pill"
+                                />
+                            </div>
                             <div className="text-center">
                                 <small className="text-muted">¿Ya tienes cuenta? <Link to="/login">Inicia sesión aquí</Link></small>
                             </div>
