@@ -55,6 +55,8 @@ const corsOptions = {
         
         const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
         const isVercel = /\.vercel\.app$/.test(origin);
+        const isCloudflarePages = /\.pages\.dev$/.test(origin);
+        const isLevelUpSubdomain = /^https?:\/\/([a-z0-9-]+\.)?levelupenglishco\.com$/.test(origin);
         
         const allowedOrigins = [
             'https://www.levelupenglishco.com',
@@ -65,7 +67,7 @@ const corsOptions = {
             process.env.FRONTEND_URL.split(',').forEach(url => allowedOrigins.push(url.trim()));
         }
 
-        if (!origin || isLocal || isVercel || allowedOrigins.includes(origin)) {
+        if (!origin || isLocal || isVercel || isCloudflarePages || isLevelUpSubdomain || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
             console.warn(`[CORS] Request blocked from origin: ${origin}. If this is legitimate, add it to FRONTEND_URL in .env`);
