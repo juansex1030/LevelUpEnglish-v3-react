@@ -124,8 +124,15 @@ router.post('/login', authLimiter, async (req, res, next) => {
 });
 
 router.post('/logout', (req, res) => {
-    res.clearCookie('token');
-    res.clearCookie('admin_token');
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    const clearOptions = {
+        httpOnly: true,
+        sameSite: isProd ? 'None' : 'Lax',
+        secure: isProd,
+        path: '/'
+    };
+    res.clearCookie('token', clearOptions);
+    res.clearCookie('admin_token', clearOptions);
     res.json({ msg: 'Logged out successfully' });
 });
 
