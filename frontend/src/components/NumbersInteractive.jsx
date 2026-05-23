@@ -29,9 +29,10 @@ const tensData = [
     { num: 90, word: 'Ninety' }, { num: 100, word: 'One hundred' },
 ];
 
-const NumbersInteractive = () => {
+const NumbersInteractive = ({ onInteraction }) => {
 
     const playAudio = (text) => {
+        if (onInteraction) onInteraction();
         if (!text || typeof text !== 'string') return;
         try {
             if (!window.speechSynthesis) return;

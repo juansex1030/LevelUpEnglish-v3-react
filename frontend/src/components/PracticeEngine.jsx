@@ -39,7 +39,7 @@ const playSFX = (type) => {
                     setTimeout(() => playTone(f, 'sine', 0.3, 0.1), i * 80);
                 });
                 break;
-            case 'success_magic': // Magical glissando
+            case 'success_magic': { // Magical glissando
                 const oscM = ctx.createOscillator();
                 const gainM = ctx.createGain();
                 oscM.connect(gainM); gainM.connect(ctx.destination);
@@ -49,6 +49,7 @@ const playSFX = (type) => {
                 gainM.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
                 oscM.start(now); oscM.stop(now + 0.5);
                 break;
+            }
             case 'error': // Classic error
                 playTone(150, 'sawtooth', 0.4, 0.2);
                 break;
@@ -66,7 +67,7 @@ const playSFX = (type) => {
             default:
                 playTone(440, 'sine', 0.2);
         }
-    } catch (e) { console.warn("Audio Context blocked"); }
+    } catch { console.warn("Audio Context blocked"); }
 };
 
 /** Trigger Confetti Celebration */
@@ -97,12 +98,58 @@ const stableShuffle = (arr) => {
     return a;
 };
 
-function PracticeEngine({ data, onScoreUpdate }) {
-    const [completedQuestions, setCompletedQuestions] = React.useState(new Set());
+function PracticeEngine({ data, onScoreUpdate, isCompleted, storageKey }) {
+    const [completedQuestions, setCompletedQuestions] = React.useState(() => {
+        if (isCompleted && data && data.games) {
+            return new Set(data.games.map((_, i) => `${i}`));
+        }
+        if (storageKey) {
+            try {
+                const stored = localStorage.getItem(storageKey);
+                if (stored) {
+                    return new Set(JSON.parse(stored));
+                }
+            } catch (e) {
+                console.error("Error reading localStorage key", e);
+            }
+        }
+        return new Set();
+    });
 
     useEffect(() => {
-        setCompletedQuestions(new Set());
-    }, [data]);
+        let active = true;
+        const timer = setTimeout(() => {
+            if (!active) return;
+            if (isCompleted && data && data.games) {
+                const allIdxs = new Set(data.games.map((_, i) => `${i}`));
+                setCompletedQuestions(allIdxs);
+            } else if (!isCompleted) {
+                if (storageKey) {
+                    try {
+                        const stored = localStorage.getItem(storageKey);
+                        if (stored) {
+                            setCompletedQuestions(new Set(JSON.parse(stored)));
+                            return;
+                        }
+                    } catch {
+                        // ignore localStorage read error
+                    }
+                }
+                setCompletedQuestions(new Set());
+            }
+        }, 0);
+        return () => {
+            active = false;
+            clearTimeout(timer);
+        };
+    }, [data, isCompleted, storageKey]);
+
+    useEffect(() => {
+        if (onScoreUpdate && data && data.games) {
+            const scorePercent = Math.round((completedQuestions.size / data.games.length) * 100);
+            onScoreUpdate(scorePercent);
+        }
+    }, [completedQuestions, data, onScoreUpdate]);
 
     if (!data || !data.games) return null;
 
@@ -116,14 +163,17 @@ function PracticeEngine({ data, onScoreUpdate }) {
         setCompletedQuestions(newSet);
         playSFX('success');
 
+        if (storageKey) {
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(Array.from(newSet)));
+            } catch {
+                // ignore localStorage write error
+            }
+        }
+
         if (newSet.size === totalQuestions) {
             playSFX('win');
             triggerConfetti();
-        }
-
-        if (onScoreUpdate) {
-            const scorePercent = Math.round((newSet.size / totalQuestions) * 100);
-            onScoreUpdate(scorePercent);
         }
     };
 
@@ -150,25 +200,50 @@ function PracticeEngine({ data, onScoreUpdate }) {
                         )}
                     </div>
 
-                    <div className="game-board position-relative" style={{ minHeight: '300px', transition: 'all 0.5s' }}>
-                        {game.type === 'multiple_choice'  && <MultipleChoice game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'fill_in'          && <FillIn game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'unscramble'       && <Unscramble game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'matching'         && <Matching game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'spell_tool'       && <SpellTool game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'hangman_game'     && <HangmanGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'sentence_builder' && <SentenceBuilderGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'trivia_game'      && <TriviaGame game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'reading_comprehension' && <ReadingComprehension game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'cloze_test'       && <ClozeTest game={game} onCorrect={() => handleCorrect(i)} />}
-                        {game.type === 'word_search'      && <WordSearchGame game={game} onCorrect={() => handleCorrect(i)} />}
-
+                    <div className="game-board position-relative" style={{ minHeight: completedQuestions.has(`${i}`) ? '150px' : '300px', transition: 'all 0.5s' }}>
+                        {completedQuestions.has(`${i}`) ? (
+                            <div className="d-flex flex-column align-items-center justify-content-center p-5 text-center animate__animated animate__fadeIn">
+                                <div className="display-4 text-success mb-3">🎉</div>
+                                <h4 className="fw-bold text-success">¡Ejercicio Completado!</h4>
+                                <p className="text-white-50">Has respondido correctamente a todas las preguntas de esta actividad.</p>
+                                <button className="btn btn-outline-light btn-sm mt-2 rounded-pill px-3" onClick={() => {
+                                    const newSet = new Set(completedQuestions);
+                                    newSet.delete(`${i}`);
+                                    setCompletedQuestions(newSet);
+                                    if (storageKey) {
+                                        try {
+                                            localStorage.setItem(storageKey, JSON.stringify(Array.from(newSet)));
+                                        } catch {
+                                            // ignore localStorage write error
+                                        }
+                                    }
+                                }}>
+                                    <i className="bi bi-arrow-counterclockwise me-1"></i> Intentar de nuevo
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                 {game.type === 'multiple_choice'  && <MultipleChoice game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'fill_in'          && <FillIn game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'unscramble'       && <Unscramble game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'matching'         && <Matching game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'spell_tool'       && <SpellTool game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'hangman_game'     && <HangmanGame game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'crossword'        && <CrosswordGame game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'fill_blanks'      && <FillBlanksGame game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'sentence_builder' && <SentenceBuilderGame game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'trivia_game'      && <TriviaGame game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'reading_comprehension' && <ReadingComprehension game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'cloze_test'       && <ClozeTest game={game} onCorrect={() => handleCorrect(i)} />}
+                                {game.type === 'word_search'      && <WordSearchGame game={game} onCorrect={() => handleCorrect(i)} />}
+                            </>
+                        )}
                     </div>
                 </div>
             ))}
         </div>
     );
-};
+}
 
 /* ── shared feedback banner ─────────────────────────────────────────── */
 function Feedback({ fb }) {
@@ -182,12 +257,11 @@ function Feedback({ fb }) {
     );
 };
 
-/* ── 1. Multiple Choice ─────────────────────────────────────────────── */
 function MultipleChoice({ game, onCorrect }) {
     const [idx, setIdx] = useState(0);
     const [fb, setFb] = useState(null);
+    const [attempts, setAttempts] = useState(0);
     const q = game.questions ? game.questions[idx] : null;
-    if (!q) return <div className="p-4 text-center text-white-50">Cargando pregunta...</div>;
 
     const finalOptions = React.useMemo(() => {
         if (!q) return [];
@@ -203,10 +277,8 @@ function MultipleChoice({ game, onCorrect }) {
         return stableShuffle(finalOptions);
     }, [finalOptions]);
 
-    const [attempts, setAttempts] = useState(0);
-
     const choose = (opt) => {
-        if (fb?.type === 'success') return;
+        if (!q || fb?.type === 'success') return;
         if (opt === q.a) {
             playSFX('success_pop');
             setFb({ type: 'success', text: '✅ Correct!' });
@@ -226,6 +298,8 @@ function MultipleChoice({ game, onCorrect }) {
             });
         }
     };
+
+    if (!q) return <div className="p-4 text-center text-white-50">Cargando pregunta...</div>;
 
     return (
         <div className="multiple-choice animate__animated animate__fadeIn">
@@ -690,10 +764,13 @@ function SentenceBuilderGame({ game, onCorrect }) {
         if (currentSentence.distractors) {
             currentSentence.distractors.forEach((d, i) => words.push({ id: `d-${i}`, text: d }));
         }
-        setAvailableWords(stableShuffle(words));
-        setSelectedWords([]);
-        setStatus('playing');
-    }, [sentenceIdx, game]);
+        const timer = setTimeout(() => {
+            setAvailableWords(stableShuffle(words));
+            setSelectedWords([]);
+            setStatus('playing');
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [sentenceIdx, game, currentSentence]);
 
     const selectWord = (word) => {
         if (status === 'correct') return;
@@ -786,17 +863,17 @@ function TriviaGame({ game, onCorrect }) {
     
     // Resilience Logic
     const qText = question ? (question.question || question.q) : '';
-    const rawOptions = question ? (question.options || question.o || []) : [];
     const answerText = question ? (question.answer || question.a) : '';
 
     const finalOptions = React.useMemo(() => {
         if (!question) return [];
+        const rawOptions = question.options || question.o || [];
         // If it's the new dense format {q, a, o}, sometimes 'a' is not in 'o'
         if (question.o && !question.options && answerText && !question.o.includes(answerText)) {
             return [answerText, ...question.o];
         }
         return rawOptions;
-    }, [question, rawOptions, answerText]);
+    }, [question, answerText]);
 
     const finalCorrectIdx = React.useMemo(() => {
         if (!question) return 0;
@@ -981,16 +1058,16 @@ function ReadingComprehension({ game, onCorrect }) {
     
     // Resilience: Support both structures
     const qText = question ? (question.question || question.q) : '';
-    const rawOptions = question ? (question.options || question.o || []) : [];
     const answerText = question ? question.a : '';
     
     const finalOptions = React.useMemo(() => {
         if (!question) return [];
+        const rawOptions = question.options || question.o || [];
         if (question.o && !question.options && !question.o.includes(answerText)) {
             return [answerText, ...question.o];
         }
         return rawOptions;
-    }, [question, rawOptions, answerText]);
+    }, [question, answerText]);
 
     const finalCorrectIdx = React.useMemo(() => {
         if (!question) return 0;
@@ -1057,10 +1134,10 @@ function ReadingComprehension({ game, onCorrect }) {
                             <span className="badge bg-secondary p-2">Question {qIdx + 1} of {game.questions.length}</span>
                         </div>
                         
-                        <h4 className="mb-4 text-white fw-bold">{question.question}</h4>
+                        <h4 className="mb-4 text-white fw-bold">{qText}</h4>
 
                         <div className="d-flex flex-column gap-3">
-                            {question.options.map((opt, idx) => {
+                            {finalOptions.map((opt, idx) => {
                                 let bg = '#2c3144'; let border = '2px solid transparent';
                                 if (selectedOption !== null) {
                                     if (idx === finalCorrectIdx) { bg = 'rgba(40,167,69,0.2)'; border = '2px solid #28a745'; }
@@ -1279,13 +1356,12 @@ function ClozeTest({ game, onCorrect }) {
 /* ── 15. Word Search Game (Practice Zone) ───────────────────────────────── */
 function WordSearchGame({ game, onCorrect }) {
     const [foundWords, setFoundWords] = useState([]);
-    if (!game) return null;
     const [foundCells, setFoundCells] = useState([]);
     const [selectedCells, setSelectedCells] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
     const [currentGrid, setCurrentGrid] = useState([]);
 
-    const wordsToFind = React.useMemo(() => game.words || [], [game.words]);
+    const wordsToFind = React.useMemo(() => game?.words || [], [game?.words]);
 
     // Internal Grid Generator
     const generateGrid = React.useCallback(() => {
@@ -1375,10 +1451,10 @@ function WordSearchGame({ game, onCorrect }) {
         }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = React.useCallback(() => {
         if (!isDragging) return;
         setIsDragging(false);
-        const selectedWord = selectedCells.map(cell => currentGrid[cell.r][cell.c]).join('');
+        const selectedWord = selectedCells.map(cell => currentGrid[cell.r]?.[cell.c]).join('');
         const reversedWord = selectedWord.split('').reverse().join('');
 
         let match = null;
@@ -1398,14 +1474,14 @@ function WordSearchGame({ game, onCorrect }) {
             playSFX('error_buzz');
         }
         setSelectedCells([]);
-    };
+    }, [isDragging, selectedCells, currentGrid, wordsToFind, foundWords, onCorrect]);
 
     useEffect(() => {
         window.addEventListener('mouseup', handleMouseUp);
         return () => window.removeEventListener('mouseup', handleMouseUp);
-    }, [selectedCells, foundWords, isDragging, currentGrid]);
+    }, [handleMouseUp]);
 
-    if (currentGrid.length === 0) return null;
+    if (!game || currentGrid.length === 0) return null;
 
     return (
         <div className="word-search-container text-center p-3 animate__animated animate__fadeIn" style={{ userSelect: 'none' }}>

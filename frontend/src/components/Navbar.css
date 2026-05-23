@@ -464,6 +464,14 @@ body.light-mode .modern-navbar.scrolled {
     }
 }
 
+/* Hide mobile-specific layout elements on desktop */
+.mobile-menu-drawer {
+    display: none;
+}
+.mobile-menu-backdrop {
+    display: none;
+}
+
 @media (max-width: 1000px) {
     .navbar-container {
         justify-content: space-between;
@@ -515,6 +523,7 @@ body.light-mode .modern-navbar.scrolled {
 
     /* Premium Mobile Menu Backdrop */
     .mobile-menu-backdrop {
+        display: block;
         position: fixed;
         top: 0;
         left: 0;

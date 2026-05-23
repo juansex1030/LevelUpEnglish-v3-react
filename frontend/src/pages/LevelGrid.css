@@ -1154,3 +1154,165 @@ body.light-mode .premium-progress-track {
 [data-bs-theme="dark"] .card-advanced h5 {
     color: #c4b5fd !important; /* violet-300 */
 }
+
+/* ===================================
+   GLASSMORPHIC PROGRESS WIDGET
+   =================================== */
+.glass-progress-widget {
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    min-width: 320px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.3s ease;
+}
+
+[data-bs-theme="dark"] .glass-progress-widget {
+    background: rgba(30, 41, 59, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+.glass-progress-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.progress-label {
+    display: flex;
+    align-items: center;
+    color: var(--color-texto-secundario);
+}
+
+.theory-icon {
+    color: var(--acento-primario);
+}
+
+.practice-icon {
+    color: #10b981; /* green */
+}
+
+.progress-value {
+    color: var(--color-texto-principal);
+}
+
+.progress-value.completed {
+    color: #10b981 !important; /* emerald/green accent */
+    font-weight: 700;
+}
+
+.glass-progress-track {
+    width: 100%;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 9999px;
+    overflow: hidden;
+    position: relative;
+}
+
+[data-bs-theme="dark"] .glass-progress-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.glass-progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.glass-progress-fill.theory-fill {
+    background: linear-gradient(90deg, #0ea5e9, var(--acento-primario));
+    box-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
+}
+
+.glass-progress-fill.practice-fill {
+    background: linear-gradient(90deg, #10b981, #34d399);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.completion-toast {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #047857;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.5rem;
+}
+
+[data-bs-theme="dark"] .completion-toast {
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+@keyframes iconBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+.completion-toast span {
+    display: inline-block;
+    animation: iconBounce 1.5s infinite ease-in-out;
+}
+
+/* Mini-progress badges in Topic Cards */
+.topic-mini-progress {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.mini-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid transparent;
+}
+
+.mini-badge.theory {
+    background: rgba(14, 165, 233, 0.1);
+    color: #0284c7;
+    border-color: rgba(14, 165, 233, 0.2);
+}
+
+[data-bs-theme="dark"] .mini-badge.theory {
+    background: rgba(14, 165, 233, 0.15);
+    color: #38bdf8;
+    border-color: rgba(14, 165, 233, 0.3);
+}
+
+.mini-badge.practice {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+[data-bs-theme="dark"] .mini-badge.practice {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+

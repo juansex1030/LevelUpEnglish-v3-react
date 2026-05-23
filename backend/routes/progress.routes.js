@@ -68,7 +68,7 @@ router.get('/', async (req, res, next) => {
 });
 
 router.post('/mark-complete', async (req, res, next) => {
-    const { level, topic_number } = req.body;
+    const { level, topic_number, completed } = req.body;
     if (!level || !topic_number) return res.status(400).json({ msg: 'Nivel y número de tema son requeridos' });
 
     try {
@@ -76,10 +76,17 @@ router.post('/mark-complete', async (req, res, next) => {
         const topic = topicResult.rows[0];
         if (!topic) return res.status(404).json({ msg: 'Topic not found' });
 
-        await query(
-            'INSERT INTO progress (user_id, topic_id) VALUES ($1, $2) ON CONFLICT (user_id, topic_id) DO NOTHING',
-            [req.user.id, topic.id]
-        );
+        if (completed === false) {
+            await query(
+                'DELETE FROM progress WHERE user_id = $1 AND topic_id = $2',
+                [req.user.id, topic.id]
+            );
+        } else {
+            await query(
+                'INSERT INTO progress (user_id, topic_id) VALUES ($1, $2) ON CONFLICT (user_id, topic_id) DO NOTHING',
+                [req.user.id, topic.id]
+            );
+        }
         res.json({ success: true });
     } catch (err) {
         next(err);

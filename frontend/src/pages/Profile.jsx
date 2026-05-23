@@ -105,7 +105,6 @@ const Profile = () => {
     }
 
     const initials = user.username ? user.username.substring(0, 2).toUpperCase() : 'US';
-    const displayAvatar = formData.avatar === 'default' ? initials : formData.avatar;
 
     return (
         <div className="container py-5">

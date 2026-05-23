@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import PracticeEngine from '../components/PracticeEngine';
 import './PracticeZone.css';
 
@@ -10,15 +10,12 @@ const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1'];
 const PracticeZone = () => {
     const { user, verifyUser } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
     
     const [topics, setTopics] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedLevel, setSelectedLevel] = useState('A1');
     const [activeGameTopic, setActiveGameTopic] = useState(null);
-    const [checkoutLoading, setCheckoutLoading] = useState(false);
-    const [gameLoading, setGameLoading] = useState(false);
 
     // New Trial and Manual Payment states
     const [trialLoading, setTrialLoading] = useState(false);
@@ -56,38 +53,6 @@ const PracticeZone = () => {
         };
         fetchTopics();
     }, []);
-
-    const handleCheckout = async () => {
-        if (!user) {
-            navigate('/login', { state: { returnTo: '/practice-zone' } });
-            return;
-        }
-
-        setCheckoutLoading(true);
-        try {
-            const res = await apiClient.post('/epayco/checkout-session', {});
-            const sessionId = res.data.session_id;
-
-            if (window.ePayco) {
-                const handler = window.ePayco.checkout.configure({
-                    key: import.meta.env.VITE_EPAYCO_PUBLIC_KEY || 'TU_PUBLIC_KEY_AQUI',
-                    test: import.meta.env.DEV
-                });
-
-                handler.open({
-                    external: 'true',
-                    session_id: sessionId
-                });
-            } else {
-                throw new Error("ePayco SDK no cargado");
-            }
-        } catch (err) {
-            console.error("ePayco Checkout Error", err);
-            alert("No se pudo iniciar el pago. Intente nuevamente.");
-        } finally {
-            setCheckoutLoading(false);
-        }
-    };
 
     const handleStartTrial = async () => {
         if (!user) {
@@ -159,7 +124,6 @@ const PracticeZone = () => {
             const topic = topics.find(t => t.id.toString() === topicId);
             if (!topic) return;
 
-            setGameLoading(true);
             try {
                 const res = await apiClient.get(`/topics/${topic.level}/${topic.number}/premium`);
                 const completeTopic = { ...topic, premium_practice: res.data.premium_practice };
@@ -168,15 +132,13 @@ const PracticeZone = () => {
                 console.error("Error loading practice game:", err);
                 alert("Hubo un error al cargar el juego. Intente de nuevo.");
                 setSearchParams({}); // Clear on error
-            } finally {
-                setGameLoading(false);
             }
         };
 
         if (topics.length > 0) {
             fetchGame();
         }
-    }, [searchParams, topics]);
+    }, [searchParams, topics, setSearchParams]);
 
     const isSuccess = searchParams.get('success');
 
@@ -212,7 +174,19 @@ const PracticeZone = () => {
                 </div>
                 
                 {premiumData && (premiumData.games || premiumData.pairs) ? (
-                    <PracticeEngine data={premiumData} onScoreUpdate={() => {}} />
+                    <PracticeEngine 
+                        data={premiumData} 
+                        onScoreUpdate={(score) => {
+                            const userId = user ? user.id : 'guest';
+                            if (score >= 100) {
+                                localStorage.setItem(`levelup_premium_practice_${userId}_${activeGameTopic.level}_${activeGameTopic.id}_done`, 'true');
+                            } else {
+                                localStorage.removeItem(`levelup_premium_practice_${userId}_${activeGameTopic.level}_${activeGameTopic.id}_done`);
+                            }
+                        }}
+                        isCompleted={localStorage.getItem(`levelup_premium_practice_${user ? user.id : 'guest'}_${activeGameTopic.level}_${activeGameTopic.id}_done`) === 'true'}
+                        storageKey={`levelup_premium_practice_${user ? user.id : 'guest'}_${activeGameTopic.level}_${activeGameTopic.id}_completed`}
+                    />
                 ) : (
                     <div className="alert alert-info text-center shadow-sm">
                         <strong>¡Juegos en construcción!</strong>
@@ -509,8 +483,15 @@ const PracticeZone = () => {
                                         onClick={() => handlePlayArea(topic)}
                                     >
                                         <div className="card-body text-center p-4">
-                                            <div className="level-badge mb-3">
-                                                <span>Tema {topic.number}</span>
+                                            <div className="d-flex justify-content-center align-items-center gap-2 mb-3">
+                                                <div className="level-badge mb-0">
+                                                    <span>Tema {topic.number}</span>
+                                                </div>
+                                                {!isLocked && localStorage.getItem(`levelup_premium_practice_${user ? user.id : 'guest'}_${topic.level}_${topic.id}_done`) === 'true' && (
+                                                    <span className="badge bg-success rounded-pill px-2 py-1" style={{ fontSize: '0.7rem' }}>
+                                                        ✓ Completado
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="icon-wrapper mb-3">
                                                 {isLocked ? (

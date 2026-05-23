@@ -30,7 +30,10 @@ const WelcomeModal = () => {
         const flag = sessionStorage.getItem('show_welcome');
         if (flag !== 'true') return;
         sessionStorage.removeItem('show_welcome');
-        setIsOpen(true);
+        const timer = setTimeout(() => {
+            setIsOpen(true);
+        }, 0);
+        return () => clearTimeout(timer);
     }, [user]);
 
     // Close on Escape key

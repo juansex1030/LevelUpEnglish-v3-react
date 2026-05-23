@@ -24,9 +24,10 @@ const symbolsData = [
     { char: '_', name: 'Underscore' }
 ];
 
-const AlphabetInteractive = () => {
+const AlphabetInteractive = ({ onInteraction }) => {
 
     const playAudio = (text) => {
+        if (onInteraction) onInteraction();
         if (!text || typeof text !== 'string') return;
         
         try {

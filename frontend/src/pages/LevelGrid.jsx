@@ -117,27 +117,37 @@ const LevelGrid = () => {
             <AdBanner type="horizontal" />
 
             <div className="topics-grid">
-                {topicsWithStatus.map(topic => (
-                    <Link 
-                        key={topic.number} 
-                        to={`/niveles/${nivel}/topic/${topic.number}`}
-                        className={`topic-card ${topic.status === 'completed' ? 'completed' : ''}`}
-                    >
-                        <div className="topic-icon">
-                            <i className={`bi ${topic.icon}`}></i>
-                        </div>
-                        <div className="topic-info">
-                            <span className="topic-number">Topic {topic.number}</span>
-                            <h3 className="topic-title">{topic.title}</h3>
-                            <p>{topic.description}</p>
-                        </div>
-                        {topic.status === 'completed' && (
-                            <div className="completion-badge">
-                                <i className="bi bi-check-circle-fill"></i>
+                {topicsWithStatus.map(topic => {
+                    const userId = user ? user.id : 'guest';
+                    const isTheoryDone = localStorage.getItem(`levelup_theory_${userId}_${nivel}_${topic.number}_done`) === 'true' || topic.status === 'completed';
+                    const isPracticeDone = localStorage.getItem(`levelup_practice_${userId}_${nivel}_${topic.number}_done`) === 'true' || topic.status === 'completed';
+
+                    return (
+                        <Link 
+                            key={topic.number} 
+                            to={`/niveles/${nivel}/topic/${topic.number}`}
+                            className={`topic-card ${topic.status === 'completed' ? 'completed' : ''}`}
+                        >
+                            <div className="topic-icon">
+                                <i className={`bi ${topic.icon}`}></i>
                             </div>
-                        )}
-                    </Link>
-                ))}
+                            <div className="topic-info">
+                                <span className="topic-number">Topic {topic.number}</span>
+                                <h3 className="topic-title">{topic.title}</h3>
+                                <p>{topic.description}</p>
+                                <div className="topic-mini-progress">
+                                    {isTheoryDone && <span className="mini-badge theory"><i className="bi bi-book-half"></i> Teoría ✓</span>}
+                                    {isPracticeDone && <span className="mini-badge practice"><i className="bi bi-controller"></i> Práctica ✓</span>}
+                                </div>
+                            </div>
+                            {topic.status === 'completed' && (
+                                <div className="completion-badge">
+                                    <i className="bi bi-check-circle-fill"></i>
+                                </div>
+                            )}
+                        </Link>
+                    );
+                })}
             </div>
 
             {/* Ad: Square ad below the grid */}

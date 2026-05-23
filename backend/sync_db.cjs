@@ -24,12 +24,16 @@ async function sync() {
                     practice_zone_enabled = TRUE
                 WHERE id = $3
             `;
+            const premiumPractice = typeof topic.premium_practice === 'object' 
+                ? JSON.stringify(topic.premium_practice) 
+                : topic.premium_practice;
+
             await client.query(query, [
                 topic.theory, 
-                JSON.stringify(topic.premium_practice), 
+                premiumPractice, 
                 topic.id
             ]);
-            process.stdout.write(`Updated topic ${topic.id} (${topic.level} - ${topic.title})\r`);
+            process.stdout.write(`Updated topic ${topic.id} (${topic.level} - ${topic.title})\n`);
         }
 
         console.log('\n✅ Database sync COMPLETE for all 138 topics.');
