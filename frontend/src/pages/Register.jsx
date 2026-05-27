@@ -53,7 +53,7 @@ const Register = () => {
                 token: credentialResponse.credential
             });
             if (res.data.token && typeof res.data.token === 'string') {
-                if (/^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$/.test(res.data.token)) {
+                if (/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(res.data.token)) {
                     localStorage.setItem('token', res.data.token);
                 }
             }

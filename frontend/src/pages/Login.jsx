@@ -39,7 +39,7 @@ const Login = () => {
         try {
             const response = await apiClient.post('/auth/login', formData);
             if (response.data.token && typeof response.data.token === 'string') {
-                if (/^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$/.test(response.data.token)) {
+                if (/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(response.data.token)) {
                     localStorage.setItem('token', response.data.token);
                 }
             }
@@ -101,7 +101,7 @@ const Login = () => {
                 token: credentialResponse.credential
             });
             if (res.data.token && typeof res.data.token === 'string') {
-                if (/^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$/.test(res.data.token)) {
+                if (/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(res.data.token)) {
                     localStorage.setItem('token', res.data.token);
                 }
             }

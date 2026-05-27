@@ -34,7 +34,7 @@ const Login = () => {
 
             // Fallback for blocked cookies: save token to localStorage
             if (response.data.token && typeof response.data.token === 'string') {
-                if (/^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$/.test(response.data.token)) {
+                if (/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(response.data.token)) {
                     localStorage.setItem('admin_token', response.data.token);
                 }
             }
