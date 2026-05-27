@@ -381,7 +381,7 @@ const DashboardTab = ({ isDarkMode }) => {
 
             {/* Modals */}
             {membershipModal.open && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => { if (e.target === e.currentTarget) closeMembershipModal(); }}>
+                <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') { if (e.target === e.currentTarget) closeMembershipModal(); } }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => { if (e.target === e.currentTarget) closeMembershipModal(); }}>
                     <div className="bg-white p-4 rounded shadow" style={{ maxWidth: '400px', width: '100%' }}>
                         <h5>Manage Membership</h5>
                         <input type="number" className="form-control mb-3" value={membershipModal.daysInput} onChange={e => setMembershipModal(prev => ({ ...prev, daysInput: e.target.value }))} placeholder="Days to add..." />
