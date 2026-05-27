@@ -3,7 +3,7 @@ import apiClient from '../../api/apiClient';
 
 const timeAgo = (dateStr) => {
     if (!dateStr) return 'Never';
-    const ms = new Date() - new Date(dateStr);
+    const ms = Date.now() - new Date(dateStr);
     if (ms < 0) return 'Just now';
     const mins = Math.floor(ms / 60000);
     if (mins < 1) return 'Just now';
@@ -67,7 +67,7 @@ const ActivityTab = () => {
 
             {loadingLogs ? (
                 <div className="text-center py-5">
-                    <div className="spinner-border text-primary" role="status"></div>
+                    <output className="spinner-border text-primary"></output>
                 </div>
             ) : (
                 <div className="table-responsive p-0">
