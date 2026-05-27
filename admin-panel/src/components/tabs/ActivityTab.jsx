@@ -14,6 +14,12 @@ const timeAgo = (dateStr) => {
     return `${days}d ago`;
 };
 
+const getActionBadgeClass = (action) => {
+    if (!action) return 'bg-secondary';
+    if (action.includes('error')) return 'bg-danger';
+    if (action.includes('payment')) return 'bg-success';
+    return 'bg-secondary';
+};
 const ActivityTab = () => {
     const [logs, setLogs] = useState([]);
     const [loadingLogs, setLoadingLogs] = useState(false);
@@ -85,7 +91,7 @@ const ActivityTab = () => {
                                         <span className="fw-semibold">{log.username || `User #${log.user_id}`}</span>
                                     </td>
                                     <td>
-                                        <span className={`badge ${log.action.includes('error') ? 'bg-danger' : log.action.includes('payment') ? 'bg-success' : 'bg-secondary'}`}>
+                                        <span className={`badge ${getActionBadgeClass(log.action)}`}>
                                             {log.action}
                                         </span>
                                     </td>
