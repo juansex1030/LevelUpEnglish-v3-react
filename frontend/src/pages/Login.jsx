@@ -38,9 +38,10 @@ const Login = () => {
 
         try {
             const response = await apiClient.post('/auth/login', formData);
-            if (response.data.token) {
-                const safeToken = String(response.data.token).replace(/[^a-zA-Z0-9-_\.]/g, '');
-                localStorage.setItem('token', safeToken);
+            if (response.data.token && typeof response.data.token === 'string') {
+                if (/^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$/.test(response.data.token)) {
+                    localStorage.setItem('token', response.data.token);
+                }
             }
             login(response.data.user);
             sessionStorage.setItem('show_welcome', 'true');
@@ -99,9 +100,10 @@ const Login = () => {
             const res = await apiClient.post('/auth/google', {
                 token: credentialResponse.credential
             });
-            if (res.data.token) {
-                const safeToken = String(res.data.token).replace(/[^a-zA-Z0-9-_\.]/g, '');
-                localStorage.setItem('token', safeToken);
+            if (res.data.token && typeof res.data.token === 'string') {
+                if (/^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$/.test(res.data.token)) {
+                    localStorage.setItem('token', res.data.token);
+                }
             }
             login(res.data.user);
             sessionStorage.setItem('show_welcome', 'true');
