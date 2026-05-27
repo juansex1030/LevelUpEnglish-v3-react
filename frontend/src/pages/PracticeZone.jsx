@@ -125,7 +125,7 @@ const PracticeZone = () => {
             if (!topic) return;
 
             try {
-                const res = await apiClient.get(`/topics/${topic.level}/${topic.number}/premium`);
+                const res = await apiClient.get(`/topics/${encodeURIComponent(topic.level)}/${encodeURIComponent(topic.number)}/premium`);
                 const completeTopic = { ...topic, premium_practice: res.data.premium_practice };
                 setActiveGameTopic(completeTopic);
             } catch (err) {

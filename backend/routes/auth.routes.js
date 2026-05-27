@@ -95,13 +95,13 @@ router.post('/login', authLimiter, async (req, res, next) => {
         const user = result.rows[0];
 
         if (!user) {
-            console.warn(`[Auth] User not found: ${email}`);
+            console.warn('[Auth] Login attempt failed: User not found');
             return res.status(401).json({ msg: 'Invalid credentials' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            console.warn(`[Auth] Password mismatch for: ${email}`);
+            console.warn('[Auth] Login attempt failed: Password mismatch');
             return res.status(401).json({ msg: 'Invalid credentials' });
         }
 

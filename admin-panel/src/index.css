@@ -750,3 +750,16 @@ body:not([data-bs-theme="dark"]) .btn-outline-light.btn-danger {
     border-color: #dc3545 !important;
     color: #fff !important;
 }
+
+
+/* Local Fonts Utility Classes */
+.font-poppins { font-family: 'Poppins', sans-serif !important; }
+.font-roboto { font-family: 'Roboto', sans-serif !important; }
+.font-inter { font-family: 'Inter', sans-serif !important; }
+.font-open-sans { font-family: 'Open Sans', sans-serif !important; }
+.font-montserrat { font-family: 'Montserrat', sans-serif !important; }
+.font-lato { font-family: 'Lato', sans-serif !important; }
+.font-nunito { font-family: 'Nunito', sans-serif !important; }
+.font-oswald { font-family: 'Oswald', sans-serif !important; }
+.font-raleway { font-family: 'Raleway', sans-serif !important; }
+.font-ubuntu { font-family: 'Ubuntu', sans-serif !important; }

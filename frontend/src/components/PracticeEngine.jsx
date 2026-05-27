@@ -361,6 +361,20 @@ function Unscramble({ game, onCorrect }) {
     const [val, setVal] = useState('');
     const [fb, setFb] = useState(null);
     const q = game.questions ? game.questions[idx] : null;
+
+    const scrambledText = React.useMemo(() => {
+        if (!q) return '';
+        const words = q.q.split(' ');
+        let shuffled = stableShuffle(words);
+        let attempts = 0;
+        // Ensure it's actually scrambled if possible
+        while (words.length > 1 && shuffled.join(' ') === q.a && attempts < 5) {
+            shuffled = stableShuffle(words);
+            attempts++;
+        }
+        return shuffled.join(' ');
+    }, [q]);
+
     if (!q) return null;
 
     const check = () => {
@@ -380,7 +394,7 @@ function Unscramble({ game, onCorrect }) {
 
     return (
         <>
-            <div className="p-3 rounded mb-4 text-center" style={{ background: 'rgba(255,255,255,.05)' }}><span className="text-muted d-block small">Scrambled:</span><span className="fw-bold fs-5">{q.q}</span></div>
+            <div className="p-3 rounded mb-4 text-center" style={{ background: 'rgba(255,255,255,.05)' }}><span className="text-muted d-block small">Scrambled:</span><span className="fw-bold fs-5">{scrambledText}</span></div>
             <div className="d-flex gap-2 mb-2">
                 <input className="form-control" value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} />
                 <button className="btn btn-primary" onClick={check}>Check</button>
@@ -1365,14 +1379,15 @@ function WordSearchGame({ game, onCorrect }) {
 
     // Internal Grid Generator
     const generateGrid = React.useCallback(() => {
-        const size = 12;
+        const maxWordLen = wordsToFind.reduce((max, w) => Math.max(max, w.length), 0);
+        const size = Math.max(12, maxWordLen + 1);
         const newGrid = Array(size).fill().map(() => Array(size).fill(""));
         
         const placeWord = (word) => {
             const directions = [[0, 1], [1, 0], [1, 1], [0, -1], [-1, 0], [-1, -1], [1, -1], [-1, 1]];
             let placed = false;
             let attempts = 0;
-            while (!placed && attempts < 50) {
+            while (!placed && attempts < 500) {
                 const dir = directions[Math.floor(Math.random() * directions.length)];
                 const r = Math.floor(Math.random() * size);
                 const c = Math.floor(Math.random() * size);

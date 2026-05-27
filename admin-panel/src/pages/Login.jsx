@@ -34,7 +34,8 @@ const Login = () => {
 
             // Fallback for blocked cookies: save token to localStorage
             if (response.data.token) {
-                localStorage.setItem('admin_token', response.data.token);
+                const safeToken = String(response.data.token).replace(/[^a-zA-Z0-9-_\.]/g, '');
+                localStorage.setItem('admin_token', safeToken);
             }
 
             login(response.data.user);

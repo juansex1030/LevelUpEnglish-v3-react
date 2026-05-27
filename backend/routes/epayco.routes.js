@@ -58,7 +58,7 @@ router.post('/checkout-session', authenticateToken, async (req, res, next) => {
             throw new Error(sessionRes.data.message || 'Error creating ePayco session');
         }
     } catch (error) {
-        console.error('[ePayco] Session Error:', error.response?.data || error.message);
+        console.error('[ePayco] Session Error occurred during checkout session creation');
         next(error);
     }
 });
@@ -69,7 +69,7 @@ router.post('/checkout-session', authenticateToken, async (req, res, next) => {
 router.post('/webhook', async (req, res) => {
     try {
         const data = req.body;
-        console.log('[ePayco Webhook] Received:', data);
+        console.log('[ePayco Webhook] Received payment webhook event');
 
         // ePayco sends x_cod_response or x_transaction_state
         // x_cod_response: 1 = Aceptada, 2 = Rechazada, 3 = Pendiente, 4 = Fallida
@@ -89,13 +89,13 @@ router.post('/webhook', async (req, res) => {
                     WHERE id = $1
                 `, [finalUserId]);
                 
-                console.log(`[ePayco] Payment successful for User ${finalUserId}. Access extended 30 days.`);
+                console.log('[ePayco] Payment successful. Access extended 30 days.');
             }
         }
 
         res.status(200).send('OK');
     } catch (error) {
-        console.error('[ePayco Webhook] Processing Error:', error.message);
+        console.error('[ePayco Webhook] Processing Error occurred');
         res.status(500).send('Error');
     }
 });

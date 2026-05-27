@@ -28,7 +28,7 @@ app.use(cookieParser());
 
 // Logging (Moved to top)
 app.use((req, res, next) => {
-    console.log(`[Request] ${req.method} ${req.url}`);
+    console.log(`[Request] ${req.method} ${encodeURI(req.url)}`);
     next();
 });
 
@@ -165,7 +165,7 @@ app.use((err, req, res, next) => {
     const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
     
     if (!isProd) {
-        console.error(`[Error] ${req.method} ${req.url}:`, err);
+        console.error(`[Error] ${req.method} ${encodeURI(req.url)}:`, err);
     }
     
     const status = err.status || 500;

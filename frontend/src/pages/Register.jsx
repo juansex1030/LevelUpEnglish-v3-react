@@ -53,7 +53,8 @@ const Register = () => {
                 token: credentialResponse.credential
             });
             if (res.data.token) {
-                localStorage.setItem('token', res.data.token);
+                const safeToken = String(res.data.token).replace(/[^a-zA-Z0-9-_\.]/g, '');
+                localStorage.setItem('token', safeToken);
             }
             login(res.data.user);
             sessionStorage.setItem('show_welcome', 'true');
