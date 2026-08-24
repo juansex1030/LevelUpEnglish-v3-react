@@ -1,0 +1,451 @@
+/* =====================================================================
+   TopicViewer.css - Layout gamificado para la vista de temas
+   ===================================================================== */
+
+/* Layout Principal */
+.topic-page-container {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 80px);
+    /* 80px es altura aproximada del navbar */
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+@media (min-width: 992px) {
+    .topic-page-container {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+}
+
+/* Sidebar de Temas */
+.topics-sidebar {
+    background-color: var(--color-fondo-secundario);
+    border-right: 2px solid var(--color-borde);
+    width: 100%;
+    padding: 1.5rem;
+    position: relative;
+    z-index: 10;
+}
+
+@media (min-width: 992px) {
+    .topics-sidebar {
+        width: 320px;
+        min-height: calc(100vh - 80px);
+        position: sticky;
+        top: 80px;
+        flex-shrink: 0;
+        overflow-y: auto;
+        border-right: 2px solid var(--color-borde);
+        border-bottom: none;
+    }
+}
+
+.sidebar-header {
+    padding: 0.5rem;
+    margin: -0.5rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s ease;
+}
+
+@media (max-width: 991px) {
+    .sidebar-header:active {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+}
+
+.sidebar-header h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--color-texto-principal);
+}
+
+.sidebar-tap-hint {
+    font-size: 0.75rem;
+    color: var(--color-texto-secundario);
+    opacity: 0.8;
+}
+
+.sidebar-progress-bar {
+    height: 8px;
+    background-color: var(--color-fondo-primario);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.sidebar-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--acento-primario), var(--acento-secundario));
+    transition: width 0.4s ease;
+}
+
+.progress-text {
+    font-size: 0.85rem;
+    color: var(--color-texto-secundario);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+/* Lista de temas en Sidebar */
+.topics-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* En móvil, esconder la lista si no está abierta */
+@media (max-width: 991px) {
+    .topics-list {
+        display: none;
+    }
+
+    .topics-sidebar.mobile-open .topics-list {
+        display: flex;
+        margin-top: 1rem;
+    }
+}
+
+/* Botones de Tema (Topic Items) */
+.topic-item {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    background-color: var(--color-fondo-primario);
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--color-texto-secundario);
+    font-weight: 600;
+    border: 2px solid var(--color-borde);
+    transition: all 0.2s;
+}
+
+.topic-item:hover {
+    background-color: var(--color-fondo-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.topic-item.active {
+    background-color: rgba(37, 117, 252, 0.1);
+    border-color: var(--acento-primario);
+    color: var(--acento-primario);
+}
+
+.topic-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background-color: var(--color-borde);
+    color: var(--color-texto-principal);
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 800;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.topic-item.active .topic-num {
+    background-color: var(--acento-primario);
+    color: white;
+}
+
+.topic-name {
+    flex-grow: 1;
+    font-size: 0.95rem;
+}
+
+.topic-status-icon {
+    color: #4caf50;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+
+/* Área de Contenido Principal */
+.topic-content {
+    flex-grow: 1;
+    padding: 2rem;
+    min-width: 0;
+    /* previene desbordamiento */
+}
+
+@media (max-width: 768px) {
+    .topic-content {
+        padding: 1.5rem 1rem;
+    }
+}
+
+/* Cabecera del tema */
+.topic-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background-color: rgba(37, 117, 252, 0.1);
+    color: var(--acento-primario);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+
+/* Pestañas (Segmented Control) */
+.custom-tabs {
+    display: flex;
+    background-color: var(--color-fondo-secundario);
+    padding: 6px;
+    border-radius: 16px;
+    border: 2px solid var(--color-borde);
+    gap: 8px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.custom-tabs .nav-item {
+    flex: 1;
+}
+
+.custom-tabs .nav-link {
+    width: 100%;
+    text-align: center;
+    border-radius: 12px;
+    padding: 10px 15px;
+    font-weight: 700;
+    color: var(--color-texto-secundario);
+    background: transparent;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.custom-tabs .nav-link:hover {
+    color: var(--color-texto-principal);
+}
+
+.custom-tabs .nav-link.active {
+    background-color: var(--color-fondo-primario);
+    color: var(--acento-primario);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Área de contenido del Tab */
+.custom-tab-content {
+    background: var(--color-fondo-primario);
+    border: 2px solid var(--color-borde);
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.03);
+}
+
+@media (max-width: 768px) {
+    .custom-tab-content {
+        padding: 1.5rem;
+        border-radius: 20px;
+    }
+}
+
+/* =====================================================================
+   Diseño de Teoría Pulido (Azul / Gris Premium)
+   ===================================================================== */
+.theory-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding-top: 1rem;
+}
+
+/* Forzar sobrescritura de clases globales que puedan estar en el HTML de la BD */
+.theory-wrapper .accordion-body,
+.theory-wrapper .animation-zone {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Encabezados H3, H4, H5 (Títulos de Sección) */
+.theory-wrapper h3,
+.theory-wrapper h4,
+.theory-wrapper h5 {
+    color: #4a90e2 !important;
+    font-weight: 800;
+    font-size: 1.6rem;
+    margin-top: 2rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.8rem;
+    padding-left: 0 !important; /* Elimina padding heredado */
+    border-left: none !important; /* Elimina línea morada/verde de index.css */
+    border-bottom: 2px solid rgba(74, 144, 226, 0.2);
+    display: flex;
+    align-items: center;
+}
+
+/* Párrafos principales (Tarjetas limpias y sólidas) */
+.theory-wrapper p {
+    font-size: 1.15rem;
+    line-height: 1.8;
+    color: var(--color-texto-principal);
+    background: var(--color-fondo-primario);
+    padding: 1.8rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important; /* Sobrescribe cualquier borde heredado */
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    margin: 0;
+}
+
+/* Listas (Chat Bubbles Premium) */
+.theory-wrapper ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.theory-wrapper ul li {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    padding: 1.2rem 1.8rem;
+    border-radius: 20px;
+    max-width: 80%;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+/* Burbuja Izquierda (Emisor) con colita */
+.theory-wrapper ul li:nth-child(odd) {
+    align-self: flex-start;
+    background: var(--color-fondo-secundario);
+    color: var(--color-texto-principal);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom-left-radius: 4px;
+}
+.theory-wrapper ul li:nth-child(odd)::before {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: -12px;
+    border-width: 12px 16px 0 0;
+    border-style: solid;
+    border-color: var(--color-fondo-secundario) transparent transparent transparent;
+}
+
+/* Burbuja Derecha (Receptor) con colita */
+.theory-wrapper ul li:nth-child(even) {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #2575fc 0%, #1e3c72 100%);
+    color: white;
+    border: none;
+    border-bottom-right-radius: 4px;
+}
+.theory-wrapper ul li:nth-child(even)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: -12px;
+    border-width: 12px 0 0 16px;
+    border-style: solid;
+    border-color: #1e3c72 transparent transparent transparent;
+}
+
+/* Resaltar texto importante dentro de los chats */
+.theory-wrapper ul li strong {
+    font-weight: 800;
+    color: #4a90e2;
+}
+
+.theory-wrapper ul li:nth-child(even) strong {
+    color: #a0c4ff;
+}
+
+/* =====================================================================
+   Widget de Progreso Glassmorphism
+   ===================================================================== */
+.glass-progress-widget {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 1.5rem;
+    min-width: 280px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.glass-progress-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-texto-principal);
+}
+
+.progress-label {
+    display: flex;
+    align-items: center;
+}
+
+.theory-icon { color: #4facfe; }
+.practice-icon { color: #a18cd1; }
+
+.progress-value {
+    color: var(--color-texto-secundario);
+}
+.progress-value.completed {
+    color: #4caf50;
+    font-weight: 800;
+}
+
+.glass-progress-track {
+    width: 100%;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.glass-progress-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.theory-fill {
+    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.practice-fill {
+    background: linear-gradient(90deg, #a18cd1 0%, #fbc2eb 100%);
+}
+
+.progress-glow {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 20px;
+    background: white;
+    filter: blur(5px);
+    opacity: 0.5;
+    animation: sweep 2s infinite;
+}
+
+@keyframes sweep {
+    0% { transform: translateX(-100px); opacity: 0; }
+    50% { opacity: 0.5; }
+    100% { transform: translateX(20px); opacity: 0; }
+}

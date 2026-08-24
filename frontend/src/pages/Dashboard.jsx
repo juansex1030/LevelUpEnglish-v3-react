@@ -1,72 +1,72 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import './Dashboard.css';
 
 const LevelCard = ({ icon, cssClass, title, description, link }) => (
-    <Link to={link} className="level-card-link">
-        <div className={`level-card ${cssClass}`}>
-            <i className={`bi ${icon} card-icon`}></i>
-            <h3 className="card-title">{title}</h3>
-            <p className="card-description">{description}</p>
+    <Link to={link} className="learn-card-link animate__animated animate__zoomIn">
+        <div className={`learn-card ${cssClass}`}>
+            <div className="learn-icon-wrapper">
+                <i className={`bi ${icon}`}></i>
+            </div>
+            <h3>{title}</h3>
+            <p>{description}</p>
         </div>
     </Link>
 );
 
 const Dashboard = () => {
     return (
-        <div className="container mt-5 mb-5">
+        <div className="learn-container">
+            <h1 className="learn-title">Tu Ruta de Aprendizaje</h1>
+            <p className="learn-subtitle">Selecciona tu nivel para comenzar la aventura.</p>
 
-            <div className="text-center mb-5">
-                <h1 className="main-title">Choose Your Path to Fluency</h1>
-                <p className="lead text-muted">Select your current level to begin your learning adventure.</p>
-            </div>
-
-            <div className="level-grid">
+            <div className="learn-grid">
                 <LevelCard 
                     level="A1"
-                    title="A1 Level"
+                    title="A1 Beginner"
                     cssClass="card-a1"
-                    icon="bi-flag-fill"
-                    description="Start your journey with the fundamental basics of English."
+                    icon="bi-emoji-smile-fill"
+                    description="Lo básico: vocabulario de supervivencia y frases del día a día."
                     link="/niveles/a1"
                 />
                 <LevelCard 
                     level="A2"
-                    title="A2 Level"
+                    title="A2 Elementary"
                     cssClass="card-a2"
-                    icon="bi-lightbulb-fill"
-                    description="Build upon your knowledge and handle simple, everyday conversations."
+                    icon="bi-chat-dots-fill"
+                    description="Maneja conversaciones sencillas y situaciones cotidianas."
                     link="/niveles/a2"
                 />
                 <LevelCard 
                     level="B1"
-                    title="B1 Level"
+                    title="B1 Intermediate"
                     cssClass="card-b1"
-                    icon="bi-compass-fill"
-                    description="Travel, describe experiences, and become an independent user."
+                    icon="bi-airplane-fill"
+                    description="Viaja y comunícate de manera independiente."
                     link="/niveles/b1"
                 />
                 <LevelCard 
                     level="B2"
-                    title="B2 Level"
+                    title="B2 Upper Inter"
                     cssClass="card-b2"
-                    icon="bi-chat-dots-fill"
-                    description="Achieve fluency and spontaneity for regular, detailed interactions."
+                    icon="bi-lightbulb-fill"
+                    description="Fluidez y espontaneidad para debatir ideas y opiniones."
                     link="/niveles/b2"
                 />
                 <LevelCard 
                     level="C1"
-                    title="C1 Level"
+                    title="C1 Advanced"
                     cssClass="card-c1"
-                    icon="bi-award-fill"
-                    description="Master the language for complex academic and professional tasks."
+                    icon="bi-gem"
+                    description="Dominio del idioma para tareas profesionales y académicas."
                     link="/niveles/c1"
                 />
                 <LevelCard 
                     level="Diccionario"
-                    title="Dictionary"
-                    cssClass="card-b1" /* Reusing B1 color as in original HTML */
+                    title="Diccionario"
+                    cssClass="card-diccionario"
                     icon="bi-book-half"
-                    description="Search for words, listen to their pronunciation, and see usage examples."
+                    description="Busca palabras, escucha pronunciaciones y ve ejemplos."
                     link="/diccionario"
                 />
             </div>

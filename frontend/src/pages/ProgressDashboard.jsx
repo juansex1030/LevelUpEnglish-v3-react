@@ -2,156 +2,212 @@ import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
+import './ProgressDashboard.css';
 
 const ProgressDashboard = () => {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const navigate = useNavigate();
     const { progressData, loadingProgress, fetchProgress } = useProgress();
 
     useEffect(() => {
+        if (loading) return; // wait for /auth/me to finish
         if (!user) {
             navigate('/login');
         } else {
             fetchProgress();
         }
-    }, [user, navigate, fetchProgress]);
+    }, [user, loading, navigate, fetchProgress]);
 
-    if (!user) return null;
+    if (loading) return <div className="text-center p-5 fw-bold fs-4">Cargando...</div>;
 
     if (loadingProgress) {
         return (
             <div className="container py-5 text-center">
                 <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
+                    <span className="visually-hidden">Cargando progreso...</span>
                 </div>
             </div>
         );
     }
 
-    const { overall_percentage, stats, completed_topics, total_topics } = progressData;
+    const { stats, total_topics } = progressData;
+
+    // Calcular logros dinámicamente: Si un nivel tiene total > 0 y completed === total, se gana la insignia.
+    // MOCK (Admin): Para pruebas, seguimos simulando que A1 está completo si el usuario quiere probar.
+    // (Puedes quitar este bloque de mock cuando pases a producción y solo usar progressData.stats)
+    const mockedStats = {
+        ...stats,
+        A1: {
+            ...stats?.A1,
+            completed: stats?.A1?.total || 25,
+            total: stats?.A1?.total || 25
+        }
+    };
+
+    // Recalcular progreso global basándonos en el mock para que los porcentajes cuadren
+    let globalCompleted = 0;
+    let globalTotal = 0;
+    
+    Object.values(mockedStats).forEach(lvlData => {
+        globalCompleted += (lvlData.completed || 0);
+        globalTotal += (lvlData.total || 0);
+    });
+
+    // Usar el total que venga del backend si es mayor, por seguridad, o el sumado
+    const finalTotal = Math.max(total_topics || 0, globalTotal);
+    const mockedOverallPercentage = finalTotal > 0 ? Math.round((globalCompleted / finalTotal) * 100) : 0;
+
+    // Calculate dynamic level achievements (e.g., A1 Master)
+    const earnedAchievements = Object.entries(mockedStats)
+        .filter(([, data]) => data.total > 0 && data.completed === data.total)
+        .map(([level]) => `master_${level.toUpperCase()}`);
+
+    // Read general gamification achievements from localStorage
+    const storedAchievements = user 
+        ? JSON.parse(localStorage.getItem(`levelup_achievements_${user.id}`) || '[]')
+        : [];
+    
+    // Combine both sources
+    const allEarned = new Set([...earnedAchievements, ...storedAchievements]);
+
+    // All available achievements configuration
+    const ACHIEVEMENTS_LIST = [
+        { id: 'first_step', name: 'Primer Paso', icon: 'bi-rocket-takeoff-fill', color: '#1CB0F6', desc: 'Completaste tu primer ejercicio.' },
+        { id: 'streak_3', name: 'En Racha', icon: 'bi-fire', color: '#FF9800', desc: 'Completaste 3 ejercicios seguidos.' },
+        { id: 'streak_10', name: 'Imparable', icon: 'bi-lightning-charge-fill', color: '#CE82FF', desc: 'Completaste 10 ejercicios.' },
+        { id: 'master_A1', name: 'A1 Master', icon: 'bi-star-fill', color: '#58CC02', desc: 'Dominaste el nivel A1 completo.' },
+        { id: 'master_A2', name: 'A2 Master', icon: 'bi-award-fill', color: '#1CB0F6', desc: 'Dominaste el nivel A2 completo.' },
+        { id: 'master_B1', name: 'B1 Master', icon: 'bi-trophy-fill', color: '#CE82FF', desc: 'Dominaste el nivel B1 completo.' }
+    ];
+
+    // Configuración visual de los niveles estilo mockup
+    const levelConfig = {
+        A1: { color: '#4caf50', title: 'A1', subtitle: 'BEGINNER', desc: 'Básicos: Vocabulario, Frases' },
+        A2: { color: '#2196f3', title: 'A2', subtitle: 'ELEMENTARY', desc: 'Vida Diaria: Gramática, Conversación' },
+        B1: { color: '#9c27b0', title: 'B1', subtitle: 'INTERMEDIATE', desc: 'Temas B1: Trabajo, Viajes' },
+        B2: { color: '#ff9800', title: 'B2', subtitle: 'UPPER INTER', desc: 'Temas B2: Opiniones, Cultura' },
+        C1: { color: '#f44336', title: 'C1', subtitle: 'ADVANCED', desc: 'Avanzado: Expresiones fluidas' }
+    };
 
     return (
-        <div className="container py-5">
-            <div className="text-center mb-5">
-                <h1 className="main-title">Your Progress</h1>
-                <p className="lead text-muted">Track your progress and unlocked achievements in LevelUpEnglish</p>
+        <div className="dashboard-container">
+            <div className="dashboard-header">
+                <h1>Dashboard</h1>
             </div>
 
-            {/* ✨ LOGROS / ACHIEVEMENTS SECTION ✨ */}
-            {progressData.achievements && progressData.achievements.length > 0 && (
-                <div className="row mb-5 animate__animated animate__fadeInUp">
-                    <div className="col-12">
-                        <div className="card shadow border-0" style={{ background: 'linear-gradient(135deg, #1e2030 0%, #2e3150 100%)', borderRadius: '1rem', overflow: 'hidden' }}>
-                            <div className="card-header bg-transparent border-bottom-0 pt-4 pb-0 text-center">
-                                <h3 className="fw-bold m-0" style={{ color: '#FFD700', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                                    <i className="bi bi-stars me-2"></i> Logros Desbloqueados <i className="bi bi-stars ms-2"></i>
-                                </h3>
-                                <p className="text-muted mt-2 small">Medallas obtenidas por dominar al nivel</p>
-                            </div>
-                            <div className="card-body p-4 d-flex justify-content-center flex-wrap gap-4">
-                                {progressData.achievements.map((lvl) => (
-                                    <div key={lvl} className="text-center animate__animated animate__zoomIn" style={{ minWidth: '120px' }}>
-                                        <div 
-                                            className="badge-icon shadow-lg rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
-                                            style={{ 
-                                                width: '100px', height: '100px',
-                                                background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
-                                                border: '4px solid #fff',
-                                                boxShadow: '0 8px 15px rgba(255, 215, 0, 0.4)'
-                                            }}
-                                        >
-                                            <span className="fs-1 fw-bold text-white text-shadow-sm">{lvl}</span>
-                                        </div>
-                                        <h5 className="fw-bold text-white mb-0">Maestro {lvl}</h5>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <div className="dashboard-layout">
+                {/* LADO IZQUIERDO: Tarjetas de Niveles */}
+                <div className="level-cards-grid">
+                    {Object.entries(mockedStats).map(([level, data]) => {
+                        const pct = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+                        const config = levelConfig[level] || levelConfig.A1;
+                        
+                        // Lógica del botón según estado
+                        let btnClass = 'btn-locked';
+                        let btnText = 'LOCKED';
+                        if (pct > 0 && pct < 100) {
+                            btnClass = 'btn-orange';
+                            btnText = 'CONTINUE';
+                        } else if (pct === 100) {
+                            btnClass = 'btn-green';
+                            btnText = 'PRACTICE';
+                        } else if (pct === 0) {
+                            btnClass = 'btn-green';
+                            btnText = 'START';
+                        }
 
-            <div className="row g-4 mb-5">
-                {/* Overall Progress Card */}
-                <div className="col-lg-12 animate__animated animate__fadeIn">
-                    <div className="card shadow-sm border-0" style={{ background: 'var(--color-fondo-secundario)', borderRadius: '1rem' }}>
-                        <div className="card-body p-4 text-center">
-                            <h3 style={{ color: 'var(--color-texto-principal)' }}>Overall Progress</h3>
-                            <div className="display-4 fw-bold mb-3" style={{ color: 'var(--acento-primario)' }}>
-                                {overall_percentage}%
-                            </div>
-                            <div className="progress mx-auto mb-3" style={{ height: '20px', maxWidth: '600px', backgroundColor: 'var(--color-borde)' }}>
-                                <div 
-                                    className="progress-bar progress-bar-striped progress-bar-animated" 
-                                    role="progressbar" 
-                                    style={{ width: `${overall_percentage}%`, backgroundColor: 'var(--acento-primario)' }} 
-                                    aria-valuenow={overall_percentage} 
-                                    aria-valuemin="0" 
-                                    aria-valuemax="100"
-                                ></div>
-                            </div>
-                            <p className="text-muted fw-bold mb-0">
-                                {completed_topics} of {total_topics} topics completed in total
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Individual Level Cards */}
-                {Object.entries(stats).map(([level, data], i) => {
-                    const pct = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-                    
-                    const levelColors = {
-                        A1: '#F59E0B',
-                        A2: '#00ADB5',
-                        B1: '#00ADB5',
-                        B2: '#3B82F6',
-                        C1: '#10B981',
-                    };
-
-                    const color = levelColors[level] || 'var(--acento-primario)';
-
-                    return (
-                        <div className="col-md-6 col-lg-4 animate__animated animate__fadeInUp" style={{ animationDelay: `${i * 0.1}s` }} key={level}>
-                            <div className="card shadow-sm border-0 h-100" style={{ background: 'var(--color-fondo-secundario)', borderRadius: '1rem', position: 'relative', overflow: 'hidden' }}>
-                                {/* Golden Overlay when 100% completed */}
-                                {pct === 100 && (
-                                    <div style={{ position: 'absolute', top: 0, right: 0, padding: '10px 15px', background: 'linear-gradient(45deg, #FFD700, #FFA500)', borderBottomLeftRadius: '1rem', color: '#fff', fontWeight: 'bold' }}>
-                                        <i className="bi bi-trophy-fill me-1"></i> Completado
-                                    </div>
-                                )}
+                        return (
+                            <div className="mockup-level-card animate__animated animate__fadeInUp" key={level}>
+                                <div className="mockup-card-top" style={{ backgroundColor: config.color }}>
+                                    <h2 className="mockup-card-title">{config.title}</h2>
+                                    <span className="mockup-card-subtitle">{config.subtitle}</span>
+                                </div>
                                 
-                                <div className="card-body p-4">
-                                    <h4 className="fw-bold mb-3 d-flex align-items-center justify-content-between" style={{ color: 'var(--color-texto-principal)' }}>
-                                        Level {level}
-                                        {pct < 100 && <span className="badge" style={{ backgroundColor: color }}>{pct}%</span>}
-                                    </h4>
-                                    
-                                    <div className="progress mb-3" style={{ height: '10px', backgroundColor: 'var(--color-borde)' }}>
-                                        <div 
-                                            className="progress-bar" 
-                                            style={{ width: `${pct}%`, backgroundColor: pct === 100 ? '#FFD700' : color }}
-                                        ></div>
+                                <div className="mockup-circular-progress">
+                                    <svg viewBox="0 0 100 100" className="mockup-circular-svg">
+                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--color-fondo)" strokeWidth="10" />
+                                        <circle 
+                                            cx="50" cy="50" r="40" 
+                                            fill="transparent" 
+                                            stroke={config.color} 
+                                            strokeWidth="10"
+                                            strokeDasharray="251.2"
+                                            strokeDashoffset={251.2 - (251.2 * pct) / 100}
+                                            strokeLinecap="round"
+                                            style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dashoffset 1s ease' }}
+                                        />
+                                    </svg>
+                                    <div className="mockup-circular-value" style={{ color: config.color }}>
+                                        {pct}%
                                     </div>
-                                    
-                                    <p className="text-muted mb-4">
-                                        {data.completed} / {data.total} Topics
-                                    </p>
+                                </div>
 
-                                    <Link to={`/niveles/${level.toLowerCase()}`} className="btn w-100 fw-bold shadow-sm" style={{ backgroundColor: pct === 100 ? '#2e3150' : color, border: pct === 100 ? '2px solid #FFD700' : 'none', color: pct === 100 ? '#FFD700' : '#fff' }}>
-                                        {pct === 100 ? <><i className="bi bi-star-fill me-2"></i>Repasar Logro</> : 'Continue Learning'}
+                                <div className="mockup-card-body">
+                                    <p className="mockup-lessons-count">{data.completed}/{data.total} Lessons</p>
+                                    <p className="mockup-desc">{config.title} {config.desc}</p>
+                                    
+                                    {pct === 100 && (
+                                        <div className="alert mt-auto mb-3 text-center fw-bold" style={{ backgroundColor: '#fff3cd', color: '#856404', border: '2px solid #ffeeba', borderRadius: '12px' }}>
+                                            🎉 ¡Felicidades! Has dominado todo este Level.
+                                        </div>
+                                    )}
+
+                                    <Link to={`/niveles/${level.toLowerCase()}`} className={`mockup-btn ${btnClass} ${pct !== 100 ? 'mt-auto' : ''}`}>
+                                        {btnText}
                                     </Link>
                                 </div>
                             </div>
+                        );
+                    })}
+                </div>
+
+                {/* LADO DERECHO: Sidebar Widgets */}
+                <div className="sidebar-column">
+                    <div className="sidebar-widget">
+                        <h4>Progreso Global</h4>
+                        <div className="d-flex align-items-center gap-3">
+                            <div className="fs-1">🔥</div>
+                            <div>
+                                <div className="fw-bold fs-5">{mockedOverallPercentage}% Completado</div>
+                                <div className="text-muted fw-bold">{globalCompleted} de {finalTotal} módulos</div>
+                            </div>
                         </div>
-                    );
-                })}
-            </div>
-            
-            <div className="text-center mt-5">
-                <Link to="/learn" className="btn btn-outline-primary btn-lg rounded-pill px-5 shadow-sm fw-bold">
-                    <i className="bi bi-compass-fill me-2"></i> Ir a Niveles
-                </Link>
+                    </div>
+
+                    <div className="sidebar-widget p-4 rounded-4" style={{ backgroundColor: 'var(--color-fondo-secundario)', border: '1px solid var(--color-borde)' }}>
+                        <h4 className="fw-bold mb-4" style={{ fontSize: '1.25rem' }}>Mis Insignias</h4>
+                        <div className="achievements-grid">
+                            {ACHIEVEMENTS_LIST.map(ach => {
+                                const isUnlocked = allEarned.has(ach.id);
+                                return (
+                                    <div 
+                                        key={ach.id} 
+                                        className="achievement-card text-center" 
+                                        title={ach.desc}
+                                        style={{ opacity: isUnlocked ? 1 : 0.4, transition: 'all 0.3s ease' }}
+                                    >
+                                        <div 
+                                            className="achievement-badge shadow-sm mb-2 mx-auto d-flex align-items-center justify-content-center"
+                                            style={{ 
+                                                width: '60px', 
+                                                height: '60px', 
+                                                borderRadius: '50%',
+                                                backgroundColor: isUnlocked ? ach.color : '#333',
+                                                color: isUnlocked ? '#fff' : '#666',
+                                                fontSize: '1.8rem'
+                                            }}
+                                        >
+                                            <i className={`bi ${isUnlocked ? ach.icon : 'bi-lock-fill'}`}></i>
+                                        </div>
+                                        <div className="achievement-name fw-bold" style={{ fontSize: '0.85rem' }}>
+                                            {ach.name}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

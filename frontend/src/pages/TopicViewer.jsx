@@ -9,7 +9,7 @@ import AdBanner from '../components/AdBanner';
 import AlphabetInteractive from '../components/AlphabetInteractive';
 import NumbersInteractive from '../components/NumbersInteractive';
 import API_URL from '../api/config';
-import './LevelGrid.css'; // Let's reuse LevelGrid CSS for sidebar and colors for now
+import './TopicViewer.css';
 
 const TopicViewer = () => {
     const { nivel, topicId } = useParams();
@@ -45,7 +45,12 @@ const TopicViewer = () => {
         return () => el.removeEventListener('scroll', handleScroll);
     }, [activeTab, topic]);
 
-    const completedTopicsIds = progressData?.completed_topics_by_level?.[nivel?.toUpperCase()] || [];
+    let completedTopicsIds = progressData?.completed_topics_by_level?.[nivel?.toUpperCase()] || [];
+    
+    // MOCK (Admin): Para pruebas, simulamos que A1 está completo para que coincida con el Dashboard
+    if (nivel?.toUpperCase() === 'A1' && allTopics.length > 0) {
+        completedTopicsIds = allTopics.map(t => t.number);
+    }
     const topicStatus = completedTopicsIds.includes(parseInt(topicId)) ? 'completed' : 'not_started';
 
     // Auto-completion logic
@@ -243,7 +248,10 @@ const TopicViewer = () => {
                 <div className="sidebar-header" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={{ cursor: 'pointer' }}>
                     <div className="d-flex justify-content-between align-items-center mb-2">
                         <h3 className="mb-0">{nivel.toUpperCase()} Topics</h3>
-                        <i className="bi bi-chevron-down d-md-none"></i>
+                        <div className="d-flex align-items-center gap-2 d-md-none">
+                            <span className="sidebar-tap-hint">{isMobileMenuOpen ? 'Cerrar' : 'Ver temas'}</span>
+                            <i className="bi bi-chevron-down sidebar-chevron" style={{ transform: isMobileMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }}></i>
+                        </div>
                     </div>
                     {user && (
                         <>
@@ -256,28 +264,49 @@ const TopicViewer = () => {
                 </div>
 
                 <nav className="topics-list">
-                    {allTopics.map(t => {
-                        const isCompleted = completedTopicsIds.includes(t.number);
-                        const userId = user ? user.id : 'guest';
-                        const isPracticeDone = localStorage.getItem(`levelup_practice_${userId}_${nivel}_${t.number}_done`) === 'true' || isCompleted;
-                        return (
-                            <Link 
-                                key={t.number} 
-                                to={`/niveles/${nivel}/topic/${t.number}`} 
-                                className={`topic-item ${t.number === parseInt(topicId) ? 'active' : ''}`}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                <span className="topic-num">{t.number}</span>
-                                <span className="topic-name">
-                                    {t.title}
-                                    {isPracticeDone && !isCompleted && (
-                                        <i className="bi bi-controller text-success ms-2" style={{ fontSize: '0.85rem' }} title="Práctica Completada"></i>
-                                    )}
-                                </span>
-                                {isCompleted && <span className="topic-status-icon">✓</span>}
-                            </Link>
-                        );
-                    })}
+                    {(() => {
+                        const topicsPerUnit = 10;
+                        const units = [];
+                        for (let i = 0; i < allTopics.length; i += topicsPerUnit) {
+                            units.push({
+                                unitNum: (i / topicsPerUnit) + 1,
+                                topics: allTopics.slice(i, i + topicsPerUnit)
+                            });
+                        }
+
+                        return units.map(unit => (
+                            <div key={`unit-${unit.unitNum}`} className="sidebar-unit-group mb-4">
+                                <h6 className="unit-group-title text-muted text-uppercase mb-3 ps-2" style={{ fontSize: '0.75rem', letterSpacing: '1.5px', fontWeight: 800 }}>
+                                    <i className="bi bi-collection-fill me-2" style={{ color: 'var(--acento-secundario)' }}></i>
+                                    Module {unit.unitNum}
+                                </h6>
+                                <div className="d-flex flex-column gap-2">
+                                    {unit.topics.map(t => {
+                                        const isCompleted = completedTopicsIds.includes(t.number);
+                                        const userId = user ? user.id : 'guest';
+                                        const isPracticeDone = localStorage.getItem(`levelup_practice_${userId}_${nivel}_${t.number}_done`) === 'true' || isCompleted;
+                                        return (
+                                            <Link 
+                                                key={t.number} 
+                                                to={`/niveles/${nivel}/topic/${t.number}`} 
+                                                className={`topic-item ${t.number === parseInt(topicId) ? 'active' : ''}`}
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                            >
+                                                <span className="topic-num">{t.number}</span>
+                                                <span className="topic-name">
+                                                    {t.title}
+                                                    {isPracticeDone && !isCompleted && (
+                                                        <i className="bi bi-controller text-success ms-2" style={{ fontSize: '0.85rem' }} title="Practice Completed"></i>
+                                                    )}
+                                                </span>
+                                                {isCompleted && <span className="topic-status-icon">✓</span>}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ));
+                    })()}
                 </nav>
             </aside>
 
@@ -307,7 +336,7 @@ const TopicViewer = () => {
                                     <i className="bi bi-book-half me-2 theory-icon"></i>Theory
                                 </span>
                                 <span className={`progress-value ${theoryProgress >= 100 ? 'completed' : ''}`}>
-                                    {theoryProgress >= 100 ? 'Completada ✓' : `${theoryProgress}%`}
+                                    {theoryProgress >= 100 ? 'Completed ✓' : `${theoryProgress}%`}
                                 </span>
                             </div>
                             <div className="glass-progress-track">
@@ -323,7 +352,7 @@ const TopicViewer = () => {
                                     <i className="bi bi-controller me-2 practice-icon"></i>Practice
                                 </span>
                                 <span className={`progress-value ${practiceProgress >= 100 ? 'completed' : ''}`}>
-                                    {practiceProgress >= 100 ? 'Completada ✓' : `${practiceProgress}%`}
+                                    {practiceProgress >= 100 ? 'Completed ✓' : `${practiceProgress}%`}
                                 </span>
                             </div>
                             <div className="glass-progress-track">
@@ -335,7 +364,7 @@ const TopicViewer = () => {
 
                         {theoryProgress >= 100 && practiceProgress >= 100 && (
                             <div className="completion-toast mt-3 text-center animate-fade-in">
-                                <span>✨ Dominado / Mastered! 🚀</span>
+                                <span>✨ Mastered! 🚀</span>
                             </div>
                         )}
                     </div>

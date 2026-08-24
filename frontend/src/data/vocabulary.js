@@ -1,9 +1,9 @@
 export const vocabularyData = {
     regularVerbs: {
-        title: 'Verbos Regulares',
+        title: 'Regular Verbs',
         icon: 'bi-bookmark-check',
         color: '#10B981',
-        description: 'Verbos que forman su pasado añadiendo "-ed" o "-d" (100 palabras).',
+        description: 'Verbs that form their past tense by adding "-ed" or "-d" (100 words).',
         words: [
             { en: 'Accept', es: 'Aceptar', past: 'Accepted', part: 'Accepted', esPast: 'Acepté', esPart: 'Aceptado' },
             { en: 'Add', es: 'Añadir / Sumar', past: 'Added', part: 'Added', esPast: 'Añadí', esPart: 'Añadido' },
@@ -108,10 +108,10 @@ export const vocabularyData = {
         ]
     },
     irregularVerbs: {
-        title: 'Verbos Irregulares',
+        title: 'Irregular Verbs',
         icon: 'bi-bookmark-star',
         color: '#F59E0B',
-        description: 'Verbos cuya forma en pasado cambia completamente (100 palabras).',
+        description: 'Verbs whose past tense form changes completely (100 words).',
         words: [
             { en: 'Arise', es: 'Surgir', past: 'Arose', part: 'Arisen', esPast: 'Surgió', esPart: 'Surgido' },
             { en: 'Awake', es: 'Despertar', past: 'Awoke', part: 'Awoken', esPast: 'Desperté', esPart: 'Despertado' },
@@ -216,10 +216,10 @@ export const vocabularyData = {
         ]
     },
     adjectives: {
-        title: 'Adjetivos',
+        title: 'Adjectives',
         icon: 'bi-palette',
         color: '#3B82F6',
-        description: 'Palabras que describen cualidades de los sustantivos (100 palabras).',
+        description: 'Words that describe qualities of nouns (100 words).',
         words: [
             { en: 'Able', es: 'Capaz' },
             { en: 'Afraid', es: 'Asustado' },
@@ -324,10 +324,10 @@ export const vocabularyData = {
         ]
     },
     adverbs: {
-        title: 'Adverbios',
+        title: 'Adverbs',
         icon: 'bi-wind',
         color: '#8B5CF6',
-        description: 'Palabras que modifican verbos, adjetivos u otros adverbios (100 palabras).',
+        description: 'Words that modify verbs, adjectives, or other adverbs (100 words).',
         words: [
             { en: 'Accidentally', es: 'Accidentalmente' },
             { en: 'Afterward', es: 'Después' },
@@ -432,10 +432,10 @@ export const vocabularyData = {
         ]
     },
     nouns: {
-        title: 'Sustantivos',
+        title: 'Nouns',
         icon: 'bi-box-seam',
         color: '#EC4899',
-        description: 'Palabras utilizadas para nombrar personas, animales, cosas o ideas (100 palabras).',
+        description: 'Words used to name people, animals, things, or ideas (100 words).',
         words: [
             { en: 'Animal', es: 'Animal' },
             { en: 'Answer', es: 'Respuesta' },
@@ -543,7 +543,7 @@ export const vocabularyData = {
         title: 'Phrasal Verbs',
         icon: 'bi-lightning-fill',
         color: '#F43F5E',
-        description: 'Verbos seguidos de una preposición o adverbio que cambia su significado (100 palabras).',
+        description: 'Verbs followed by a preposition or adverb that changes their meaning (100 words).',
         words: [
             { en: "Abide by", es: "Cumplir con" },
             { en: "Account for", es: "Dar cuenta de / Explicar" },
@@ -651,7 +651,7 @@ export const vocabularyData = {
         title: 'Compound Adjectives',
         icon: 'bi-puzzle-fill',
         color: '#06B6D4',
-        description: 'Adjetivos formados por dos o más palabras unidas por un guion (100 palabras).',
+        description: 'Adjectives formed by two or more words, usually joined by a hyphen (100 words).',
         words: [
             { en: "Absent-minded", es: "Distraído" },
             { en: "All-out", es: "Total / A tope" },

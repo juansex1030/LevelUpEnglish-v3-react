@@ -71,7 +71,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
             token, // Returning token for localStorage fallback
             user: { 
                 id: user.id, username: user.username, email: user.email, 
-                is_admin: user.is_admin, is_premium: user.is_premium, 
+                is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
                 premium_until: user.premium_until,
                 avatar: user.avatar, created_at: user.created_at 
             } 
@@ -114,7 +114,7 @@ router.post('/login', authLimiter, async (req, res, next) => {
             token, // Returning token for localStorage fallback
             user: { 
                 id: user.id, username: user.username, email: user.email, 
-                is_admin: user.is_admin, is_premium: user.is_premium, 
+                is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
                 avatar: user.avatar 
             } 
         });
@@ -240,7 +240,7 @@ router.post('/google', async (req, res, next) => {
             token: appToken, // Returning token for localStorage fallback
             user: { 
                 id: user.id, username: user.username, email: user.email, 
-                is_admin: user.is_admin, is_premium: user.is_premium, 
+                is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
                 avatar: user.avatar 
             } 
         });
@@ -332,7 +332,7 @@ router.put('/profile', authenticateToken, async (req, res, next) => {
             msg: 'Perfil actualizado exitosamente', 
             user: { 
                 id: user.id, username: updatedUsername, email: user.email, 
-                is_admin: user.is_admin, is_premium: user.is_premium, 
+                is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
                 premium_until: user.premium_until,
                 avatar: updatedAvatar 
             } 

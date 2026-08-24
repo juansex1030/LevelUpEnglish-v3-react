@@ -1,0 +1,130 @@
+/* ===================================
+   DASHBOARD GAMIFICADO (Aprender)
+   =================================== */
+
+   .learn-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.learn-title {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--color-texto-principal);
+    margin-bottom: 0.5rem;
+}
+
+.learn-subtitle {
+    font-size: 1.25rem;
+    color: var(--color-texto-secundario);
+    font-weight: 600;
+    margin-bottom: 3rem;
+}
+
+/* Cuadrícula de Niveles */
+.learn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    padding: 1rem;
+}
+
+/* Tarjeta Gamificada 3D */
+.learn-card {
+    background: var(--color-fondo-primario);
+    border-radius: 24px;
+    padding: 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+    position: relative;
+    border: 3px solid transparent;
+}
+
+.learn-card-link {
+    text-decoration: none;
+    display: block;
+}
+
+/* Colores por nivel (Bordes 3D inferiores) */
+.learn-card.card-a1 {
+    border-color: #e8f5e9;
+    box-shadow: 0 10px 0 #4caf50;
+}
+[data-bs-theme="dark"] .learn-card.card-a1 { border-color: #4caf50; box-shadow: 0 10px 0 #2e7d32; }
+
+.learn-card.card-a2 {
+    border-color: #e3f2fd;
+    box-shadow: 0 10px 0 #2196f3;
+}
+[data-bs-theme="dark"] .learn-card.card-a2 { border-color: #2196f3; box-shadow: 0 10px 0 #1565c0; }
+
+.learn-card.card-b1 {
+    border-color: #f3e5f5;
+    box-shadow: 0 10px 0 #9c27b0;
+}
+[data-bs-theme="dark"] .learn-card.card-b1 { border-color: #9c27b0; box-shadow: 0 10px 0 #6a1b9a; }
+
+.learn-card.card-b2 {
+    border-color: #fff3e0;
+    box-shadow: 0 10px 0 #ff9800;
+}
+[data-bs-theme="dark"] .learn-card.card-b2 { border-color: #ff9800; box-shadow: 0 10px 0 #e65100; }
+
+.learn-card.card-c1 {
+    border-color: #ffebee;
+    box-shadow: 0 10px 0 #f44336;
+}
+[data-bs-theme="dark"] .learn-card.card-c1 { border-color: #f44336; box-shadow: 0 10px 0 #c62828; }
+
+.learn-card.card-diccionario {
+    border-color: #e0f2f1;
+    box-shadow: 0 10px 0 #009688;
+}
+[data-bs-theme="dark"] .learn-card.card-diccionario { border-color: #009688; box-shadow: 0 10px 0 #00695c; }
+
+/* Efecto Hover (Presionar el botón 3D) */
+.learn-card-link:hover .learn-card {
+    transform: translateY(6px);
+    box-shadow: 0 4px 0 transparent; /* Se "hunde" */
+}
+
+/* Iconos Gigantes */
+.learn-icon-wrapper {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    color: white;
+}
+
+.card-a1 .learn-icon-wrapper { background: linear-gradient(135deg, #81c784, #4caf50); }
+.card-a2 .learn-icon-wrapper { background: linear-gradient(135deg, #64b5f6, #2196f3); }
+.card-b1 .learn-icon-wrapper { background: linear-gradient(135deg, #ba68c8, #9c27b0); }
+.card-b2 .learn-icon-wrapper { background: linear-gradient(135deg, #ffb74d, #ff9800); }
+.card-c1 .learn-icon-wrapper { background: linear-gradient(135deg, #e57373, #f44336); }
+.card-diccionario .learn-icon-wrapper { background: linear-gradient(135deg, #4db6ac, #009688); }
+
+/* Textos */
+.learn-card h3 {
+    font-size: 1.75rem;
+    font-weight: 900;
+    color: var(--color-texto-principal);
+    margin-bottom: 0.75rem;
+}
+
+.learn-card p {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-texto-secundario);
+    line-height: 1.4;
+    margin: 0;
+}

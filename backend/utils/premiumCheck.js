@@ -13,6 +13,10 @@ const checkPremiumStatus = async (userId) => {
         const result = await query('SELECT id, username, email, is_admin, is_premium, premium_until, trial_started_at, avatar, created_at, last_login_at FROM users WHERE id = $1', [userId]);
         const user = result.rows[0];
         
+        if (user && user.is_admin) {
+            return { ...user, is_premium: true, premium_until: '2099-12-31T23:59:59.000Z' };
+        }
+
         if (user && user.is_premium && user.premium_until) {
             const now = new Date();
             const expires = new Date(user.premium_until);

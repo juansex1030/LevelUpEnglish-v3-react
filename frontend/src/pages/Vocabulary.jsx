@@ -6,6 +6,8 @@ import { vocabularyData } from '../data/vocabulary';
 const Vocabulary = () => {
     const [activeTab, setActiveTab] = useState('regularVerbs');
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 20;
 
     const renderTabs = () => {
         return (
@@ -22,7 +24,10 @@ const Vocabulary = () => {
                             padding: '0.6rem 1.5rem',
                             transition: 'all 0.3s ease'
                         }}
-                        onClick={() => setActiveTab(key)}
+                        onClick={() => {
+                            setActiveTab(key);
+                            setCurrentPage(1);
+                        }}
                     >
                         <i className={`bi ${category.icon} me-2`}></i>
                         {category.title}
@@ -39,6 +44,12 @@ const Vocabulary = () => {
         wordPair.es.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (wordPair.past && wordPair.past.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (wordPair.part && wordPair.part.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+    const totalPages = Math.ceil(filteredWords.length / ITEMS_PER_PAGE);
+    const paginatedWords = filteredWords.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
     );
 
     const playAudio = (text) => {
@@ -66,21 +77,30 @@ const Vocabulary = () => {
         <div className="container py-4">
             <style>{`
                 .vocab-card {
-                    background: var(--color-fondo-secundario);
-                    border: 1px solid var(--color-borde);
-                    border-radius: 1rem;
+                    background: var(--color-fondo-primario);
+                    border: 1px solid rgba(255, 255, 255, 0.05);
+                    border-radius: 1.5rem;
                     padding: 1.5rem;
                     transition: all 0.3s ease;
                     height: 100%;
-                    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.1), inset 0 2px 5px rgba(255,255,255,0.03);
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .vocab-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0; left: 0; right: 0; height: 4px;
+                    background: ${currentCategory.color};
+                    opacity: 0.8;
                 }
                 .vocab-card:hover {
-                    transform: translateY(-5px);
-                    border-color: ${currentCategory.color};
-                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+                    transform: translateY(-8px);
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.15), inset 0 2px 5px rgba(255,255,255,0.05);
+                    border-color: rgba(255, 255, 255, 0.1);
                 }
                 .vocab-en {
                     font-size: 1.4rem;
@@ -146,19 +166,38 @@ const Vocabulary = () => {
                     .words-grid.words-grid-verbs {
                         grid-template-columns: 1fr;
                     }
+                    .vocab-card {
+                        padding: 1rem 0.75rem;
+                    }
                     .verb-grid {
-                        grid-template-columns: 1fr;
-                        gap: 1rem;
+                        grid-template-columns: 1fr 1fr 1fr;
+                        gap: 0.25rem;
                     }
                     .verb-column {
-                        border-left: none !important;
-                        border-right: none !important;
-                        border-bottom: 1px solid var(--color-borde);
-                        padding-bottom: 1rem;
+                        padding: 0 0.25rem;
+                        overflow: hidden;
                     }
-                    .verb-column:last-child {
-                        border-bottom: none;
-                        padding-bottom: 0;
+                    .verb-label {
+                        font-size: 0.6rem;
+                        letter-spacing: 0;
+                    }
+                    .vocab-en {
+                        font-size: 0.95rem !important;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                        max-width: 100%;
+                    }
+                    .vocab-es-small {
+                        font-size: 0.75rem;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                        max-width: 100%;
+                    }
+                    .bi-volume-up {
+                        font-size: 0.9rem !important;
+                        margin-right: 0.2rem !important;
                     }
                 }
                 @keyframes fadeIn {
@@ -169,10 +208,10 @@ const Vocabulary = () => {
 
             <div className="level-header" style={{ '--glow-color': currentCategory.color }}>
                 <span className="level-badge" style={{ backgroundColor: currentCategory.color, color: '#fff' }}>
-                    <i className={`bi ${currentCategory.icon} me-2`}></i> Vocabulario
+                    <i className={`bi ${currentCategory.icon} me-2`}></i> Vocabulary
                 </span>
-                <h1>Guía de Expresiones</h1>
-                <p className="lead text-muted">Aprende y repasa las palabras más importantes del inglés divididas por categorías.</p>
+                <h1>Expression Guide</h1>
+                <p className="lead text-muted">Learn and review the most important English words categorized for you.</p>
             </div>
 
             <div className="mt-5">
@@ -189,9 +228,9 @@ const Vocabulary = () => {
                         <input
                             type="text"
                             className="form-control border-start-0 border-end-0 py-2"
-                            placeholder={`Buscar en ${currentCategory.title.toLowerCase()}...`}
+                            placeholder={`Search in ${currentCategory.title.toLowerCase()}...`}
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                             style={{ borderColor: 'var(--color-borde)', backgroundColor: 'var(--color-fondo-secundario)', color: 'var(--color-texto-principal)', boxShadow: 'none' }}
                         />
                         {searchTerm && (
@@ -203,8 +242,8 @@ const Vocabulary = () => {
                 </div>
 
                 <div className={`words-grid ${activeTab.includes('Verbs') ? 'words-grid-verbs' : ''}`}>
-                    {filteredWords.length > 0 ? (
-                        filteredWords.map((wordPair, idx) => {
+                    {paginatedWords.length > 0 ? (
+                        paginatedWords.map((wordPair, idx) => {
                             const isVerb = wordPair.past && wordPair.part;
                             return (
                                 <div key={idx} className="vocab-card">
@@ -212,31 +251,31 @@ const Vocabulary = () => {
                                         <>
                                             <div className="verb-grid">
                                                 <div className="verb-column">
-                                                    <span className="verb-label">Infinitivo</span>
+                                                    <span className="verb-label">Infinitive</span>
                                                     <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
                                                         <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }}
                                                             onClick={() => playAudio(wordPair.en)}
-                                                            title="Escuchar infinitivo"></i>
+                                                            title="Listen to infinitive"></i>
                                                         {wordPair.en}
                                                     </span>
                                                     <span className="vocab-es-small">{wordPair.es}</span>
                                                 </div>
                                                 <div className="verb-column" style={{ borderLeft: '1px solid var(--color-borde)', borderRight: '1px solid var(--color-borde)' }}>
-                                                    <span className="verb-label">Pasado</span>
+                                                    <span className="verb-label">Past</span>
                                                     <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
                                                         <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }}
                                                             onClick={() => playAudio(wordPair.past)}
-                                                            title="Escuchar pasado"></i>
+                                                            title="Listen to past"></i>
                                                         {wordPair.past}
                                                     </span>
                                                     <span className="vocab-es-small">{wordPair.esPast || '-'}</span>
                                                 </div>
                                                 <div className="verb-column">
-                                                    <span className="verb-label">Participio</span>
+                                                    <span className="verb-label">Participle</span>
                                                     <span className="vocab-en text-center w-100" style={{ fontSize: '1.2rem' }}>
                                                         <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }}
                                                             onClick={() => playAudio(wordPair.part)}
-                                                            title="Escuchar participio"></i>
+                                                            title="Listen to participle"></i>
                                                         {wordPair.part}
                                                     </span>
                                                     <span className="vocab-es-small">{wordPair.esPart || '-'}</span>
@@ -248,7 +287,7 @@ const Vocabulary = () => {
                                             <span className="vocab-en">
                                                 <i className="bi bi-volume-up me-2" style={{ fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5 }}
                                                     onClick={() => playAudio(wordPair.en)}
-                                                    title="Escuchar pronunciación"></i>
+                                                    title="Listen to pronunciation"></i>
                                                 {wordPair.en}
                                             </span>
                                             <div className="vocab-divider"></div>
@@ -261,14 +300,42 @@ const Vocabulary = () => {
                     ) : (
                         <div className="text-center py-5" style={{ gridColumn: '1 / -1' }}>
                             <i className="bi bi-search text-muted opacity-50 mb-3 d-block" style={{ fontSize: '3rem' }}></i>
-                            <h4 className="text-muted fw-bold">No se encontraron resultados</h4>
-                            <p className="text-muted">No hay palabras que coincidan con "{searchTerm}". Intenta buscar algo diferente.</p>
-                            <button className="btn btn-outline-secondary mt-2 rounded-pill" onClick={() => setSearchTerm('')}>
-                                Limpiar Búsqueda
+                            <h4 className="text-muted fw-bold">No results found</h4>
+                            <p className="text-muted">No words match "{searchTerm}". Try searching for something else.</p>
+                            <button className="btn btn-outline-secondary mt-2 rounded-pill" onClick={() => { setSearchTerm(''); setCurrentPage(1); }}>
+                                Clear Search
                             </button>
                         </div>
                     )}
                 </div>
+
+                {totalPages > 1 && (
+                    <div className="d-flex justify-content-center align-items-center gap-3 mt-5 pb-4">
+                        <button 
+                            className="btn shadow-sm px-4 rounded-pill"
+                            style={{ backgroundColor: 'var(--color-fondo-secundario)', color: 'var(--color-texto-principal)', border: '1px solid var(--color-borde)' }}
+                            disabled={currentPage === 1}
+                            onClick={() => {
+                                setCurrentPage(p => p - 1);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                        >
+                            <i className="bi bi-chevron-left me-2"></i> Previous
+                        </button>
+                        <span className="fw-bold text-muted">Page {currentPage} of {totalPages}</span>
+                        <button 
+                            className="btn shadow-sm px-4 rounded-pill"
+                            style={{ backgroundColor: 'var(--color-fondo-secundario)', color: 'var(--color-texto-principal)', border: '1px solid var(--color-borde)' }}
+                            disabled={currentPage === totalPages}
+                            onClick={() => {
+                                setCurrentPage(p => p + 1);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                        >
+                            Next <i className="bi bi-chevron-right ms-2"></i>
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

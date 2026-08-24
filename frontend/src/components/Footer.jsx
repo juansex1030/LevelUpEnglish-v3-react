@@ -8,11 +8,11 @@ const Footer = () => {
             <div className="container">
                 <div className="row gy-4 py-5">
                     <div className="col-lg-4">
-                        <Link className="brand-logo mb-3 d-inline-block" to="/">
-                            <div className="logo-icon-wrapper">
+                        <Link className="brand-logo mb-3 d-inline-flex align-items-center gap-2 text-decoration-none" to="/">
+                            <div className="logo-icon-wrapper mb-0">
                                 <i className="bi bi-rocket-takeoff-fill"></i>
                             </div>
-                            <span className="brand-text">LevelUp<span className="brand-highlight">English</span></span>
+                            <span className="brand-text m-0" style={{ fontSize: '1.5rem', lineHeight: '1' }}>LevelUp<span className="brand-highlight">English</span></span>
                         </Link>
                         <p className="text-muted pe-lg-5">
                             We power your English learning with interactive tools, advanced theory, and immersive practice.
