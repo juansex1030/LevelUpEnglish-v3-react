@@ -43,7 +43,8 @@ const Login = () => {
             }
             login(response.data.user);
             sessionStorage.setItem('show_welcome', 'true');
-            navigate('/learn');
+            const destination = response.data.user?.placement_test_completed ? '/learn' : '/placement-test';
+            navigate(destination);
             setLoading(false);
         } catch (err) {
             setError(err.response?.data?.msg || err.response?.data?.error || 'Inicio de sesión fallido. Verifica tu correo y contraseña.');
@@ -103,9 +104,9 @@ const Login = () => {
             }
             login(res.data.user);
             sessionStorage.setItem('show_welcome', 'true');
-            navigate('/learn');
+            const destination = res.data.user?.placement_test_completed ? '/learn' : '/placement-test';
+            navigate(destination);
         } catch (err) {
-            console.error("Google login failed:", err);
             setError(err.response?.data?.msg || 'Error al iniciar sesión con Google.');
         } finally {
             setLoading(false);

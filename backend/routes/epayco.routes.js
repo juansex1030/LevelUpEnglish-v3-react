@@ -69,28 +69,22 @@ router.post('/checkout-session', authenticateToken, async (req, res, next) => {
 router.post('/webhook', async (req, res) => {
     try {
         const data = req.body;
-        console.log('[ePayco Webhook] Received:', data);
 
         // ePayco sends x_cod_response or x_transaction_state
         // x_cod_response: 1 = Aceptada, 2 = Rechazada, 3 = Pendiente, 4 = Fallida
         const state = String(data.x_cod_response || data.x_transaction_state);
-        const userId = data.x_extra1 || data.x_id_invoice?.split('-')[1]; // Adjust based on how you send it
-        const externalRef = data.x_id_invoice;
+        const finalUserId = data.x_extra1; // Passed as external_reference
 
-        if (state === '1' || state === 'Aceptada') {
-            const finalUserId = data.x_extra1; // We passed it in external_reference usually maps to x_extra1
+        if ((state === '1' || state === 'Aceptada') && finalUserId) {
+            // Grant 30 days of access
+            await query(`
+                UPDATE users 
+                SET is_premium = true, 
+                    premium_until = COALESCE(premium_until, CURRENT_TIMESTAMP) + interval '30 days'
+                WHERE id = $1
+            `, [finalUserId]);
             
-            if (finalUserId) {
-                // Grant 30 days of access
-                await query(`
-                    UPDATE users 
-                    SET is_premium = true, 
-                        premium_until = COALESCE(premium_until, CURRENT_TIMESTAMP) + interval '30 days'
-                    WHERE id = $1
-                `, [finalUserId]);
-                
-                console.log(`[ePayco] Payment successful for User ${finalUserId}. Access extended 30 days.`);
-            }
+            console.log(`[ePayco] Payment successful for User ${finalUserId}. Access extended 30 days.`);
         }
 
         res.status(200).send('OK');
