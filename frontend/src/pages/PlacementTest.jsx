@@ -24,7 +24,7 @@ const placementQuestions = [
 ];
 
 function PlacementTest() {
-    const { user } = useAuth(); 
+    const { user, verifyUser } = useAuth(); 
     const navigate = useNavigate();
     
     const [step, setStep] = useState('intro'); // 'intro', 'test', 'result'
@@ -41,8 +41,8 @@ function PlacementTest() {
             const res = await api.post('/auth/placement', { score: finalScore, startFromScratch });
             setResultLevel(res.data.level);
             // Update local user context so we don't get trapped in a redirect loop
-            if (user) {
-                user.placement_test_completed = true;
+            if (verifyUser) {
+                await verifyUser();
             }
             setStep('result');
         } catch (error) {
@@ -130,7 +130,7 @@ function PlacementTest() {
                                     <button 
                                         className={btnClass}
                                         onClick={() => handleAnswer(opt)}
-                                        disabled={showAnswer}
+                                        disabled={showAnswer || isSubmitting}
                                     >
                                         {opt}
                                     </button>
