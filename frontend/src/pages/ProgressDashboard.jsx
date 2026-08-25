@@ -50,9 +50,18 @@ const ProgressDashboard = () => {
         .map(([level]) => `master_${level.toUpperCase()}`);
 
     // Read general gamification achievements from localStorage
-    const storedAchievements = user 
-        ? JSON.parse(localStorage.getItem(`levelup_achievements_${user.id}`) || '[]')
-        : [];
+    let storedAchievements = [];
+    if (user) {
+        try {
+            const item = localStorage.getItem(`levelup_achievements_${user.id}`);
+            const parsed = item ? JSON.parse(item) : [];
+            if (Array.isArray(parsed)) {
+                storedAchievements = parsed;
+            }
+        } catch (e) {
+            console.warn('Could not parse achievements', e);
+        }
+    }
     
     // Combine both sources
     const allEarned = new Set([...earnedAchievements, ...storedAchievements]);
