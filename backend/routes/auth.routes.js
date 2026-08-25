@@ -404,9 +404,9 @@ router.post('/placement', authenticateToken, async (req, res, next) => {
         if (determinedLevel === 'B2') levelsToComplete.push('A1', 'A2', 'B1');
 
         if (levelsToComplete.length > 0) {
+            const levelsStr = levelsToComplete.map(l => `'${l}'`).join(',');
             const topicsRes = await query(
-                'SELECT id FROM topics WHERE level = ANY($1::text[])',
-                [levelsToComplete]
+                `SELECT id FROM topics WHERE level IN (${levelsStr})`
             );
             for (const row of topicsRes.rows) {
                 await query(
