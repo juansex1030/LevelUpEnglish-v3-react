@@ -85,7 +85,7 @@ const ProgressDashboard = () => {
             <div className="dashboard-layout">
                 {/* LADO IZQUIERDO: Tarjetas de Niveles */}
                 <div className="level-cards-grid">
-                    {Object.entries(mockedStats).map(([level, data]) => {
+                    {Object.entries(stats || {}).map(([level, data]) => {
                         const pct = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
                         const config = levelConfig[level] || levelConfig.A1;
                         
