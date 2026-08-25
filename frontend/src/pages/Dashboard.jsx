@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './Dashboard.css';
 
 const LevelCard = ({ icon, cssClass, title, description, link }) => (
@@ -15,6 +16,14 @@ const LevelCard = ({ icon, cssClass, title, description, link }) => (
 );
 
 const Dashboard = () => {
+    const { user, loading } = useAuth();
+
+    if (loading) return <div>Cargando...</div>;
+    
+    if (user && !user.placement_test_completed) {
+        return <Navigate to="/placement-test" />;
+    }
+
     return (
         <div className="learn-container">
             <h1 className="learn-title">Tu Ruta de Aprendizaje</h1>

@@ -58,7 +58,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = await query(
-            'INSERT INTO users (username, email, password, is_admin, is_premium) VALUES ($1, $2, $3, false, false) RETURNING id, username, email, is_admin, is_premium, avatar, created_at',
+            'INSERT INTO users (username, email, password, is_admin, is_premium) VALUES ($1, $2, $3, false, false) RETURNING id, username, email, is_admin, is_premium, avatar, created_at, placement_test_completed',
             [username, email, hashedPassword]
         );
 
@@ -73,7 +73,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
                 id: user.id, username: user.username, email: user.email, 
                 is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
                 premium_until: user.premium_until,
-                avatar: user.avatar, created_at: user.created_at 
+                avatar: user.avatar, created_at: user.created_at, placement_test_completed: user.placement_test_completed 
             } 
         });
 
@@ -115,7 +115,7 @@ router.post('/login', authLimiter, async (req, res, next) => {
             user: { 
                 id: user.id, username: user.username, email: user.email, 
                 is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
-                avatar: user.avatar 
+                avatar: user.avatar, placement_test_completed: user.placement_test_completed 
             } 
         });
     } catch (error) {
@@ -241,7 +241,7 @@ router.post('/google', async (req, res, next) => {
             user: { 
                 id: user.id, username: user.username, email: user.email, 
                 is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
-                avatar: user.avatar 
+                avatar: user.avatar, placement_test_completed: user.placement_test_completed 
             } 
         });
     } catch (error) {
@@ -364,6 +364,47 @@ router.delete('/subscription', authenticateToken, async (req, res, next) => {
             premium_until: user.premium_until,
             msg: `Tu suscripción ha sido cancelada. Tu acceso Premium se mantendrá activo hasta que venza el período ya pagado.`
         });
+    } catch (error) {
+        next(error);
+    }
+});
+
+router.post('/placement', authenticateToken, async (req, res, next) => {
+    try {
+        const { score, startFromScratch } = req.body;
+        const userId = req.user.id;
+        
+        // Update user to mark test as completed
+        await query('UPDATE users SET placement_test_completed = true WHERE id = $1', [userId]);
+        
+        if (startFromScratch || score === 0 || score == null) {
+            return res.json({ msg: 'Nivel inicial configurado', level: 'A1' });
+        }
+
+        // Determine level
+        let determinedLevel = 'A1';
+        if (score >= 10) determinedLevel = 'B2';
+        else if (score >= 7) determinedLevel = 'B1';
+        else if (score >= 4) determinedLevel = 'A2';
+        else determinedLevel = 'A1';
+
+        // Mark lower levels as completed
+        const levelsToComplete = [];
+        if (determinedLevel === 'A2') levelsToComplete.push('A1');
+        if (determinedLevel === 'B1') levelsToComplete.push('A1', 'A2');
+        if (determinedLevel === 'B2') levelsToComplete.push('A1', 'A2', 'B1');
+
+        if (levelsToComplete.length > 0) {
+            for (const lvl of levelsToComplete) {
+                // Get all topics for this level
+                const topicsRes = await query('SELECT id FROM topics WHERE level = $1', [lvl]);
+                for (const row of topicsRes.rows) {
+                    await query('INSERT INTO progress (user_id, topic_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, row.id]);
+                }
+            }
+        }
+
+        res.json({ msg: 'Prueba completada', level: determinedLevel });
     } catch (error) {
         next(error);
     }

@@ -22,7 +22,7 @@ import Vocabulary from './pages/Vocabulary'
 import PracticeZone from './pages/PracticeZone'
 import Support from './pages/Support'
 import Profile from './pages/Profile'
-
+import PlacementTest from './pages/PlacementTest'
 function GlobalAudioListener() {
   const { playClick } = useAudioFeedback();
 
@@ -55,6 +55,7 @@ function App() {
               <Route path="/" element={<Landing />} />
               <Route path="/learn" element={<Dashboard />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/placement-test" element={<PlacementTest />} />
               <Route path="/register" element={<Register />} />
               <Route path="/niveles/:nivel" element={<LevelGrid />} />
               <Route path="/niveles/:nivel/topic/:topicId" element={<TopicViewer />} />

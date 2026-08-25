@@ -10,7 +10,7 @@ const checkPremiumStatus = async (userId) => {
     try {
         if (!userId) return null;
         
-        const result = await query('SELECT id, username, email, is_admin, is_premium, premium_until, trial_started_at, avatar, created_at, last_login_at FROM users WHERE id = $1', [userId]);
+        const result = await query('SELECT id, username, email, is_admin, is_premium, premium_until, trial_started_at, avatar, created_at, last_login_at, placement_test_completed FROM users WHERE id = $1', [userId]);
         const user = result.rows[0];
         
         if (user && user.is_admin) {
