@@ -66,9 +66,5 @@ router.get('/:level/:number', async (req, res, next) => {
     }
 });
 
-// Standard scripts per level
-router.get('/:level/script', (req, res) => {
-    res.json({ script: '// Standard practice scripts loaded' });
-});
 
 module.exports = router;

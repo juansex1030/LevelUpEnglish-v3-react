@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import DOMPurify from 'dompurify';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
@@ -8,7 +7,7 @@ import PracticeEngine from '../components/PracticeEngine';
 import AdBanner from '../components/AdBanner';
 import AlphabetInteractive from '../components/AlphabetInteractive';
 import NumbersInteractive from '../components/NumbersInteractive';
-import API_URL from '../api/config';
+import apiClient from '../api/apiClient';
 import './TopicViewer.css';
 
 const TopicViewer = () => {
@@ -46,11 +45,6 @@ const TopicViewer = () => {
     }, [activeTab, topic]);
 
     let completedTopicsIds = progressData?.completed_topics_by_level?.[nivel?.toUpperCase()] || [];
-    
-    // MOCK (Admin): Para pruebas, simulamos que A1 está completo para que coincida con el Dashboard
-    if (nivel?.toUpperCase() === 'A1' && allTopics.length > 0) {
-        completedTopicsIds = allTopics.map(t => t.number);
-    }
     const topicStatus = completedTopicsIds.includes(parseInt(topicId)) ? 'completed' : 'not_started';
 
     // Auto-completion logic
@@ -82,7 +76,7 @@ const TopicViewer = () => {
             });
         }
 
-        axios.get(`${API_URL}/topics/${nivel}/script`)
+        apiClient.get(`/topics/${nivel}/script`)
             .then(res => {
                 if (!res.data.script) return;
                 const scriptEl = document.createElement('script');
@@ -99,9 +93,8 @@ const TopicViewer = () => {
         const fetchTopicsAndContent = async () => {
             try {
                 setLoading(true);
-                const topicsRes = await axios.get(`${API_URL}/topics/${nivel}`);
-                const topicRes = await axios.get(`${API_URL}/topics/${nivel}/${topicId}`);
-                
+                const topicsRes = await apiClient.get(`/topics/${nivel}`);
+                const topicRes = await apiClient.get(`/topics/${nivel}/${topicId}`);
                 if (isMounted) {
                     setAllTopics(topicsRes.data.topics);
                     setTopic(topicRes.data.topic);

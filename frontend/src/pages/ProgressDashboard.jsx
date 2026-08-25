@@ -32,26 +32,20 @@ const ProgressDashboard = () => {
 
     const { stats, total_topics } = progressData;
 
-    // Calcular logros dinámicamente: Si un nivel tiene total > 0 y completed === total, se gana la insignia.
-    // MOCK (Admin): Para pruebas, seguimos simulando que A1 está completo si el usuario quiere probar.
-    // (Puedes quitar este bloque de mock cuando pases a producción y solo usar progressData.stats)
-    const mockedStats = stats || {};
-
-    // Recalcular progreso global basándonos en el mock para que los porcentajes cuadren
+    // Recalculate global progress from stats
     let globalCompleted = 0;
     let globalTotal = 0;
     
-    Object.values(mockedStats).forEach(lvlData => {
+    Object.values(stats || {}).forEach(lvlData => {
         globalCompleted += (lvlData.completed || 0);
         globalTotal += (lvlData.total || 0);
     });
 
-    // Usar el total que venga del backend si es mayor, por seguridad, o el sumado
     const finalTotal = Math.max(total_topics || 0, globalTotal);
     const mockedOverallPercentage = finalTotal > 0 ? Math.round((globalCompleted / finalTotal) * 100) : 0;
 
     // Calculate dynamic level achievements (e.g., A1 Master)
-    const earnedAchievements = Object.entries(mockedStats)
+    const earnedAchievements = Object.entries(stats || {})
         .filter(([, data]) => data.total > 0 && data.completed === data.total)
         .map(([level]) => `master_${level.toUpperCase()}`);
 

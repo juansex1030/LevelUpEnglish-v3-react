@@ -139,8 +139,8 @@ const initializeAdmin = async () => {
             const adminUsername = adminEmail.split('@')[0];
 
             await query(
-                'INSERT INTO users (username, email, password, is_admin) VALUES ($1, $2, $3, $4)',
-                [adminUsername, adminEmail, hashedPassword, true]
+                'INSERT INTO users (username, email, password, is_admin, placement_test_completed) VALUES ($1, $2, $3, $4, $5)',
+                [adminUsername, adminEmail, hashedPassword, true, true]
             );
             console.log('[Auth] Default admin user created (' + adminEmail + ').');
         }
