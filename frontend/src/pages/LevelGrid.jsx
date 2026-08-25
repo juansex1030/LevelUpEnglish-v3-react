@@ -14,7 +14,6 @@ const LevelGrid = () => {
     const [topics, setTopics] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Fetch raw topics only
     useEffect(() => {
         const fetchTopics = async () => {
             try {
@@ -30,15 +29,11 @@ const LevelGrid = () => {
 
         fetchTopics();
         
-        // Progress is automatically fetched globally by ProgressContext, 
-        // but we can ensure it's up to date when entering the grid.
         if (user && fetchProgress) {
             fetchProgress();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nivel, user]); // Removed progressData and fetchProgress to prevent loops
+    }, [nivel, user, fetchProgress]); 
 
-    // Merge status when topics or progressData change
     const [topicsWithStatus, setTopicsWithStatus] = useState([]);
     
     useEffect(() => {
@@ -47,7 +42,8 @@ const LevelGrid = () => {
             return;
         }
         
-        const completedTopicsIds = progressData?.completed_topics_by_level?.[nivel?.toUpperCase()] || [];
+        let completedTopicsIds = progressData?.completed_topics_by_level?.[nivel?.toUpperCase()] || [];
+
         const merged = topics.map(t => ({
             ...t,
             status: completedTopicsIds.includes(t.number) ? 'completed' : 'not_started'
@@ -57,66 +53,78 @@ const LevelGrid = () => {
     }, [topics, progressData, nivel]);
 
     const levelColors = {
-        'A1': '#10B981',
-        'A2': '#2DD4BF',
-        'B1': '#8B5CF6',
-        'B2': '#0EA5E9',
-        'C1': '#10B981', // Reused
+        'A1': '#58CC02', // Verde
+        'A2': '#1CB0F6', // Azul cielo
+        'B1': '#CE82FF', // Morado
+        'B2': '#FF9800', // Naranja
+        'C1': '#FF4B4B', // Rojo
     };
 
-    const color = levelColors[nivel?.toUpperCase()] || '#10B981';
+    const levelNames = {
+        'A1': 'Principiante',
+        'A2': 'Elemental',
+        'B1': 'Intermedio',
+        'B2': 'Intermedio Alto',
+        'C1': 'Avanzado',
+    };
+
+    const color = levelColors[nivel?.toUpperCase()] || 'var(--acento-primario)';
+    const name = levelNames[nivel?.toUpperCase()] || 'Nivel';
 
     const completedCount = topicsWithStatus.filter(t => t.status === 'completed').length;
     const totalCount = topicsWithStatus.length;
     const progressPercentage = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
 
-    if (loading && topics.length === 0) return <div className="text-center p-5">Loading topics...</div>;
+    if (loading && topics.length === 0) return <div className="text-center p-5 fw-bold fs-4">Cargando Level...</div>;
 
     return (
-        <div className="container py-4">
+        <div className="container py-4 level-grid-page">
+            {/* Top AdBanner */}
+            <div className="d-flex justify-content-center mb-4 top-ad-block">
+                <AdBanner type="horizontal" />
+            </div>
+
             <div className="level-header" style={{ '--glow-color': color }}>
-                <span className="level-badge">Level {nivel?.toUpperCase()}</span>
-                <h1>{nivel?.toUpperCase()} Level</h1>
-                <p className="lead text-muted">Start your English journey with fundamental topics.</p>
+                <span className="level-badge">{nivel?.toUpperCase()} - {name}</span>
+                <h1>Level {nivel?.toUpperCase()}</h1>
+                <p className="lead">Completa todos los temas para desbloquear tu certificado.</p>
                 
-                {user ? (
-                    <div className="premium-progress-wrapper mt-4">
-                        <div className="progress-info d-flex justify-content-between align-items-end mb-2">
-                            <span className="progress-label fw-bold">Your Progress</span>
-                            <span className="progress-stats badge" style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'var(--color-texto-principal)' }}>
-                                {completedCount} / {totalCount} ({progressPercentage}%)
-                            </span>
-                        </div>
-                        <div className="premium-progress-track">
-                            <div 
-                                className="premium-progress-fill"
-                                style={{ 
-                                    width: `${progressPercentage}%`,
-                                    background: `linear-gradient(90deg, ${color}, ${color}dd)` 
-                                }}
-                            >
-                                <div className="progress-glow"></div>
-                                <div className="progress-stripes"></div>
-                            </div>
-                        </div>
-                        {progressPercentage === 100 && (
-                            <div className="completion-celebration mt-3 animate-fade-in">
-                                <i className="bi bi-trophy-fill text-warning me-2"></i> 
-                                <span className="fw-bold">Level Completed!</span> Excellent work!
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="progress-summary">
-                        {completedCount}/{totalCount} Topics
+                {!user && (
+                    <div className="progress-summary mt-3 fw-bold">
+                        {totalCount} Módulos disponibles
                     </div>
                 )}
             </div>
 
-            {/* Ad: Horizontal banner below level header */}
-            <AdBanner type="horizontal" />
+            {user && (
+                <div className="premium-progress-wrapper level-progress-block" style={{ '--level-color': color }}>
+                    <div className="progress-info d-flex justify-content-between align-items-end mb-2">
+                        <span className="progress-label">Tu Progreso</span>
+                        <span className="progress-stats">
+                            {completedCount} / {totalCount} ({progressPercentage}%)
+                        </span>
+                    </div>
+                    <div className="premium-progress-track">
+                        <div 
+                            className="premium-progress-fill"
+                            style={{ 
+                                width: `${progressPercentage}%`,
+                                backgroundColor: color 
+                            }}
+                        >
+                            <div className="progress-glow"></div>
+                        </div>
+                    </div>
+                    {progressPercentage === 100 && (
+                        <div className="mt-3 fw-bold fs-5 text-warning">
+                            <i className="bi bi-star-fill me-2"></i> 
+                            ¡Level Completado! Eres increíble.
+                        </div>
+                    )}
+                </div>
+            )}
 
-            <div className="topics-grid">
+            <div className="topics-grid level-topics-block" style={{ '--level-color': color }}>
                 {topicsWithStatus.map(topic => {
                     const userId = user ? user.id : 'guest';
                     const isTheoryDone = localStorage.getItem(`levelup_theory_${userId}_${nivel}_${topic.number}_done`) === 'true' || topic.status === 'completed';
@@ -128,36 +136,35 @@ const LevelGrid = () => {
                             to={`/niveles/${nivel}/topic/${topic.number}`}
                             className={`topic-card ${topic.status === 'completed' ? 'completed' : ''}`}
                         >
+                            {topic.status === 'completed' && (
+                                <div className="completion-badge">
+                                    <i className="bi bi-check-lg"></i>
+                                </div>
+                            )}
                             <div className="topic-icon">
-                                <i className={`bi ${topic.icon}`}></i>
+                                <i className={`bi ${topic.icon || 'bi-star-fill'}`}></i>
                             </div>
-                            <div className="topic-info">
-                                <span className="topic-number">Topic {topic.number}</span>
+                            <div className="topic-info d-flex flex-column gap-2 flex-grow-1">
+                                <span className="topic-number">Módulo {topic.number}</span>
                                 <h3 className="topic-title">{topic.title}</h3>
                                 <p>{topic.description}</p>
                                 <div className="topic-mini-progress">
-                                    {isTheoryDone && <span className="mini-badge theory"><i className="bi bi-book-half"></i> Teoría ✓</span>}
-                                    {isPracticeDone && <span className="mini-badge practice"><i className="bi bi-controller"></i> Práctica ✓</span>}
+                                    {isTheoryDone && <span className="mini-badge theory">Teoría</span>}
+                                    {isPracticeDone && <span className="mini-badge practice">Práctica</span>}
                                 </div>
                             </div>
-                            {topic.status === 'completed' && (
-                                <div className="completion-badge">
-                                    <i className="bi bi-check-circle-fill"></i>
-                                </div>
-                            )}
                         </Link>
                     );
                 })}
             </div>
 
-            {/* Ad: Square ad below the grid */}
-            <div className="d-flex justify-content-center mt-4">
+            <div className="d-flex justify-content-center mt-4 bottom-ad-block">
                 <AdBanner type="square" />
             </div>
 
-            <div className="text-center mt-5">
-                <Link to="/learn" className="btn btn-outline-primary">
-                    &larr; Back to All Levels
+            <div className="text-center mt-5 back-btn-block">
+                <Link to="/learn" className="btn-gamified btn-secondary-3d">
+                    <i className="bi bi-arrow-left"></i> Volver al Mapa
                 </Link>
             </div>
         </div>

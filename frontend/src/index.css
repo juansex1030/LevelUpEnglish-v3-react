@@ -1,77 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 
-/* --- VARIABLES DE COLOR PRINCIPALES --- */
-/* Por defecto, cargamos el TEMA OSCURO */
+/* --- GAMIFIED DESIGN SYSTEM (LevelUp English) --- */
 :root {
-    /* --- PALETA MIDNIGHT TEAL (Modo Claro/Por defecto adaptado) --- */
-    --color-fondo: #EEEEEE;
+    /* Paleta Gamificada Base (Clara y Amigable) */
+    --color-fondo: #F8F9FA;
     --color-fondo-secundario: #FFFFFF;
-    --color-borde: rgba(57, 62, 70, 0.2);
-    --color-texto-principal: #222831;
-    --color-texto-secundario: #393E46;
+    --color-borde: #E5E7EB;
+    
+    --color-texto-principal: #1F2937;
+    --color-texto-secundario: #6B7280;
 
-    --acento-primario: #00ADB5;
-    --acento-secundario: #00ADB5;
+    /* Acentos Gamificados (Inspiración Duolingo) */
+    --acento-primario: #58CC02; /* Verde brillante (Primary CTA) */
+    --acento-secundario: #1CB0F6; /* Azul cielo (Cursos/Progreso) */
+    --acento-terciario: #FF4B4B; /* Rojo (Errores/Peligro) */
+    --acento-cuarto: #FFC800; /* Amarillo/Dorado (Rachas/Estrellas) */
+    --acento-quinto: #CE82FF; /* Morado (Niveles altos) */
+
+    /* Botones 3D Shadows */
+    --btn-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+    --btn-shadow-primary: 0 4px 0 #58a700;
+    --btn-shadow-secondary: 0 4px 0 #1899d6;
 
     /* Feedback Colors */
-    --feedback-correcto: #00ADB5;
-    --feedback-incorrecto: #DC2626;
-    --feedback-pista: #F59E0B;
+    --feedback-correcto: #58CC02;
+    --feedback-incorrecto: #FF4B4B;
+    --feedback-pista: #FFC800;
 
-    --sombra-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --sombra-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --sombra-card: 0 8px 24px rgba(149, 157, 165, 0.2);
+    --sombra-hover: 0 12px 28px rgba(149, 157, 165, 0.3);
     --sombra-titulo: none;
+    
+    /* Radius muy redondeado para estilo app */
+    --radius-gamified: 24px;
+    --radius-btn: 16px;
 }
 
-/* --- MODO OSCURO (Restaurado & Refinado) --- */
-[data-bs-theme="dark"] {
-    --color-fondo: #222831;
-    --color-fondo-secundario: #393E46;
-    --color-borde: rgba(238, 238, 238, 0.15);
+/* Modo Oscuro adaptado para Gamificación */
+[data-bs-theme="dark"], body.dark-mode {
+    --color-fondo: #131F24;
+    --color-fondo-secundario: #202F36;
+    --color-borde: #37464F;
 
-    --color-texto-principal: #EEEEEE;
-    --color-texto-secundario: #b4bac2;
+    --color-texto-principal: #FFFFFF;
+    --color-texto-secundario: #AFAFAF;
 
-    --acento-primario: #00ADB5;
-    --acento-secundario: #00ADB5;
-
-    --feedback-correcto: #00ADB5;
-    --feedback-incorrecto: #F87171;
-    --feedback-pista: #FBBF24;
-
-    --sombra-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    --sombra-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-
-    --sombra-titulo: 0 0 20px rgba(0, 173, 181, 0.15);
+    /* Mantenemos los acentos vibrantes sobre oscuro */
+    --btn-shadow: 0 4px 0 rgba(0, 0, 0, 0.4);
+    --btn-shadow-primary: 0 4px 0 #58a700;
+    --btn-shadow-secondary: 0 4px 0 #1899d6;
+    
+    --sombra-card: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --sombra-hover: 0 12px 28px rgba(0, 0, 0, 0.6);
 }
-
-/* Definimos el TEMA CLARO cuando el body tenga la clase "light-mode" */
-body.light-mode {
-    --color-fondo: #EEEEEE;
-    --color-fondo-secundario: #FFFFFF;
-    --color-borde: rgba(57, 62, 70, 0.2);
-    --color-texto-principal: #222831;
-    --color-texto-secundario: #393E46;
-
-    --acento-primario: #00ADB5;
-    --acento-secundario: #00ADB5;
-
-    --feedback-correcto: #00ADB5;
-    --feedback-incorrecto: #DC2626;
-    --feedback-pista: #F59E0B;
-
-    --sombra-titulo: none;
-}
-
-
-/* --- Estilos Generales --- */
 
 body {
     background-color: var(--color-fondo);
     color: var(--color-texto-principal);
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Nunito', sans-serif;
     transition: background-color 0.3s, color 0.3s;
     overflow-x: hidden;
+    background-image: radial-gradient(var(--color-borde) 1.5px, transparent 1.5px);
+    background-size: 36px 36px;
 }
 
 .no-transition * {

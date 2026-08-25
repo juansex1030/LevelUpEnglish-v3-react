@@ -155,3 +155,46 @@
 .payment-methods-grid .bg-body {
     background-color: var(--color-fondo) !important;
 }
+
+/* ===========================
+   MOBILE FIXES — PracticeEngine
+   =========================== */
+@media (max-width: 768px) {
+    /* El card del juego no debe desbordar */
+    .practice-engine > div {
+        overflow: hidden;
+        padding: 1rem !important;
+    }
+
+    /* Header del juego: wrap para que el badge no se salga */
+    .practice-engine .d-flex.align-items-center.mb-4 {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* Badge "Completado": ocultar texto, dejar solo el ícono y el color */
+    .practice-engine .badge {
+        font-size: 0 !important;   /* oculta el texto */
+        padding: 0.45rem 0.6rem !important;
+        border-radius: 50% !important;
+    }
+    .practice-engine .badge i,
+    .practice-engine .badge .bi {
+        font-size: 0.85rem !important;
+        margin: 0 !important;
+    }
+
+    /* Pantalla de "¡Ejercicio Completado!": reducir padding y fuentes */
+    .game-board .d-flex.flex-column.align-items-center {
+        padding: 1.5rem 1rem !important;
+    }
+    .game-board .d-flex.flex-column.align-items-center h4 {
+        font-size: 1.1rem !important;
+    }
+    .game-board .d-flex.flex-column.align-items-center p {
+        font-size: 0.85rem !important;
+    }
+    .game-board .d-flex.flex-column.align-items-center .display-4 {
+        font-size: 2rem !important;
+    }
+}

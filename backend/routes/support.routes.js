@@ -19,23 +19,36 @@ const supportLimiter = rateLimit({
 // @access  Public (or authenticated)
 router.post('/', supportLimiter, async (req, res, next) => {
     try {
-        const { name, email, subject, message, userId } = req.body;
+        const { name, email, subject, message } = req.body;
 
         if (!name || !email || !subject || !message) {
             return res.status(400).json({ msg: 'Please complete all required fields.' });
         }
 
-        // --- NEW SECURITY POLICY: Max 2 unread messages ---
-        // We check by userId if logged in, or by email for guest inquiries
+        // Extract userId from authenticated token if present — never trust body for this
+        let authenticatedUserId = null;
+        try {
+            const jwt = require('jsonwebtoken');
+            const { SECRET_KEY } = require('../middleware/auth');
+            const authHeader = req.headers['authorization'];
+            const cookieToken = req.cookies?.token;
+            const rawToken = cookieToken || (authHeader && authHeader.split(' ')[1]);
+            if (rawToken) {
+                const decoded = jwt.verify(rawToken, SECRET_KEY);
+                authenticatedUserId = decoded.id || null;
+            }
+        } catch { /* token absent or invalid — treat as guest */ }
+
+        // --- Security: Max 2 unread messages per user/email ---
         let existingUnread;
-        if (userId) {
+        if (authenticatedUserId) {
             existingUnread = await query(
-                'SELECT COUNT(*) FROM support_messages WHERE user_id = $1 AND status = \'unread\'',
-                [userId]
+                "SELECT COUNT(*) FROM support_messages WHERE user_id = $1 AND status = 'unread'",
+                [authenticatedUserId]
             );
         } else {
             existingUnread = await query(
-                'SELECT COUNT(*) FROM support_messages WHERE email = $1 AND status = \'unread\'',
+                "SELECT COUNT(*) FROM support_messages WHERE email = $1 AND status = 'unread'",
                 [email]
             );
         }
@@ -47,15 +60,13 @@ router.post('/', supportLimiter, async (req, res, next) => {
                 policy: 'max_unread_reached'
             });
         }
-        // --------------------------------------------------
 
-        // Robust sanitization: remove all HTML-like tags and escape quotes
-        // This ensures the DB stores clean data even if the frontend escapes it
+        // Robust sanitization: strip HTML-like tags and limit length
         const cleanMessage = message.replace(/[<>]/g, '').trim();
 
         const result = await query(
             'INSERT INTO support_messages (user_id, name, email, subject, message) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [userId || null, name, email, subject, cleanMessage.substring(0, 2000)] // Safety limit
+            [authenticatedUserId, name, email, subject, cleanMessage.substring(0, 2000)]
         );
 
         res.status(201).json({

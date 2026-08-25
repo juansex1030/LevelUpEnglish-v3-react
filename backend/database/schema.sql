@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     google_id VARCHAR(255) UNIQUE DEFAULT NULL,
     otp_attempts INTEGER DEFAULT 0,
     last_login_at TIMESTAMP DEFAULT NULL,
+    placement_test_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

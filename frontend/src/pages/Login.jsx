@@ -40,12 +40,13 @@ const Login = () => {
             const response = await apiClient.post('/auth/login', formData);
             if (response.data.token && typeof response.data.token === 'string') {
                 if (/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(response.data.token)) {
-                    localStorage.setItem('token', response.data.token);
+                    sessionStorage.setItem('token', response.data.token);
                 }
             }
             login(response.data.user);
             sessionStorage.setItem('show_welcome', 'true');
-            navigate('/learn');
+            const destination = response.data.user?.placement_test_completed ? '/learn' : '/placement-test';
+            navigate(destination);
             setLoading(false);
         } catch (err) {
             setError(err.response?.data?.msg || err.response?.data?.error || 'Inicio de sesión fallido. Verifica tu correo y contraseña.');
@@ -102,14 +103,14 @@ const Login = () => {
             });
             if (res.data.token && typeof res.data.token === 'string') {
                 if (/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(res.data.token)) {
-                    localStorage.setItem('token', res.data.token);
+                    sessionStorage.setItem('token', res.data.token);
                 }
             }
             login(res.data.user);
             sessionStorage.setItem('show_welcome', 'true');
-            navigate('/learn');
+            const destination = res.data.user?.placement_test_completed ? '/learn' : '/placement-test';
+            navigate(destination);
         } catch (err) {
-            console.error("Google login failed:", err);
             setError(err.response?.data?.msg || 'Error al iniciar sesión con Google.');
         } finally {
             setLoading(false);

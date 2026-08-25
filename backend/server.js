@@ -13,7 +13,6 @@ const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
 const topicsRoutes = require('./routes/topics.routes');
 const progressRoutes = require('./routes/progress.routes');
-const epaycoRoutes = require('./routes/epayco.routes');
 const supportRoutes = require('./routes/support.routes');
 
 const app = express();
@@ -53,7 +52,7 @@ const corsOptions = {
         // 2. Allow any 'localhost' or '127.0.0.1' in dev
         // 3. Allow origins specified in FRONTEND_URL env var
         
-        const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+        const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/.test(origin);
         const isVercel = /\.vercel\.app$/.test(origin);
         const isCloudflarePages = /\.pages\.dev$/.test(origin);
         const isLevelUpSubdomain = /^https?:\/\/([a-z0-9-]+\.)?levelupenglishco\.com$/.test(origin);
@@ -113,7 +112,6 @@ app.use('/api/v1/topics', topicsRoutes);
 app.use('/api/v1/progress', progressRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/support', supportRoutes);
-app.use('/api/v1/epayco', epaycoRoutes);
 
 // ======================
 // INITIALIZATION
@@ -139,8 +137,8 @@ const initializeAdmin = async () => {
             const adminUsername = adminEmail.split('@')[0];
 
             await query(
-                'INSERT INTO users (username, email, password, is_admin) VALUES ($1, $2, $3, $4)',
-                [adminUsername, adminEmail, hashedPassword, true]
+                'INSERT INTO users (username, email, password, is_admin, placement_test_completed) VALUES ($1, $2, $3, $4, $5)',
+                [adminUsername, adminEmail, hashedPassword, true, true]
             );
             console.log('[Auth] Default admin user created (' + adminEmail + ').');
         }

@@ -26,8 +26,7 @@ const isUniqueViolation = (error) => error && error.code === '23505';
 const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax', // Changed from Strict to Lax for better compatibility
-    maxAge: 90 * 24 * 60 * 60 * 1000 // 90 days
+    sameSite: 'Lax' // Changed from Strict to Lax for better compatibility
 };
 
 const setAuthCookie = (req, res, user, token) => {
@@ -39,8 +38,7 @@ const setAuthCookie = (req, res, user, token) => {
         ...COOKIE_OPTIONS,
         // In production (Vercel), we MUST use SameSite: None and Secure: true for cookies to work across domains/subdomains.
         sameSite: isProd ? 'None' : 'Lax',
-        secure: isProd,
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        secure: isProd
     };
 
     const name = useAdminCookie ? 'admin_token' : 'token';
@@ -58,7 +56,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = await query(
-            'INSERT INTO users (username, email, password, is_admin, is_premium) VALUES ($1, $2, $3, false, false) RETURNING id, username, email, is_admin, is_premium, avatar, created_at',
+            'INSERT INTO users (username, email, password, is_admin, is_premium) VALUES ($1, $2, $3, false, false) RETURNING id, username, email, is_admin, is_premium, avatar, created_at, placement_test_completed',
             [username, email, hashedPassword]
         );
 
@@ -71,9 +69,9 @@ router.post('/register', authLimiter, async (req, res, next) => {
             token, // Returning token for localStorage fallback
             user: { 
                 id: user.id, username: user.username, email: user.email, 
-                is_admin: user.is_admin, is_premium: user.is_premium, 
+                is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
                 premium_until: user.premium_until,
-                avatar: user.avatar, created_at: user.created_at 
+                avatar: user.avatar, created_at: user.created_at, placement_test_completed: user.placement_test_completed 
             } 
         });
 
@@ -114,8 +112,8 @@ router.post('/login', authLimiter, async (req, res, next) => {
             token, // Returning token for localStorage fallback
             user: { 
                 id: user.id, username: user.username, email: user.email, 
-                is_admin: user.is_admin, is_premium: user.is_premium, 
-                avatar: user.avatar 
+                is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
+                avatar: user.avatar, placement_test_completed: user.placement_test_completed 
             } 
         });
     } catch (error) {
@@ -240,8 +238,8 @@ router.post('/google', async (req, res, next) => {
             token: appToken, // Returning token for localStorage fallback
             user: { 
                 id: user.id, username: user.username, email: user.email, 
-                is_admin: user.is_admin, is_premium: user.is_premium, 
-                avatar: user.avatar 
+                is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
+                avatar: user.avatar, placement_test_completed: user.placement_test_completed 
             } 
         });
     } catch (error) {
@@ -332,7 +330,7 @@ router.put('/profile', authenticateToken, async (req, res, next) => {
             msg: 'Perfil actualizado exitosamente', 
             user: { 
                 id: user.id, username: updatedUsername, email: user.email, 
-                is_admin: user.is_admin, is_premium: user.is_premium, 
+                is_admin: user.is_admin, is_premium: user.is_admin ? true : user.is_premium, 
                 premium_until: user.premium_until,
                 avatar: updatedAvatar 
             } 
@@ -355,9 +353,7 @@ router.delete('/subscription', authenticateToken, async (req, res, next) => {
         if (!user.is_premium) return res.status(400).json({ msg: 'No tienes una suscripción Premium activa.' });
 
         // We do NOT revoke access — user keeps premium until premium_until expires.
-        // Since ePayco does not auto-charge, there is no recurring billing to stop.
-        // This endpoint simply confirms the cancellation intent for the user's records.
-        console.log(`[Auth] User #${userId} confirmed subscription cancellation. Access continues until: ${user.premium_until}`);
+        // This endpoint confirms the cancellation intent; no further charges will apply.
 
         res.json({
             success: true,
@@ -365,6 +361,64 @@ router.delete('/subscription', authenticateToken, async (req, res, next) => {
             msg: `Tu suscripción ha sido cancelada. Tu acceso Premium se mantendrá activo hasta que venza el período ya pagado.`
         });
     } catch (error) {
+        next(error);
+    }
+});
+
+router.post('/placement', authenticateToken, async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+
+        // Security: Check if user already completed the test (server-side guard)
+        const userCheck = await query('SELECT placement_test_completed FROM users WHERE id = $1', [userId]);
+        if (userCheck.rows[0]?.placement_test_completed) {
+            return res.status(409).json({ msg: 'La prueba de ubicación ya fue completada.' });
+        }
+
+        const { score, startFromScratch } = req.body;
+
+        // Validate score: must be an integer between 0 and total number of questions
+        const totalQuestions = 12;
+        const parsedScore = parseInt(score, 10);
+        const validScore = !isNaN(parsedScore) && parsedScore >= 0 && parsedScore <= totalQuestions
+            ? parsedScore
+            : 0;
+
+        // Update user to mark test as completed
+        await query('UPDATE users SET placement_test_completed = true WHERE id = $1', [userId]);
+        
+        if (startFromScratch || validScore === 0) {
+            return res.json({ msg: 'Nivel inicial configurado', level: 'A1' });
+        }
+
+        // Determine level based on validated score
+        let determinedLevel = 'A1';
+        if (validScore >= 10) determinedLevel = 'B2';
+        else if (validScore >= 7) determinedLevel = 'B1';
+        else if (validScore >= 4) determinedLevel = 'A2';
+
+        // Mark lower levels as completed in progress table
+        const levelsToComplete = [];
+        if (determinedLevel === 'A2') levelsToComplete.push('A1');
+        if (determinedLevel === 'B1') levelsToComplete.push('A1', 'A2');
+        if (determinedLevel === 'B2') levelsToComplete.push('A1', 'A2', 'B1');
+
+        if (levelsToComplete.length > 0) {
+            const levelsStr = levelsToComplete.map(l => `'${l}'`).join(',');
+            const topicsRes = await query(
+                `SELECT id FROM topics WHERE level IN (${levelsStr})`
+            );
+            for (const row of topicsRes.rows) {
+                await query(
+                    'INSERT INTO progress (user_id, topic_id) VALUES ($1, $2) ON CONFLICT (user_id, topic_id) DO NOTHING',
+                    [userId, row.id]
+                );
+            }
+        }
+
+        res.json({ msg: 'Prueba completada', level: determinedLevel });
+    } catch (error) {
+        console.error('[Placement] Error:', error.message);
         next(error);
     }
 });

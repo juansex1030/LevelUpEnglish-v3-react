@@ -54,12 +54,14 @@ const Register = () => {
             });
             if (res.data.token && typeof res.data.token === 'string') {
                 if (/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(res.data.token)) {
-                    localStorage.setItem('token', res.data.token);
+                    sessionStorage.setItem('token', res.data.token);
                 }
             }
             login(res.data.user);
             sessionStorage.setItem('show_welcome', 'true');
-            navigate('/learn');
+            // New users won't have completed the placement test
+            const destination = res.data.user?.placement_test_completed ? '/learn' : '/placement-test';
+            navigate(destination);
         } catch (err) {
             console.error("Google register failed:", err);
             setError(err.response?.data?.msg || 'Error al registrarse con Google.');
