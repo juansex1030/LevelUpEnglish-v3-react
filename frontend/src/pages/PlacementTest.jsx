@@ -161,9 +161,9 @@ function PlacementTest() {
 
                     <button 
                         className="btn btn-primary btn-lg rounded-pill fw-bold w-100 py-3 shadow"
-                        onClick={() => navigate('/dashboard')}
+                        onClick={() => navigate('/progress')}
                     >
-                        Ir a mi Dashboard <i className="bi bi-arrow-right ms-2"></i>
+                        Ver mi Progreso <i className="bi bi-bar-chart-line ms-2"></i>
                     </button>
                 </div>
             </div>
