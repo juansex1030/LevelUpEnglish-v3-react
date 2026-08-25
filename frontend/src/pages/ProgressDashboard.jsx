@@ -35,14 +35,7 @@ const ProgressDashboard = () => {
     // Calcular logros dinámicamente: Si un nivel tiene total > 0 y completed === total, se gana la insignia.
     // MOCK (Admin): Para pruebas, seguimos simulando que A1 está completo si el usuario quiere probar.
     // (Puedes quitar este bloque de mock cuando pases a producción y solo usar progressData.stats)
-    const mockedStats = {
-        ...stats,
-        A1: {
-            ...stats?.A1,
-            completed: stats?.A1?.total || 25,
-            total: stats?.A1?.total || 25
-        }
-    };
+    const mockedStats = stats || {};
 
     // Recalcular progreso global basándonos en el mock para que los porcentajes cuadren
     let globalCompleted = 0;
