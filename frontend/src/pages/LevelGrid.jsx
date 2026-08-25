@@ -79,6 +79,11 @@ const LevelGrid = () => {
 
     return (
         <div className="container py-4 level-grid-page">
+            {/* Top AdBanner */}
+            <div className="d-flex justify-content-center mb-4 top-ad-block">
+                <AdBanner type="horizontal" />
+            </div>
+
             <div className="level-header" style={{ '--glow-color': color }}>
                 <span className="level-badge">{nivel?.toUpperCase()} - {name}</span>
                 <h1>Level {nivel?.toUpperCase()}</h1>
@@ -119,8 +124,6 @@ const LevelGrid = () => {
                 </div>
             )}
 
-            <AdBanner type="horizontal" />
-
             <div className="topics-grid level-topics-block" style={{ '--level-color': color }}>
                 {topicsWithStatus.map(topic => {
                     const userId = user ? user.id : 'guest';
@@ -155,11 +158,11 @@ const LevelGrid = () => {
                 })}
             </div>
 
-            <div className="d-flex justify-content-center mt-4">
+            <div className="d-flex justify-content-center mt-4 bottom-ad-block">
                 <AdBanner type="square" />
             </div>
 
-            <div className="text-center mt-5">
+            <div className="text-center mt-5 back-btn-block">
                 <Link to="/learn" className="btn-gamified btn-secondary-3d">
                     <i className="bi bi-arrow-left"></i> Volver al Mapa
                 </Link>

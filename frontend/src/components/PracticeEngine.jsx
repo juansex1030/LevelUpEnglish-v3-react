@@ -117,10 +117,14 @@ function PracticeEngine({ data, onScoreUpdate, isCompleted, storageKey }) {
         return new Set();
     });
 
+    const [manualReset, setManualReset] = useState(false);
+
     useEffect(() => {
         let active = true;
         const timer = setTimeout(() => {
             if (!active) return;
+            if (manualReset) return; // Do not auto-lock if user manually reset an exercise
+
             if (isCompleted && data && data.games) {
                 const allIdxs = new Set(data.games.map((_, i) => `${i}`));
                 setCompletedQuestions(allIdxs);
@@ -143,7 +147,7 @@ function PracticeEngine({ data, onScoreUpdate, isCompleted, storageKey }) {
             active = false;
             clearTimeout(timer);
         };
-    }, [data, isCompleted, storageKey]);
+    }, [data, isCompleted, storageKey, manualReset]);
 
     useEffect(() => {
         if (onScoreUpdate && data && data.games) {
@@ -253,7 +257,7 @@ function PracticeEngine({ data, onScoreUpdate, isCompleted, storageKey }) {
             )}
             
             {data.games.map((game, i) => (
-                <div key={i} className="mb-5 p-4 rounded-4 transition-all shadow-lg" 
+                <div key={i} className="mb-4 mb-md-5 p-3 p-md-4 rounded-4 transition-all shadow-lg" 
                      style={{ 
                          position: 'relative', 
                          background: 'rgba(15, 15, 25, 0.7)', 
@@ -265,10 +269,47 @@ function PracticeEngine({ data, onScoreUpdate, isCompleted, storageKey }) {
                         <div className="game-icon me-3 p-3 rounded-circle shadow" style={{ background: 'var(--acento-primario)', color: '#111' }}>
                             <span className="fs-4">🎮</span>
                         </div>
-                        <div>
-                            <h4 className="fw-bold mb-1 text-white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{game.title}</h4>
-                            <p className="mb-0 small" style={{ color: 'rgba(255,255,255,0.7)' }}>{game.instruction}</p>
-                        </div>
+                        {(() => {
+                            let title = game.title;
+                            let instruction = game.instruction;
+                            
+                            if (!title) {
+                                const titles = {
+                                    multiple_choice: "Selección Múltiple", fill_in: "Completar", unscramble: "Ordenar Palabras",
+                                    matching: "Unir Parejas", spell_tool: "Deletreo", hangman_game: "Ahorcado",
+                                    crossword: "Crucigrama", fill_blanks: "Espacios en Blanco", sentence_builder: "Construir Oración",
+                                    trivia_game: "Trivia", reading_comprehension: "Comprensión Lectora", cloze_test: "Completar Texto",
+                                    word_search: "Sopa de Letras"
+                                };
+                                title = titles[game.type] || "Actividad";
+                            }
+                            
+                            if (!instruction) {
+                                const instructions = {
+                                    multiple_choice: "Selecciona la opción correcta para cada pregunta.",
+                                    fill_in: "Escribe la palabra correcta para completar el ejercicio.",
+                                    unscramble: "Ordena los elementos para formar la respuesta correcta.",
+                                    matching: "Une cada elemento con su pareja correspondiente.",
+                                    spell_tool: "Deletrea correctamente las palabras.",
+                                    hangman_game: "Adivina la palabra oculta antes de quedarte sin intentos.",
+                                    crossword: "Resuelve las pistas para completar el crucigrama.",
+                                    fill_blanks: "Llena los espacios en blanco con la palabra adecuada.",
+                                    sentence_builder: "Construye la oración en el orden correcto.",
+                                    trivia_game: "Responde las preguntas de trivia.",
+                                    reading_comprehension: "Lee el texto y responde las preguntas.",
+                                    cloze_test: "Completa los espacios vacíos en el texto.",
+                                    word_search: "Encuentra todas las palabras ocultas en la cuadrícula."
+                                };
+                                instruction = instructions[game.type] || "Sigue las instrucciones para completar el juego.";
+                            }
+
+                            return (
+                                <div>
+                                    <h4 className="fw-bold mb-1 text-white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{title}</h4>
+                                    <p className="mb-0 small" style={{ color: 'rgba(255,255,255,0.7)' }}>{instruction}</p>
+                                </div>
+                            );
+                        })()}
 
                         {completedQuestions.has(`${i}`) && (
                             <div className="ms-auto animate__animated animate__bounceIn">
@@ -285,13 +326,17 @@ function PracticeEngine({ data, onScoreUpdate, isCompleted, storageKey }) {
                                 <div className="display-4 text-primary mb-3">🎉</div>
                                 <h4 className="fw-bold text-primary">¡Ejercicio Completado!</h4>
                                 <p className="text-white-50">Has respondido correctamente a todas las preguntas de esta actividad.</p>
-                                <button className="btn btn-outline-light btn-sm mt-2 rounded-pill px-3" onClick={() => {
+                                <button type="button" className="btn btn-outline-light btn-sm mt-2 rounded-pill px-3" onClick={() => {
                                     const newSet = new Set(completedQuestions);
                                     newSet.delete(`${i}`);
                                     setCompletedQuestions(newSet);
+                                    setManualReset(true);
                                     if (storageKey) {
                                         try {
                                             localStorage.setItem(storageKey, JSON.stringify(Array.from(newSet)));
+                                            // Ensure the "done" flag is also cleared so parent doesn't override
+                                            const doneKey = storageKey.replace('_completed', '_done');
+                                            localStorage.removeItem(doneKey);
                                         } catch {
                                             // ignore localStorage write error
                                         }
@@ -323,6 +368,15 @@ function PracticeEngine({ data, onScoreUpdate, isCompleted, storageKey }) {
         </div>
     );
 }
+
+const normalizeText = (str) => {
+    if (!str) return '';
+    return String(str)
+        .toLowerCase()
+        .replace(/[.,!?]/g, '') // remove common punctuation
+        .replace(/\s+/g, ' ')   // normalize multiple spaces to one
+        .trim();
+};
 
 /* ── shared feedback banner ─────────────────────────────────────────── */
 function Feedback({ fb }) {
@@ -388,33 +442,41 @@ function MultipleChoice({ game, onCorrect }) {
 
     return (
         <div className="multiple-choice animate__animated animate__fadeIn">
-            <div className="text-center fs-4 fw-bold mb-5 py-4 px-4 rounded-4 shadow" 
+            <div className="text-center fs-5 fs-md-4 fw-bold mb-4 py-3 px-3 py-md-4 px-md-4 rounded-4 shadow" 
                  style={{ 
                      background: 'rgba(0,0,0,0.4)', 
                      border: '1px solid rgba(255,255,255,0.05)', 
                      color: '#fff',
                      textShadow: '0 2px 10px rgba(0,0,0,0.5)' 
                  }}>{q.q}</div>
-            <div className="d-flex flex-wrap justify-content-center gap-4">
-                {shuffledOptions.map((opt, i) => (
-                    <button key={i} 
-                            className="btn px-4 py-3 fw-bold rounded-4 transition-all" 
-                            style={{ 
-                                minWidth: '160px',
-                                background: 'rgba(255,255,255,0.05)',
-                                color: '#e0e0e0',
-                                border: '1px solid rgba(255,255,255,0.2)',
-                                backdropFilter: 'blur(10px)',
-                                transform: 'translateY(0)',
-                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-                            }}
-                            onMouseOver={(e) => { e.currentTarget.style.background = 'var(--acento-primario)'; e.currentTarget.style.color = '#111'; e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 25px var(--acento-primario)'; e.currentTarget.style.border = '1px solid var(--acento-primario)'; }}
-                            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e0e0e0'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)'; e.currentTarget.style.border = '1px solid rgba(255,255,255,0.2)'; }}
-                            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; }}
-                            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
-                            onClick={() => choose(opt)}>{opt}</button>
-                ))}
+            <div className="row g-3 px-md-4">
+                {shuffledOptions.map((opt, i) => {
+                    const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+                    return (
+                        <div className="col-6" key={`${idx}-${i}`}>
+                            <button 
+                                className="btn w-100 px-3 py-3 fw-bold rounded-4 transition-all d-flex align-items-center justify-content-start text-start" 
+                                style={{ 
+                                    background: 'rgba(255,255,255,0.05)',
+                                    color: '#e0e0e0',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    backdropFilter: 'blur(10px)',
+                                    transform: 'translateY(0)',
+                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                                }}
+                                onMouseOver={(e) => { e.currentTarget.style.background = 'var(--acento-primario)'; e.currentTarget.style.color = '#111'; e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 25px var(--acento-primario)'; e.currentTarget.style.border = '1px solid var(--acento-primario)'; }}
+                                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e0e0e0'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)'; e.currentTarget.style.border = '1px solid rgba(255,255,255,0.2)'; }}
+                                onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; }}
+                                onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+                                onClick={() => choose(opt)}
+                            >
+                                <span className="me-2 text-white-50 fs-6">{letters[i]}.</span>
+                                <span style={{ fontSize: 'clamp(0.8rem, 2.5vw, 1rem)' }}>{opt}</span>
+                            </button>
+                        </div>
+                    );
+                })}
             </div>
             <Feedback fb={fb} />
         </div>
@@ -429,7 +491,7 @@ function FillIn({ game, onCorrect }) {
     const q = game.questions[idx];
 
     const check = () => {
-        if (val.trim().toLowerCase() === q.a.toLowerCase()) {
+        if (normalizeText(val) === normalizeText(q.a)) {
             playSFX('success_chime');
             setFb({ type: 'success', text: '✅ Excellent!' });
             if (idx === game.questions.length - 1) {
@@ -445,14 +507,14 @@ function FillIn({ game, onCorrect }) {
 
     return (
         <div className="fill-in animate__animated animate__fadeIn">
-            <div className="fs-4 fw-bold mb-5 p-4 rounded-4 text-center shadow" 
+            <div className="fs-5 fs-md-4 fw-bold mb-4 p-3 p-md-4 rounded-4 text-center shadow" 
                  style={{ 
                      background: 'rgba(0,0,0,0.4)', 
                      border: '1px solid rgba(255,255,255,0.05)', 
                      color: '#fff',
                      textShadow: '0 2px 10px rgba(0,0,0,0.5)' 
                  }}>{q.q}</div>
-            <div className="d-flex gap-3 mb-2 max-w-md mx-auto" style={{ maxWidth: '600px' }}>
+            <div className="d-flex flex-column flex-md-row gap-3 mb-2 max-w-md mx-auto" style={{ maxWidth: '600px' }}>
                 <input className="form-control form-control-lg rounded-4 shadow-sm" 
                        style={{ 
                            background: 'rgba(255,255,255,0.05)', 
@@ -497,7 +559,7 @@ function Unscramble({ game, onCorrect }) {
     if (!q) return null;
 
     const check = () => {
-        if (val.trim().toLowerCase() === q.a.toLowerCase()) {
+        if (normalizeText(val) === normalizeText(q.a)) {
             playSFX('success_pop');
             setFb({ type: 'success', text: '✅ Perfect!' });
             if (idx === game.questions.length - 1) {
@@ -522,7 +584,7 @@ function Unscramble({ game, onCorrect }) {
                 <span className="d-block small mb-2 text-uppercase fw-bold" style={{ color: 'var(--acento-primario)', letterSpacing: '2px' }}>Scrambled Word</span>
                 <span className="fw-bold fs-2" style={{ color: '#fff', letterSpacing: '4px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{q.q}</span>
             </div>
-            <div className="d-flex gap-3 mb-2 max-w-md mx-auto" style={{ maxWidth: '500px' }}>
+            <div className="d-flex flex-column flex-md-row gap-3 mb-2 max-w-md mx-auto" style={{ maxWidth: '500px' }}>
                 <input className="form-control form-control-lg rounded-4 shadow-sm text-center" 
                        style={{ 
                            background: 'rgba(255,255,255,0.05)', 
@@ -582,36 +644,38 @@ function Matching({ game, onCorrect }) {
 
     return (
         <div className="matching-game animate__animated animate__fadeIn">
-            <div className="d-grid gap-4 mb-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))' }}>
+            <div className="row g-3 g-md-4 mb-4">
                 {limitedQuestions.map((q, i) => (
-                    <div key={i} className="d-flex align-items-center justify-content-between p-4 gap-4 rounded-4 shadow-lg" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(15px)', transition: 'all 0.3s ease' }}>
-                        <div className="matching-question flex-grow-1 d-flex align-items-start" style={{ minWidth: '0' }}>
-                            <span className="badge bg-primary rounded-circle text-white me-3 d-flex align-items-center justify-content-center" style={{ width: '28px', height: '28px', flexShrink: 0, fontSize: '0.8rem' }}>{i + 1}</span>
-                            <div className="text-light fw-bold" style={{ fontSize: '1.05rem', lineHeight: '1.4', whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'left' }}>
-                                {q.q}
+                    <div key={i} className="col-12 col-lg-6">
+                        <div className="d-flex flex-column flex-sm-row align-items-center justify-content-between p-3 p-md-4 gap-3 rounded-4 shadow-lg h-100" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(15px)', transition: 'all 0.3s ease' }}>
+                            <div className="matching-question flex-grow-1 d-flex align-items-start w-100" style={{ minWidth: '0' }}>
+                                <div className="bg-primary rounded-circle text-white me-3 d-flex align-items-center justify-content-center shadow-sm" style={{ width: '28px', height: '28px', flexShrink: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>{i + 1}</div>
+                                <div className="text-light fw-bold" style={{ fontSize: '1rem', lineHeight: '1.4', whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'left' }}>
+                                    {q.q}
+                                </div>
                             </div>
-                        </div>
-                        <div className="matching-selector" style={{ minWidth: '180px', flexShrink: 0 }}>
-                            <select 
-                                className="form-select w-100 fw-bold" 
-                                style={{ 
-                                    borderRadius: '12px', 
-                                    background: 'rgba(255,255,255,0.1)', 
-                                    color: '#fff',
-                                    border: '1px solid rgba(255,255,255,0.2)', 
-                                    padding: '12px', 
-                                    fontSize: '0.95rem', 
-                                    cursor: 'pointer',
-                                    backdropFilter: 'blur(10px)',
-                                    transition: 'all 0.3s'
-                                }}
-                                onChange={e => setSelections(s => ({ ...s, [i]: e.target.value }))}
-                                onFocus={(e) => { e.currentTarget.style.border = '1px solid var(--acento-primario)'; e.currentTarget.style.boxShadow = '0 0 10px rgba(37,117,252,0.3)'; }}
-                                onBlur={(e) => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.2)'; e.currentTarget.style.boxShadow = 'none'; }}
-                            >
-                                <option value="" style={{ color: '#000' }}>Match...</option>
-                                {shuffledOptions.map((a, j) => <option key={j} value={a} style={{ color: '#000' }}>{a}</option>)}
-                            </select>
+                            <div className="matching-selector w-100 mt-2 mt-sm-0" style={{ flexShrink: 0, minWidth: '160px', flexBasis: '40%' }}>
+                                <select 
+                                    className="form-select w-100 fw-bold" 
+                                    style={{ 
+                                        borderRadius: '12px', 
+                                        background: 'rgba(255,255,255,0.1)', 
+                                        color: '#fff',
+                                        border: '1px solid rgba(255,255,255,0.2)', 
+                                        padding: '10px 12px', 
+                                        fontSize: '0.95rem', 
+                                        cursor: 'pointer',
+                                        backdropFilter: 'blur(10px)',
+                                        transition: 'all 0.3s'
+                                    }}
+                                    onChange={e => setSelections(s => ({ ...s, [i]: e.target.value }))}
+                                    onFocus={(e) => { e.currentTarget.style.border = '1px solid var(--acento-primario)'; e.currentTarget.style.boxShadow = '0 0 10px rgba(37,117,252,0.3)'; }}
+                                    onBlur={(e) => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.2)'; e.currentTarget.style.boxShadow = 'none'; }}
+                                >
+                                    <option value="" style={{ color: '#000' }}>Match...</option>
+                                    {shuffledOptions.map((a, j) => <option key={j} value={a} style={{ color: '#000' }}>{a}</option>)}
+                                </select>
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -632,19 +696,95 @@ function Matching({ game, onCorrect }) {
 
 /* ── 5. Spell Tool ──────────────────────────────────────────────────── */
 function SpellTool({ game, onCorrect }) {
+    const isSpellingTest = !!(game.words && game.words.length > 0) || !!(game.questions && game.questions.length > 0);
+    const wordsList = game.words ? game.words : (game.questions ? game.questions.map(q => q.word || q.a || q.q) : []);
+    
     const [name, setName] = useState('');
     const [result, setResult] = useState('');
+    const [wordIdx, setWordIdx] = useState(0);
+    const [fb, setFb] = useState(null);
+
+    const getCurrentWord = () => {
+        const item = wordsList[wordIdx];
+        if (!item) return '';
+        if (typeof item === 'string') return item;
+        return item.word || item.a || item.q || item.text || item.value || JSON.stringify(item);
+    };
+
+    const playWord = () => {
+        if (!isSpellingTest) return;
+        const text = getCurrentWord();
+        
+        if (!text || text.startsWith('{')) {
+            alert("Error: No se encontró la palabra a dictar. Datos: " + text);
+            return;
+        }
+        
+        try {
+            window.speechSynthesis.cancel();
+            
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = 'en-US';
+            msg.rate = 0.9; 
+            
+            // Explicitly set voice for mobile browsers that fail without it
+            const voices = window.speechSynthesis.getVoices();
+            const enVoice = voices.find(v => v.lang.includes('en-US')) || voices.find(v => v.lang.includes('en')) || voices[0];
+            if (enVoice) {
+                msg.voice = enVoice;
+            }
+            
+            msg.onerror = (event) => {
+                console.error("SpeechSynthesis error:", event);
+            };
+
+            window.speechSynthesis.speak(msg);
+        } catch (error) {
+            console.error("SpeechSynthesis exception:", error);
+            alert("Tu navegador no soporta o tiene bloqueado el dictado por voz.");
+        }
+    };
 
     const spell = () => {
         if (!name.trim()) return;
-        const spelled = Array.from(name.toUpperCase()).map(c => game.alphabet[c] || c).join(' - ');
-        setResult(spelled);
-        setTimeout(() => { if (onCorrect) onCorrect(); }, 1000);
+        
+        if (isSpellingTest) {
+            const targetWord = getCurrentWord();
+            if (name.trim().toLowerCase() === targetWord.toLowerCase()) {
+                playSFX('success_pop');
+                setFb({ type: 'success', text: '✅ Correcto!' });
+                if (wordIdx + 1 < wordsList.length) {
+                    setTimeout(() => {
+                        setFb(null);
+                        setName('');
+                        setWordIdx(wordIdx + 1);
+                    }, 1200);
+                } else {
+                    setFb({ type: 'success', text: '✅ ¡Excelente! Has completado la prueba.' });
+                    setTimeout(() => { if (onCorrect) onCorrect(); }, 1500);
+                }
+            } else {
+                playSFX('error_buzz');
+                setFb({ type: 'error', text: '❌ Incorrecto, escucha e intenta de nuevo.' });
+            }
+        } else {
+            const spelled = Array.from(name.toUpperCase()).map(c => (game.alphabet && game.alphabet[c]) || c).join(' - ');
+            setResult(spelled);
+            setTimeout(() => { if (onCorrect) onCorrect(); }, 1000);
+        }
     };
 
     return (
         <div className="spell-tool animate__animated animate__fadeIn max-w-md mx-auto" style={{ maxWidth: '500px' }}>
-            <div className="d-flex gap-3 mb-4">
+            {isSpellingTest && (
+                <div className="mb-4 text-center">
+                    <button className="btn btn-outline-info rounded-circle p-3 shadow-sm" onClick={playWord} title="Escuchar palabra">
+                        <i className="bi bi-volume-up-fill fs-3"></i>
+                    </button>
+                    <p className="mt-2 text-white-50 small">Palabra {wordIdx + 1} de {wordsList.length}</p>
+                </div>
+            )}
+            <div className="d-flex flex-column flex-md-row gap-3 mb-4">
                 <input className="form-control form-control-lg rounded-4 shadow-sm" 
                        style={{ 
                            background: 'rgba(255,255,255,0.05)', 
@@ -653,7 +793,7 @@ function SpellTool({ game, onCorrect }) {
                            backdropFilter: 'blur(10px)',
                            transition: 'all 0.3s'
                        }}
-                       placeholder="Type a word..."
+                       placeholder={isSpellingTest ? "Escribe la palabra que escuchas..." : "Type a word..."}
                        value={name} 
                        onChange={e => setName(e.target.value)} 
                        onKeyDown={e => e.key === 'Enter' && spell()}
@@ -672,10 +812,10 @@ function SpellTool({ game, onCorrect }) {
                         onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 15px rgba(37,117,252,0.4)'; }}
                         onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                 >
-                    Spell it!
+                    {isSpellingTest ? "Check" : "Spell it!"}
                 </button>
             </div>
-            {result && (
+            {isSpellingTest ? <Feedback fb={fb} /> : result && (
                 <div className="p-4 rounded-4 text-center fw-bold fs-4 animate__animated animate__zoomIn shadow" 
                      style={{ 
                          background: 'rgba(37,117,252,0.1)', 
@@ -736,18 +876,23 @@ function HangmanGame({ game, onCorrect }) {
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
     return (
-        <div className="hangman-container text-center p-4 rounded-4 shadow-lg animate__animated animate__fadeIn" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
-            <div className="d-flex justify-content-between mb-4">
-                <span className="badge rounded-pill shadow-sm" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 15px', fontSize: '0.9rem' }}>
-                    Palabra {wordIdx + 1} / {game.words.length}
+        <div className="hangman-container text-center p-4 rounded-4 shadow-lg animate__animated animate__fadeIn max-w-lg mx-auto" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', maxWidth: '600px' }}>
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <span className="badge rounded-pill shadow-sm" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 15px', fontSize: '0.9rem' }}>
+                    Palabra {wordIdx + 1} / {game.words ? game.words.length : (game.questions ? game.questions.length : 1)}
                 </span>
                 <span className="badge rounded-pill shadow-sm" style={{ background: 'rgba(220,53,69,0.2)', color: '#ff6b6b', border: '1px solid rgba(220,53,69,0.5)', padding: '8px 15px', fontSize: '0.9rem' }}>
                     <i className="bi bi-heart-fill me-2 text-danger"></i> {lives}
                 </span>
             </div>
 
-            <div className="alert d-inline-block shadow-sm fw-bold mb-5 rounded-4" style={{ background: 'rgba(255,193,7,0.1)', border: '1px solid rgba(255,193,7,0.3)', color: '#ffdca8' }}>
-                <i className="bi bi-lightbulb-fill text-warning me-2"></i> Pista: {currentWordData.hint}
+            <div className="mb-4">
+                <h5 className="text-white-50 mb-3">{game.instruction || 'Adivina la palabra oculta usando el teclado'}</h5>
+                {currentWordData.hint && (
+                    <div className="alert d-inline-block shadow-sm fw-bold rounded-4" style={{ background: 'rgba(255,193,7,0.1)', border: '1px solid rgba(255,193,7,0.3)', color: '#ffdca8' }}>
+                        <i className="bi bi-lightbulb-fill text-warning me-2"></i> Pista: {currentWordData.hint}
+                    </div>
+                )}
             </div>
 
             <div className="word-display d-flex justify-content-center flex-wrap gap-3 mb-5">
@@ -771,15 +916,15 @@ function HangmanGame({ game, onCorrect }) {
             </div>
 
             {gameStatus === 'playing' && (
-                <div className="keyboard d-flex flex-wrap justify-content-center gap-2 max-w-md mx-auto" style={{ maxWidth: '600px' }}>
+                <div className="keyboard d-flex flex-wrap justify-content-center gap-2 mt-4 mx-auto" style={{ maxWidth: '400px' }}>
                     {alphabet.map(letter => {
                         const isGuessed = guessedLetters.has(letter);
                         const isCorrect = isGuessed && currentWord.includes(letter);
                         const isWrong = isGuessed && !currentWord.includes(letter);
                         
                         let btnStyle = { background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' };
-                        if (isCorrect) btnStyle = { background: 'rgba(37,117,252,0.2)', color: '#2575fc', border: '1px solid rgba(37,117,252,0.5)' };
-                        if (isWrong) btnStyle = { background: 'rgba(220,53,69,0.2)', color: '#dc3545', border: '1px solid rgba(220,53,69,0.5)', opacity: 0.5 };
+                        if (isCorrect) btnStyle = { background: 'rgba(40,167,69,0.2)', color: '#4dd475', border: '1px solid rgba(40,167,69,0.5)' };
+                        if (isWrong) btnStyle = { background: 'rgba(220,53,69,0.2)', color: '#dc3545', border: '1px solid rgba(220,53,69,0.5)', opacity: 0.4 };
                         
                         return (
                             <button key={letter}
@@ -1193,7 +1338,7 @@ function TriviaGame({ game, onCorrect }) {
                 <h3 className="fw-bold" style={{ color: '#fff', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{qText}</h3>
             </div>
 
-            <div className="options d-flex flex-column gap-3 max-w-md mx-auto" style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <div className="row g-3 mx-auto" style={{ maxWidth: '600px' }}>
                 {finalOptions.map((opt, idx) => {
                     let bg = 'rgba(255,255,255,0.05)'; let border = '1px solid rgba(255,255,255,0.2)'; let icon = null; let textColor = '#e0e0e0';
                     if (selectedOption !== null) {
@@ -1202,14 +1347,18 @@ function TriviaGame({ game, onCorrect }) {
                         else { bg = 'rgba(0,0,0,0.2)'; border = '1px solid rgba(255,255,255,0.05)'; textColor = '#888'; }
                     }
                     return (
-                        <button key={idx} className="btn d-flex align-items-center text-start p-3 fw-bold rounded-4 shadow-sm transition-all"
-                            style={{ background: bg, border: border, color: textColor, transition: 'all 0.2s', fontSize: '1.1rem' }}
-                            onClick={() => handleSelect(idx)} disabled={selectedOption !== null}
-                            onMouseOver={(e) => { if (selectedOption === null) { e.currentTarget.style.background = 'var(--acento-primario)'; e.currentTarget.style.color = '#111'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
-                            onMouseOut={(e) => { if (selectedOption === null) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e0e0e0'; e.currentTarget.style.transform = 'translateY(0)'; } }}
-                        >
-                            <span className="me-3" style={{ opacity: selectedOption === null ? 0.5 : 1 }}>{String.fromCharCode(65 + idx)}.</span>{opt}{icon}
-                        </button>
+                        <div key={idx} className="col-6">
+                            <button className="btn d-flex align-items-center text-start w-100 p-3 fw-bold rounded-4 shadow-sm transition-all h-100"
+                                style={{ background: bg, border: border, color: textColor, transition: 'all 0.2s', fontSize: '1rem', minHeight: '60px' }}
+                                onClick={() => handleSelect(idx)} disabled={selectedOption !== null}
+                                onMouseOver={(e) => { if (selectedOption === null) { e.currentTarget.style.background = 'var(--acento-primario)'; e.currentTarget.style.color = '#111'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
+                                onMouseOut={(e) => { if (selectedOption === null) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e0e0e0'; e.currentTarget.style.transform = 'translateY(0)'; } }}
+                            >
+                                <span className="me-2 text-white-50 fs-6">{String.fromCharCode(65 + idx)}.</span>
+                                <span style={{ flexGrow: 1, fontSize: 'clamp(0.85rem, 2.5vw, 1rem)' }}>{opt}</span>
+                                {icon}
+                            </button>
+                        </div>
                     );
                 })}
             </div>
@@ -1405,7 +1554,7 @@ function ReadingComprehension({ game, onCorrect }) {
                         
                         <h4 className="mb-4 text-white fw-bold" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{qText}</h4>
 
-                        <div className="d-flex flex-column gap-3">
+                        <div className="row g-3">
                             {finalOptions.map((opt, idx) => {
                                 let bg = 'rgba(255,255,255,0.05)'; let border = '1px solid rgba(255,255,255,0.2)'; let textColor = '#e0e0e0';
                                 if (selectedOption !== null) {
@@ -1413,14 +1562,17 @@ function ReadingComprehension({ game, onCorrect }) {
                                     else if (selectedOption === idx) { bg = 'rgba(220,53,69,0.2)'; border = '1px solid rgba(220,53,69,0.5)'; textColor = '#dc3545'; }
                                 }
                                 return (
-                                    <button key={idx} className="btn text-start p-3 fw-bold rounded-4 shadow-sm transition-all"
-                                        style={{ background: bg, border: border, color: textColor, transition: 'all 0.2s', fontSize: '1.05rem' }}
-                                        onClick={() => handleSelect(idx)} disabled={selectedOption !== null}
-                                        onMouseOver={(e) => { if (selectedOption === null) { e.currentTarget.style.background = 'var(--acento-primario)'; e.currentTarget.style.color = '#111'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
-                                        onMouseOut={(e) => { if (selectedOption === null) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e0e0e0'; e.currentTarget.style.transform = 'translateY(0)'; } }}
-                                    >
-                                        {opt}
-                                    </button>
+                                    <div key={idx} className="col-6">
+                                        <button className="btn d-flex align-items-center text-start w-100 p-3 fw-bold rounded-4 shadow-sm transition-all h-100"
+                                            style={{ background: bg, border: border, color: textColor, transition: 'all 0.2s', fontSize: '1rem', minHeight: '60px' }}
+                                            onClick={() => handleSelect(idx)} disabled={selectedOption !== null}
+                                            onMouseOver={(e) => { if (selectedOption === null) { e.currentTarget.style.background = 'var(--acento-primario)'; e.currentTarget.style.color = '#111'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
+                                            onMouseOut={(e) => { if (selectedOption === null) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e0e0e0'; e.currentTarget.style.transform = 'translateY(0)'; } }}
+                                        >
+                                            <span className="me-2 text-white-50 fs-6">{String.fromCharCode(65 + idx)}.</span>
+                                            <span style={{ flexGrow: 1, fontSize: 'clamp(0.85rem, 2.5vw, 1rem)' }}>{opt}</span>
+                                        </button>
+                                    </div>
                                 );
                             })}
                         </div>
@@ -1526,17 +1678,16 @@ function ClozeTest({ game, onCorrect }) {
                     </div>
                     
                     <div className="d-flex flex-column align-items-center gap-3 mt-5">
-                        <div className="d-flex gap-2 mx-auto" style={{ maxWidth: '500px', width: '100%' }}>
+                        <div className="d-flex flex-column flex-md-row gap-2 mx-auto" style={{ maxWidth: '500px', width: '100%' }}>
                             <input 
                                 className="form-control form-control-lg bg-dark text-white border-warning text-center"
                                 placeholder="Type here or click a word..."
                                 value={userAnswers[clozeIdx] || ''}
                                 onChange={(e) => setUserAnswers(prev => ({ ...prev, [clozeIdx]: e.target.value }))}
                                 onKeyDown={(e) => e.key === 'Enter' && check()}
-                                autoFocus
                             />
                             <button className="btn btn-warning fw-bold px-4" onClick={check}>
-                                {clozeIdx + 1 < game.questions.length ? 'Next' : 'Finish'}
+                                {clozeIdx + 1 < game.questions.length ? 'Check' : 'Finish'}
                             </button>
                         </div>
 
@@ -1639,6 +1790,7 @@ function WordSearchGame({ game, onCorrect }) {
     const [foundCells, setFoundCells] = useState([]);
     const [selectedCells, setSelectedCells] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
+    const [tapStartCell, setTapStartCell] = useState(null);
     const [currentGrid, setCurrentGrid] = useState([]);
     const [placedWords, setPlacedWords] = useState([]);
 
@@ -1704,6 +1856,58 @@ function WordSearchGame({ game, onCorrect }) {
     }, [generateGrid]);
 
     const handleCellMouseDown = (r, c) => {
+        if (tapStartCell) {
+            // Second tap logic
+            const dr = r - tapStartCell.r;
+            const dc = c - tapStartCell.c;
+            const absDr = Math.abs(dr);
+            const absDc = Math.abs(dc);
+
+            const isHorizontal = dr === 0;
+            const isVertical = dc === 0;
+            const isDiagonal = absDr === absDc;
+
+            if (isHorizontal || isVertical || isDiagonal) {
+                const steps = Math.max(absDr, absDc);
+                const stepR = dr === 0 ? 0 : dr / absDr;
+                const stepC = dc === 0 ? 0 : dc / absDc;
+
+                const newSelection = [];
+                for (let i = 0; i <= steps; i++) {
+                    newSelection.push({ 
+                        r: tapStartCell.r + Math.round(i * stepR), 
+                        c: tapStartCell.c + Math.round(i * stepC) 
+                    });
+                }
+                
+                // Immediately check if word matches
+                const selectedWord = newSelection.map(cell => currentGrid[cell.r]?.[cell.c]).join('');
+                const reversedWord = selectedWord.split('').reverse().join('');
+                let match = null;
+                const targetWords = placedWords.map(w => w.toUpperCase());
+                if (targetWords.includes(selectedWord) && !foundWords.includes(selectedWord)) match = selectedWord;
+                else if (targetWords.includes(reversedWord) && !foundWords.includes(reversedWord)) match = reversedWord;
+
+                if (match) {
+                    setFoundWords(prev => {
+                        const next = [...prev, match];
+                        if (next.length === placedWords.length) setTimeout(() => onCorrect && onCorrect(), 1000);
+                        return next;
+                    });
+                    setFoundCells(prev => [...prev, ...newSelection]);
+                    playSFX('success_magic');
+                } else {
+                    playSFX('error_buzz');
+                }
+            } else {
+                playSFX('error_buzz'); // Not a straight line
+            }
+            
+            setTapStartCell(null);
+            setSelectedCells([]);
+            return;
+        }
+
         setIsDragging(true);
         setSelectedCells([{ r, c }]);
         playSFX('click');
@@ -1744,6 +1948,13 @@ function WordSearchGame({ game, onCorrect }) {
     const handleMouseUp = React.useCallback(() => {
         if (!isDragging) return;
         setIsDragging(false);
+
+        if (selectedCells.length === 1) {
+            // Detected a single tap, enter tap selection mode
+            setTapStartCell(selectedCells[0]);
+            return; // keep the selected cell visually highlighted
+        }
+
         const selectedWord = selectedCells.map(cell => currentGrid[cell.r]?.[cell.c]).join('');
         const reversedWord = selectedWord.split('').reverse().join('');
 
@@ -1772,14 +1983,34 @@ function WordSearchGame({ game, onCorrect }) {
         return () => window.removeEventListener('mouseup', handleMouseUp);
     }, [handleMouseUp]);
 
+    const handleTouchMove = (e) => {
+        if (!isDragging) return;
+        // Prevent scrolling while dragging
+        if (e.cancelable) e.preventDefault(); 
+        const touch = e.touches[0];
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (element) {
+            const r = parseInt(element.getAttribute('data-r'));
+            const c = parseInt(element.getAttribute('data-c'));
+            if (!isNaN(r) && !isNaN(c)) {
+                handleCellMouseEnter(r, c);
+            }
+        }
+    };
+
     if (!game || currentGrid.length === 0) return null;
 
     return (
-        <div className="word-search-container text-center p-4 animate__animated animate__fadeIn rounded-4 shadow-lg" style={{ userSelect: 'none', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
+        <div className="word-search-container text-center p-2 p-md-4 animate__animated animate__fadeIn rounded-4 shadow-lg" style={{ userSelect: 'none', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
             <div className="row g-4">
                 <div className="col-lg-8">
                     <div className="overflow-auto w-100 pb-3" style={{ maxWidth: '100vw' }}>
-                        <div className="grid-wrapper d-inline-block p-2 p-md-4 rounded-4 shadow-sm" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div className="grid-wrapper d-inline-block p-1 p-md-4 rounded-4 shadow-sm" 
+                             style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', touchAction: 'none' }}
+                             onTouchMove={handleTouchMove}
+                             onTouchEnd={handleMouseUp}
+                             onMouseLeave={handleMouseUp}
+                        >
                         {currentGrid.map((row, r) => (
                             <div key={r} className="d-flex">
                                 {row.map((char, c) => {
@@ -1801,12 +2032,15 @@ function WordSearchGame({ game, onCorrect }) {
 
                                     return (
                                         <div key={c}
+                                            data-r={r}
+                                            data-c={c}
                                             onMouseDown={() => handleCellMouseDown(r, c)}
                                             onMouseEnter={() => handleCellMouseEnter(r, c)}
+                                            onTouchStart={() => handleCellMouseDown(r, c)}
                                             className={`d-flex justify-content-center align-items-center fw-bold rounded-2 transition-all ${isFound ? 'animate__animated animate__pulse' : ''}`}
                                             style={{ 
-                                                width: 'clamp(20px, 7vw, 42px)', height: 'clamp(20px, 7vw, 42px)', cursor: 'pointer', margin: '1px',
-                                                background: bg, color: color, fontSize: '1.1rem', border: border,
+                                                width: 'clamp(18px, 6.5vw, 42px)', height: 'clamp(18px, 6.5vw, 42px)', cursor: 'pointer', margin: '0.5px',
+                                                background: bg, color: color, fontSize: 'clamp(0.7rem, 3.5vw, 1.1rem)', border: border,
                                                 boxShadow: isSelected ? '0 0 10px rgba(37,117,252,0.3)' : (isFound ? '0 0 10px rgba(37,117,252,0.3)' : 'none')
                                             }}
                                         >
@@ -1820,21 +2054,21 @@ function WordSearchGame({ game, onCorrect }) {
                     </div>
                 </div>
                 <div className="col-lg-4">
-                    <div className="word-list p-4 rounded-4 shadow-sm h-100" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <h6 className="mb-4 fw-bold d-flex align-items-center" style={{ color: 'var(--acento-primario)' }}><i className="bi bi-search me-2"></i> Palabras:</h6>
-                        <div className="d-flex flex-column gap-3 overflow-auto" style={{ maxHeight: '400px' }}>
+                    <div className="word-list p-3 p-md-4 rounded-4 shadow-sm h-100" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <h6 className="mb-3 fw-bold d-flex align-items-center" style={{ color: 'var(--acento-primario)' }}><i className="bi bi-search me-2"></i> Palabras:</h6>
+                        <div className="d-flex flex-wrap justify-content-center gap-2 overflow-auto" style={{ maxHeight: '250px' }}>
                             {placedWords.map(word => {
                                 const isFound = foundWords.includes(word.toUpperCase());
                                 return (
-                                    <div key={word} className={`p-3 rounded-4 transition-all d-flex justify-content-between align-items-center shadow-sm`} 
+                                    <div key={word} className={`py-1 px-2 rounded-4 transition-all d-flex align-items-center shadow-sm`} 
                                         style={{ 
                                             border: isFound ? '1px solid rgba(37,117,252,0.5)' : '1px solid rgba(255,255,255,0.1)', 
                                             background: isFound ? 'rgba(37,117,252,0.1)' : 'rgba(255,255,255,0.05)',
                                             color: isFound ? '#2575fc' : '#e0e0e0',
-                                            fontSize: '1rem', letterSpacing: '1px'
+                                            fontSize: '0.8rem', letterSpacing: '0.5px'
                                         }}>
-                                        <span className={isFound ? 'text-decoration-line-through opacity-75' : ''}>{word}</span>
-                                        {isFound && <i className="bi bi-check-circle-fill fs-5 text-primary"></i>}
+                                        <span className={isFound ? 'text-decoration-line-through opacity-75 me-1' : 'me-1'}>{word}</span>
+                                        {isFound && <i className="bi bi-check-circle-fill text-primary" style={{fontSize: '0.9rem'}}></i>}
                                     </div>
                                 )
                             })}

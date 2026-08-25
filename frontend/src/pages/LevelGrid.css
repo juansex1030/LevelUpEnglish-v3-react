@@ -253,8 +253,8 @@
         display: flex;
         flex-direction: column;
     }
-    .level-header {
-        order: 2;
+    .top-ad-block {
+        order: 0;
     }
     .level-progress-block {
         order: 1;
@@ -264,7 +264,16 @@
         border-radius: var(--radius-gamified);
         padding: 1.25rem 1.5rem;
     }
+    .level-header {
+        order: 2;
+    }
     .level-topics-block {
+        order: 3;
+    }
+    .bottom-ad-block {
         order: 4;
+    }
+    .back-btn-block {
+        order: 5;
     }
 }

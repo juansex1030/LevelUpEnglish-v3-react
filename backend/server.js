@@ -53,7 +53,7 @@ const corsOptions = {
         // 2. Allow any 'localhost' or '127.0.0.1' in dev
         // 3. Allow origins specified in FRONTEND_URL env var
         
-        const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+        const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/.test(origin);
         const isVercel = /\.vercel\.app$/.test(origin);
         const isCloudflarePages = /\.pages\.dev$/.test(origin);
         const isLevelUpSubdomain = /^https?:\/\/([a-z0-9-]+\.)?levelupenglishco\.com$/.test(origin);

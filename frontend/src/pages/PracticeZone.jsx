@@ -164,8 +164,8 @@ const PracticeZone = () => {
         }
         
         return (
-            <div className="practice-play-area container py-5">
-                <button className="btn btn-outline-secondary mb-4" onClick={() => setSearchParams({})}>
+            <div className="practice-play-area container-fluid container-md px-2 px-md-3 py-4 py-md-5">
+                <button className="btn btn-outline-secondary mb-4 ms-2 ms-md-0" onClick={() => setSearchParams({})}>
                     <i className="bi bi-arrow-left"></i> Volver al Mapa de Práctica
                 </button>
                 <div className="text-center mb-4">

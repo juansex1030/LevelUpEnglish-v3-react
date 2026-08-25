@@ -317,11 +317,64 @@
 /* Responsive adjustments */
 @media (max-width: 1024px) {
     .nav-links { display: none; } /* Ocultar enlaces de texto para usar drawer */
-    .mobile-controls { display: block; }
+    
+    .navbar-container {
+        gap: 0.25rem;
+        padding: 0 0.5rem;
+    }
+    
+    .mobile-controls { 
+        display: block; 
+        flex: 0 0 auto;
+    }
+    
+    .nav-actions {
+        flex: 0 0 auto;
+        gap: 0.5rem;
+    }
+
+    .brand-logo { 
+        flex: 1; 
+        min-width: 0;
+        justify-content: center;
+        gap: 0.25rem;
+        font-size: 1.1rem;
+    }
+
+    .brand-text { 
+        font-size: 1.1rem; 
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .logo-icon-wrapper {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .theme-toggle-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+    
+    .avatar {
+        width: 32px;
+        height: 32px;
+    }
+
     .auth-buttons { display: none; }
     .user-profile-btn span { display: none; }
     .user-profile-btn { padding: 0.25rem; }
-    .brand-text { font-size: 1.2rem; }
+}
+
+@media (max-width: 400px) {
+    .brand-text .brand-highlight {
+        display: none;
+    }
 }
 
 /* Drawer Enhancements for Premium Glassmorphism */

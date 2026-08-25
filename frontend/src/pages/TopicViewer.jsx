@@ -392,7 +392,7 @@ const TopicViewer = () => {
                         </li>
                     </ul>
 
-                    <div className="tab-content custom-tab-content" ref={containerRef} style={{ background: 'var(--color-fondo-secundario)', padding: '2rem', borderRadius: '1rem', border: '1px solid var(--color-borde)' }}>
+                    <div className="tab-content custom-tab-content p-2 p-md-4" ref={containerRef} style={{ background: 'var(--color-fondo-secundario)', borderRadius: '1rem', border: '1px solid var(--color-borde)' }}>
                         {activeTab === 'theory' && nivel?.toLowerCase() === 'a1' && parseInt(topicId) === 3 && (
                             <AlphabetInteractive onInteraction={() => setTheoryProgress(100)} />
                         )}
