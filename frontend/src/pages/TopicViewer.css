@@ -197,6 +197,7 @@
 /* Pestañas (Segmented Control) */
 .custom-tabs {
     display: flex;
+    flex-wrap: nowrap;
     background-color: var(--color-fondo-secundario);
     padding: 6px;
     border-radius: 16px;
@@ -243,8 +244,8 @@
 
 @media (max-width: 768px) {
     .custom-tab-content {
-        padding: 1.5rem;
-        border-radius: 20px;
+        padding: 1rem 0.75rem;
+        border-radius: 16px;
     }
 }
 
@@ -295,6 +296,13 @@
     border: 1px solid rgba(255, 255, 255, 0.05) !important; /* Sobrescribe cualquier borde heredado */
     box-shadow: 0 8px 20px rgba(0,0,0,0.1);
     margin: 0;
+}
+
+@media (max-width: 768px) {
+    .theory-wrapper p {
+        padding: 1rem;
+        font-size: 1.05rem;
+    }
 }
 
 /* Listas (Chat Bubbles Premium) */

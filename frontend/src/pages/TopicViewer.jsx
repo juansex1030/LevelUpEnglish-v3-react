@@ -403,7 +403,7 @@ const TopicViewer = () => {
                             <div 
                                 className="theory-wrapper premium-content" 
                                 ref={theoryRef}
-                                style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '1rem' }}
+                                style={{ maxHeight: '70vh', overflowY: 'auto' }}
                                 dangerouslySetInnerHTML={{ 
                                     __html: DOMPurify.sanitize(topic.theory, { 
                                         ALLOWED_ATTR: ['class', 'style', 'id', 'scope', 'colspan', 'rowspan'],
