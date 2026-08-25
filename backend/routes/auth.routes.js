@@ -399,13 +399,14 @@ router.post('/placement', authenticateToken, async (req, res, next) => {
                 // Get all topics for this level
                 const topicsRes = await query('SELECT id FROM topics WHERE level = $1', [lvl]);
                 for (const row of topicsRes.rows) {
-                    await query('INSERT INTO progress (user_id, topic_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, row.id]);
+                    await query('INSERT INTO progress (user_id, topic_id) VALUES ($1, $2) ON CONFLICT (user_id, topic_id) DO NOTHING', [userId, row.id]);
                 }
             }
         }
 
         res.json({ msg: 'Prueba completada', level: determinedLevel });
     } catch (error) {
+        require('fs').writeFileSync('error_log.txt', error.stack || error.toString());
         next(error);
     }
 });

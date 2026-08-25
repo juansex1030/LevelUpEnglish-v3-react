@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/config';
+import api from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
 import './PlacementTest.css';
 
