@@ -13,7 +13,6 @@ const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
 const topicsRoutes = require('./routes/topics.routes');
 const progressRoutes = require('./routes/progress.routes');
-const epaycoRoutes = require('./routes/epayco.routes');
 const supportRoutes = require('./routes/support.routes');
 
 const app = express();
@@ -113,7 +112,6 @@ app.use('/api/v1/topics', topicsRoutes);
 app.use('/api/v1/progress', progressRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/support', supportRoutes);
-app.use('/api/v1/epayco', epaycoRoutes);
 
 // ======================
 // INITIALIZATION

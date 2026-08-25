@@ -355,9 +355,7 @@ router.delete('/subscription', authenticateToken, async (req, res, next) => {
         if (!user.is_premium) return res.status(400).json({ msg: 'No tienes una suscripción Premium activa.' });
 
         // We do NOT revoke access — user keeps premium until premium_until expires.
-        // Since ePayco does not auto-charge, there is no recurring billing to stop.
-        // This endpoint simply confirms the cancellation intent for the user's records.
-        console.log(`[Auth] User #${userId} confirmed subscription cancellation. Access continues until: ${user.premium_until}`);
+        // This endpoint confirms the cancellation intent; no further charges will apply.
 
         res.json({
             success: true,
