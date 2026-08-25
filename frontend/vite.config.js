@@ -10,12 +10,15 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       manifest: {
+        id: '/',
+        start_url: '/',
         name: 'Lvupenglish',
         short_name: 'Lvupenglish',
         description: 'Advanced English Coaching and Interactive Practice',
         theme_color: '#0d6efd',
         background_color: '#121212',
         display: 'standalone',
+        orientation: 'portrait',
         icons: [
           {
             src: 'pwa-192x192.png',

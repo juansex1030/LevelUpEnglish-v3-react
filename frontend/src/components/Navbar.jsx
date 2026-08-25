@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import useAudioFeedback from '../hooks/useAudioFeedback';
+import InstallPWA from './InstallPWA';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -167,6 +168,7 @@ const Navbar = () => {
                         </ul>
 
                         <div className="nav-actions">
+                            <InstallPWA />
                             <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle Theme">
                                 {theme === 'dark' ? <i className="bi bi-sun-fill"></i> : <i className="bi bi-moon-stars-fill"></i>}
                             </button>
