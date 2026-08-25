@@ -6,7 +6,15 @@ const SoundContext = createContext();
 export const SoundProvider = ({ children }) => {
     const [soundEnabled, setSoundEnabled] = useState(() => {
         const saved = localStorage.getItem('soundEnabled');
-        return saved !== null ? JSON.parse(saved) : true;
+        if (saved !== null) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.warn('Failed to parse soundEnabled', e);
+                return true;
+            }
+        }
+        return true;
     });
 
     const [play] = useSound('/sounds/click.mp3', { volume: 0.5 });

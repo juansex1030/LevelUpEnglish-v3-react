@@ -12,8 +12,8 @@ import './AdBanner.css';
  * 4. Set VITE_ADSENSE_ENABLED=true in your .env
  */
 
-const ADSENSE_CLIENT = 'ca-pub-XXXXXXXXXX'; // ← Replace with your Publisher ID
-const IS_PRODUCTION = import.meta.env.PROD && import.meta.env.VITE_ADSENSE_ENABLED === 'true';
+const ADSENSE_CLIENT = 'ca-pub-7953629056689148'; // ← Your Publisher ID
+const IS_PRODUCTION = import.meta.env.PROD; // Enable ads when in production build
 
 const AD_SLOTS = {
     horizontal: 'XXXXXXXXXX',   // ← Replace with your Ad Slot IDs

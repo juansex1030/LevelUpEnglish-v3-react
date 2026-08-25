@@ -630,7 +630,6 @@ function Unscramble({ game, onCorrect }) {
                     Check
                 </button>
             </div>
-            </div>
             <Feedback fb={fb} />
         </div>
     );
