@@ -1284,7 +1284,7 @@ function FillBlanksGame({ game, onCorrect }) {
                 <input type="text" className={inputClass} style={inputStyles} value={userInputs}
                     onChange={(e) => { setUserInputs(e.target.value); setStatus('playing'); }}
                     disabled={status === 'checking' || status === 'correct'}
-                    autoComplete="off" autoFocus />
+                    autoComplete="off" />
                 <span>{parts[1]}</span>
             </div>
         );
@@ -1778,7 +1778,8 @@ function WordSearchGame({ game, onCorrect }) {
         <div className="word-search-container text-center p-4 animate__animated animate__fadeIn rounded-4 shadow-lg" style={{ userSelect: 'none', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
             <div className="row g-4">
                 <div className="col-lg-8">
-                    <div className="grid-wrapper d-inline-block p-4 rounded-4 shadow-sm" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div className="overflow-auto w-100 pb-3" style={{ maxWidth: '100vw' }}>
+                        <div className="grid-wrapper d-inline-block p-2 p-md-4 rounded-4 shadow-sm" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
                         {currentGrid.map((row, r) => (
                             <div key={r} className="d-flex">
                                 {row.map((char, c) => {
@@ -1804,7 +1805,7 @@ function WordSearchGame({ game, onCorrect }) {
                                             onMouseEnter={() => handleCellMouseEnter(r, c)}
                                             className={`d-flex justify-content-center align-items-center fw-bold rounded-2 transition-all ${isFound ? 'animate__animated animate__pulse' : ''}`}
                                             style={{ 
-                                                width: 'clamp(28px, 4vw, 42px)', height: 'clamp(28px, 4vw, 42px)', cursor: 'pointer', margin: '2px',
+                                                width: 'clamp(20px, 7vw, 42px)', height: 'clamp(20px, 7vw, 42px)', cursor: 'pointer', margin: '1px',
                                                 background: bg, color: color, fontSize: '1.1rem', border: border,
                                                 boxShadow: isSelected ? '0 0 10px rgba(37,117,252,0.3)' : (isFound ? '0 0 10px rgba(37,117,252,0.3)' : 'none')
                                             }}
@@ -1815,6 +1816,7 @@ function WordSearchGame({ game, onCorrect }) {
                                 })}
                             </div>
                         ))}
+                    </div>
                     </div>
                 </div>
                 <div className="col-lg-4">
