@@ -36,8 +36,11 @@ function PlacementTest() {
     const [showAnswer, setShowAnswer] = useState(false);
 
     // If user already completed the test, send them to progress immediately
+    // If user is not logged in, send to login
     useEffect(() => {
-        if (user && user.placement_test_completed) {
+        if (!user) {
+            navigate('/login', { replace: true });
+        } else if (user.placement_test_completed) {
             navigate('/progress', { replace: true });
         }
     }, [user, navigate]);

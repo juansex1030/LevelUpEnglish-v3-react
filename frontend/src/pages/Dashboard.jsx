@@ -19,8 +19,12 @@ const Dashboard = () => {
     const { user, loading } = useAuth();
 
     if (loading) return <div>Cargando...</div>;
+
+    // Not logged in → redirect to login
+    if (!user) return <Navigate to="/login" />;
     
-    if (user && !user.placement_test_completed) {
+    // Logged in but hasn't done placement test → redirect to test
+    if (!user.placement_test_completed) {
         return <Navigate to="/placement-test" />;
     }
 

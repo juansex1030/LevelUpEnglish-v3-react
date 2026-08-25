@@ -371,42 +371,58 @@ router.delete('/subscription', authenticateToken, async (req, res, next) => {
 
 router.post('/placement', authenticateToken, async (req, res, next) => {
     try {
-        const { score, startFromScratch } = req.body;
         const userId = req.user.id;
-        
+
+        // Security: Check if user already completed the test (server-side guard)
+        const userCheck = await query('SELECT placement_test_completed FROM users WHERE id = $1', [userId]);
+        if (userCheck.rows[0]?.placement_test_completed) {
+            return res.status(409).json({ msg: 'La prueba de ubicación ya fue completada.' });
+        }
+
+        const { score, startFromScratch } = req.body;
+
+        // Validate score: must be an integer between 0 and total number of questions
+        const totalQuestions = 12;
+        const parsedScore = parseInt(score, 10);
+        const validScore = !isNaN(parsedScore) && parsedScore >= 0 && parsedScore <= totalQuestions
+            ? parsedScore
+            : 0;
+
         // Update user to mark test as completed
         await query('UPDATE users SET placement_test_completed = true WHERE id = $1', [userId]);
         
-        if (startFromScratch || score === 0 || score == null) {
+        if (startFromScratch || validScore === 0) {
             return res.json({ msg: 'Nivel inicial configurado', level: 'A1' });
         }
 
-        // Determine level
+        // Determine level based on validated score
         let determinedLevel = 'A1';
-        if (score >= 10) determinedLevel = 'B2';
-        else if (score >= 7) determinedLevel = 'B1';
-        else if (score >= 4) determinedLevel = 'A2';
-        else determinedLevel = 'A1';
+        if (validScore >= 10) determinedLevel = 'B2';
+        else if (validScore >= 7) determinedLevel = 'B1';
+        else if (validScore >= 4) determinedLevel = 'A2';
 
-        // Mark lower levels as completed
+        // Mark lower levels as completed in progress table
         const levelsToComplete = [];
         if (determinedLevel === 'A2') levelsToComplete.push('A1');
         if (determinedLevel === 'B1') levelsToComplete.push('A1', 'A2');
         if (determinedLevel === 'B2') levelsToComplete.push('A1', 'A2', 'B1');
 
         if (levelsToComplete.length > 0) {
-            for (const lvl of levelsToComplete) {
-                // Get all topics for this level
-                const topicsRes = await query('SELECT id FROM topics WHERE level = $1', [lvl]);
-                for (const row of topicsRes.rows) {
-                    await query('INSERT INTO progress (user_id, topic_id) VALUES ($1, $2) ON CONFLICT (user_id, topic_id) DO NOTHING', [userId, row.id]);
-                }
+            const topicsRes = await query(
+                'SELECT id FROM topics WHERE level = ANY($1::text[])',
+                [levelsToComplete]
+            );
+            for (const row of topicsRes.rows) {
+                await query(
+                    'INSERT INTO progress (user_id, topic_id) VALUES ($1, $2) ON CONFLICT (user_id, topic_id) DO NOTHING',
+                    [userId, row.id]
+                );
             }
         }
 
         res.json({ msg: 'Prueba completada', level: determinedLevel });
     } catch (error) {
-        require('fs').writeFileSync('error_log.txt', error.stack || error.toString());
+        console.error('[Placement] Error:', error.message);
         next(error);
     }
 });
