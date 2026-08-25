@@ -53,7 +53,7 @@ const Register = () => {
                 token: credentialResponse.credential
             });
             if (res.data.token) {
-                localStorage.setItem('token', res.data.token);
+                sessionStorage.setItem('token', res.data.token);
             }
             login(res.data.user);
             sessionStorage.setItem('show_welcome', 'true');

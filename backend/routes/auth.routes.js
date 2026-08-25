@@ -26,8 +26,7 @@ const isUniqueViolation = (error) => error && error.code === '23505';
 const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax', // Changed from Strict to Lax for better compatibility
-    maxAge: 90 * 24 * 60 * 60 * 1000 // 90 days
+    sameSite: 'Lax' // Changed from Strict to Lax for better compatibility
 };
 
 const setAuthCookie = (req, res, user, token) => {
@@ -39,8 +38,7 @@ const setAuthCookie = (req, res, user, token) => {
         ...COOKIE_OPTIONS,
         // In production (Vercel), we MUST use SameSite: None and Secure: true for cookies to work across domains/subdomains.
         sameSite: isProd ? 'None' : 'Lax',
-        secure: isProd,
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        secure: isProd
     };
 
     const name = useAdminCookie ? 'admin_token' : 'token';
