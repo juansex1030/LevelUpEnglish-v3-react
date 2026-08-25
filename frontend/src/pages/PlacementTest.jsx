@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +35,13 @@ function PlacementTest() {
     const [selectedOption, setSelectedOption] = useState(null);
     const [showAnswer, setShowAnswer] = useState(false);
 
+    // If user already completed the test, send them to progress immediately
+    useEffect(() => {
+        if (user && user.placement_test_completed) {
+            navigate('/progress', { replace: true });
+        }
+    }, [user, navigate]);
+
     const submitResult = async (finalScore, startFromScratch = false) => {
         setIsSubmitting(true);
         try {
@@ -65,10 +72,14 @@ function PlacementTest() {
             setScore(newScore);
         }
 
+        const isLastQuestion = currentQIndex + 1 >= placementQuestions.length;
+        // Lock buttons immediately if this is the last question
+        if (isLastQuestion) setIsSubmitting(true);
+
         setTimeout(() => {
             setShowAnswer(false);
             setSelectedOption(null);
-            if (currentQIndex + 1 < placementQuestions.length) {
+            if (!isLastQuestion) {
                 setCurrentQIndex(currentQIndex + 1);
             } else {
                 submitResult(newScore, false);
